@@ -1,4 +1,5 @@
 import "./App.css";
+import TestDropdown from "./components/ui/test-dropdown";
 import Filters, { type FilterOption } from "./Filters";
 import Grid from "./Grid";
 import {
@@ -169,6 +170,7 @@ const ROWS: Row[] = [
 export default function App() {
 	return (
 		<FiltersProvider>
+			<TestDropdown />
 			<Filters />
 			<Grid rows={ROWS} />
 		</FiltersProvider>
