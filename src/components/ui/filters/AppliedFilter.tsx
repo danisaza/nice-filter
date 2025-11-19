@@ -1,6 +1,5 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { X } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
 import { HoverCardContent } from "@/Filters";
 import {
 	CHECKBOX_SELECTION_RELATIONSHIPS,
@@ -14,27 +13,13 @@ const dropdownMenuContentClassNames =
 	"border border-slate-300 min-w-[220px] bg-white rounded-md p-1 shadow-lg animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2";
 
 export default function AppliedFilter({ id }: { id: string }) {
-	const {
-		getFilter,
-		nextFilterId,
-		removeFilter,
-		rotateNextFilterId,
-		updateFilterRelationship,
-		updateFilterValues,
-	} = useFilters();
+	const { getFilter, removeFilter, updateFilterRelationship } = useFilters();
 	const filter = getFilter(id);
 	if (!filter) {
-		console.error(`Filter not found: ${id}`);
 		return null;
 	}
-	const {
-		selectionType,
-		propertyNameSingular,
-		propertyNamePlural,
-		options,
-		values,
-		categoryId,
-	} = filter;
+	const { selectionType, propertyNameSingular, propertyNamePlural, values } =
+		filter;
 	const propertyNameToDisplay =
 		selectionType === RELATIONSHIP_TYPES.RADIO
 			? propertyNameSingular
@@ -51,26 +36,6 @@ export default function AppliedFilter({ id }: { id: string }) {
 	} else {
 		relationshipOptions = relationshipOptionsByNumValues.MANY;
 	}
-
-	const handleValueChange = (value: string) => {
-		const isAlreadySelected = values.some((v) => v.value === value);
-		if (isAlreadySelected) {
-			updateFilterValues(id, (prevValues) =>
-				prevValues.filter((v) => v.value !== value),
-			);
-			return;
-		}
-
-		const newValue = options.find((o) => o.value === value) ?? null;
-		if (!newValue) {
-			console.error(`Value not found in options: ${value}`);
-			return;
-		}
-		updateFilterValues(id, (prevValues) => [...prevValues, newValue]);
-	};
-
-	const selectedOptionsLabel =
-		values.length > 0 ? values.map((v) => v.label).join(", ") : "...";
 
 	return (
 		<div className="border border-slate-300 text-slate-900 rounded inline-flex items-center h-9">
@@ -120,41 +85,7 @@ export default function AppliedFilter({ id }: { id: string }) {
 					</DropdownMenu.Content>
 				</DropdownMenu.Portal>
 			</DropdownMenu.Root>
-
-			<DropdownMenu.Root>
-				<DropdownMenu.Trigger asChild>
-					<div className="h-full border-r border-slate-200 hover:bg-slate-100">
-						<button
-							type="button"
-							className="h-full px-2"
-							aria-label={`Filter by ${propertyNameToDisplay}`}
-							onClick={() => {
-								alert("foobar!");
-								// if no selected options and the user directly clicks this area, make it disappear
-								if (values.length === 0 && id === nextFilterId) {
-									removeFilter(nextFilterId);
-									rotateNextFilterId();
-									return;
-								}
-							}}
-						>
-							{selectedOptionsLabel}
-						</button>
-					</div>
-				</DropdownMenu.Trigger>
-
-				<DropdownMenu.Portal>
-					<DropdownMenu.Content sideOffset={5}>
-						<HoverCardContent
-							categoryId={categoryId}
-							useNextFilterId={false}
-							filterId={id}
-						/>
-
-						<DropdownMenu.Arrow className="fill-white" />
-					</DropdownMenu.Content>
-				</DropdownMenu.Portal>
-			</DropdownMenu.Root>
+			<RightHandSide filterId={id} />
 			<button
 				type="button"
 				className="h-full px-2 rounded-tr rounded-br text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center"
@@ -163,5 +94,62 @@ export default function AppliedFilter({ id }: { id: string }) {
 				<X className="w-4 h-4" />
 			</button>
 		</div>
+	);
+}
+
+function RightHandSide({ filterId }: { filterId: string }) {
+	const { nextFilterId, removeFilter, rotateNextFilterId, getFilterOrThrow } =
+		useFilters();
+	const filter = getFilterOrThrow(filterId);
+	const {
+		selectionType,
+		propertyNameSingular,
+		propertyNamePlural,
+		values,
+		categoryId,
+	} = filter;
+	const propertyNameToDisplay =
+		selectionType === RELATIONSHIP_TYPES.RADIO
+			? propertyNameSingular
+			: propertyNamePlural;
+
+	const selectedOptionsLabel =
+		values.length > 0 ? values.map((v) => v.label).join(", ") : "...";
+
+	return (
+		<DropdownMenu.Root>
+			<DropdownMenu.Trigger asChild>
+				<div className="h-full border-r border-slate-200 hover:bg-slate-100">
+					<button
+						type="button"
+						className="h-full px-2"
+						aria-label={`Filter by ${propertyNameToDisplay}`}
+						onClick={() => {
+							alert("foobar!");
+							// if no selected options and the user directly clicks this area, make it disappear
+							if (values.length === 0 && filterId === nextFilterId) {
+								removeFilter(nextFilterId);
+								rotateNextFilterId();
+								return;
+							}
+						}}
+					>
+						{selectedOptionsLabel}
+					</button>
+				</div>
+			</DropdownMenu.Trigger>
+
+			<DropdownMenu.Portal>
+				<DropdownMenu.Content align="start">
+					<HoverCardContent
+						categoryId={categoryId}
+						useNextFilterId={false}
+						filterId={filterId}
+					/>
+
+					<DropdownMenu.Arrow className="fill-white" />
+				</DropdownMenu.Content>
+			</DropdownMenu.Portal>
+		</DropdownMenu.Root>
 	);
 }

@@ -77,7 +77,7 @@ export default function Grid({ rows }: { rows: Row[] }) {
 				))}
 			</div>
 			{numRowsHidden > 0 ? (
-				<div className="flex justify-center items-center gap-4">
+				<div className="flex justify-center items-center gap-4 mt-4">
 					<div className="text-sm text-gray-500">
 						<span className="font-bold">
 							{numRowsHidden} {numRowsHidden === 1 ? "item" : "items"}

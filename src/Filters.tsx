@@ -1,7 +1,7 @@
 import * as HoverCard from "@radix-ui/react-hover-card";
 import { TriangleRightIcon } from "@radix-ui/react-icons";
 import * as Popover from "@radix-ui/react-popover";
-import { Check, ListFilter } from "lucide-react";
+import { ListFilter } from "lucide-react";
 import { forwardRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -14,7 +14,6 @@ import {
 	CommandList,
 } from "@/components/ui/command";
 import useFilters from "@/hooks/useFilters";
-import { cn } from "@/lib/utils";
 import AppliedFilter from "./components/ui/filters/AppliedFilter";
 import AppliedFilters from "./components/ui/filters/AppliedFilters";
 import type { ComboboxOption } from "./hooks/constants";
@@ -24,7 +23,7 @@ import { FILTER_CATEGORIES } from "./hooks/filter-options-mock-data";
 
 export default function Filters() {
 	console.log("Filters was rendered");
-	// const { filterCategories, setFilterCategories } = useFilters();
+	const { filterCategories, setFilterCategories } = useFilters();
 
 	// NOTE: This `useEffect` is populating the filter categories, which usually would involve fetching data from the
 	//       server.
@@ -32,10 +31,10 @@ export default function Filters() {
 	//       Also, a future improvement for the `useFilters` hook could be to take in a data-fetching function and do
 	//       the data-fetching on behalf of the user, using something like react-query
 	//       under the hood. (see `useFilter.tsx` for more notes on future improvements)
-	// useEffect(() => {
-	// 	if (filterCategories.length > 0) return;
-	// 	setFilterCategories(FILTER_CATEGORIES);
-	// });
+	useEffect(() => {
+		if (filterCategories.length > 0) return;
+		setFilterCategories(FILTER_CATEGORIES);
+	});
 
 	return (
 		<div className="flex gap-2 items-center flex-wrap w-fit">
@@ -179,27 +178,36 @@ const FilterCategoryItemBody = forwardRef<
 	);
 });
 
+type HoverCardContentProps =
+	| {
+			categoryId: string;
+			filterId: string;
+			useNextFilterId: false;
+			// handleValueSelected: (value: ComboboxOption) => void;
+	  }
+	| {
+			categoryId: string;
+			filterId?: undefined;
+			useNextFilterId: true;
+			// handleValueSelected: (value: ComboboxOption) => void;
+	  };
+
 export function HoverCardContent({
 	categoryId,
 	filterId,
 	useNextFilterId,
 	// handleValueSelected,
-}: {
-	categoryId: string;
-	filterId?: string;
-	useNextFilterId: boolean;
-	// handleValueSelected: (value: ComboboxOption) => void;
-}) {
+}: HoverCardContentProps) {
 	const {
 		addFilter,
 		filterCategories,
-		filters,
+		getFilter,
 		getOptionsForFilterCategory,
 		nextFilterId,
 		updateFilterValues,
 	} = useFilters();
 	const relevantFilterId = useNextFilterId ? nextFilterId : filterId;
-	const relevantFilter = filters.find((f) => f.id === relevantFilterId);
+	const relevantFilter = getFilter(relevantFilterId);
 	console.log("relevantFilter", relevantFilter);
 	const handleValueSelected = (value: ComboboxOption) => {
 		// Is there already a filter for this value?

@@ -16,7 +16,6 @@ import {
 	RELATIONSHIP_TYPES,
 	RELATIONSHIPS,
 } from "./constants";
-import { FILTER_CATEGORIES } from "./filter-options-mock-data";
 
 export function getRelationshipOptions(selectionType: RelationshipType) {
 	return selectionType === RELATIONSHIP_TYPES.RADIO
@@ -33,6 +32,7 @@ type FiltersContextType = {
 	filters: TAppliedFilter[];
 	filterCategories: FilterOption[];
 	getFilter: (filterId: string) => TAppliedFilter | undefined;
+	getFilterOrThrow: (filterId: string) => TAppliedFilter;
 	getOptionsForFilterCategory: (filterCategoryId: string) => ComboboxOption[];
 	matchType: MatchType;
 	nextFilterId: string;
@@ -111,8 +111,7 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
 	const [nextFilterId, setNextFilterId] = useState<string>(() => uuidv4());
 	const [filters, setFilters] = useState<TAppliedFilter[]>([]);
 	const [matchType, setMatchType] = useState<MatchType>(MATCH_TYPES.ANY);
-	const [filterCategories, setFilterCategories] =
-		useState<FilterOption[]>(FILTER_CATEGORIES);
+	const [filterCategories, setFilterCategories] = useState<FilterOption[]>([]);
 
 	const rotateNextFilterId = () => setNextFilterId(uuidv4());
 
@@ -193,6 +192,14 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
 		return filters.find((f) => f.id === filterId);
 	};
 
+	const getFilterOrThrow = (filterId: string) => {
+		const result = getFilter(filterId);
+		if (!result) {
+			throw new Error(`Filter not found: ${filterId}`);
+		}
+		return result;
+	};
+
 	const optionsByFilterCategoryId = filterCategories.reduce(
 		(acc, f) => {
 			acc[f.id] = f.options;
@@ -215,6 +222,7 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
 		filterCategories,
 		filters,
 		getFilter,
+		getFilterOrThrow,
 		getOptionsForFilterCategory,
 		matchType,
 		nextFilterId,
