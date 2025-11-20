@@ -1,6 +1,6 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { X } from "lucide-react";
-import { HoverCardContent } from "@/Filters";
+import FilterDropdownSubCategory from "@/components/ui/filters/FilterDropdownSubCategory";
 import {
 	CHECKBOX_SELECTION_RELATIONSHIPS,
 	RADIO_SELECTION_RELATIONSHIPS,
@@ -12,7 +12,7 @@ import useFilters from "@/hooks/useFilters";
 const dropdownMenuContentClassNames =
 	"border border-slate-300 min-w-[220px] bg-white rounded-md p-1 shadow-lg animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2";
 
-export default function AppliedFilter({ id }: { id: string }) {
+const AppliedFilter = ({ id }: { id: string }) => {
 	const { getFilter, removeFilter, updateFilterRelationship } = useFilters();
 	const filter = getFilter(id);
 	if (!filter) {
@@ -47,7 +47,7 @@ export default function AppliedFilter({ id }: { id: string }) {
 					<DropdownMenu.Trigger asChild>
 						<button
 							type="button"
-							className="h-full px-2"
+							className="h-full px-2 whitespace-nowrap"
 							aria-label={`Filter by ${propertyNameToDisplay}`}
 						>
 							{filter.relationship}
@@ -72,7 +72,7 @@ export default function AppliedFilter({ id }: { id: string }) {
 						>
 							{relationshipOptions.map((relationshipOption) => (
 								<DropdownMenu.RadioItem
-									className="relative flex items-center px-2 py-1.5 outline-none transition-colors focus:bg-slate-100 focus:text-slate-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+									className="text-nowrap relative flex items-center px-2 py-1.5 outline-none transition-colors focus:bg-slate-100 focus:text-slate-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
 									key={relationshipOption}
 									value={relationshipOption}
 								>
@@ -95,19 +95,18 @@ export default function AppliedFilter({ id }: { id: string }) {
 			</button>
 		</div>
 	);
-}
+};
 
 function RightHandSide({ filterId }: { filterId: string }) {
-	const { nextFilterId, removeFilter, rotateNextFilterId, getFilterOrThrow } =
-		useFilters();
+	const { filterCategories, removeFilter, getFilterOrThrow } = useFilters();
 	const filter = getFilterOrThrow(filterId);
-	const {
-		selectionType,
-		propertyNameSingular,
-		propertyNamePlural,
-		values,
-		categoryId,
-	} = filter;
+	const { selectionType, propertyNameSingular, propertyNamePlural, values } =
+		filter;
+	const category = filterCategories.find((c) => c.id === filter.categoryId);
+	if (!category) {
+		console.error("Category not found");
+		return null;
+	}
 	const propertyNameToDisplay =
 		selectionType === RELATIONSHIP_TYPES.RADIO
 			? propertyNameSingular
@@ -122,15 +121,16 @@ function RightHandSide({ filterId }: { filterId: string }) {
 				<div className="h-full border-r border-slate-200 hover:bg-slate-100">
 					<button
 						type="button"
-						className="h-full px-2"
+						className="h-full px-2 whitespace-nowrap"
 						aria-label={`Filter by ${propertyNameToDisplay}`}
 						onClick={() => {
-							alert("foobar!");
-							// if no selected options and the user directly clicks this area, make it disappear
-							if (values.length === 0 && filterId === nextFilterId) {
-								removeFilter(nextFilterId);
-								rotateNextFilterId();
-								return;
+							// if this is an "under construction" filter, clicking this area when there are no selected
+							// options should remove the filter, to avoid UI clutter
+							if (
+								values.length === 0 &&
+								filter.createdAt > newFilterCreatedAtCutoff
+							) {
+								removeFilter(filterId);
 							}
 						}}
 					>
@@ -140,16 +140,21 @@ function RightHandSide({ filterId }: { filterId: string }) {
 			</DropdownMenu.Trigger>
 
 			<DropdownMenu.Portal>
-				<DropdownMenu.Content align="start">
-					<HoverCardContent
-						categoryId={categoryId}
-						useNextFilterId={false}
+				<DropdownMenu.Content
+					align="start"
+					sideOffset={5}
+					className="border shadow-md border-gray-300 min-w-[220px] rounded-md bg-white p-[5px] will-change-[opacity,transform] data-[side=bottom]:animate-slideUpAndFade data-[side=left]:animate-slideRightAndFade data-[side=right]:animate-slideLeftAndFade data-[side=top]:animate-slideDownAndFade"
+				>
+					<FilterDropdownSubCategory
+						standalone
+						key={`applied-filter-subcategory-${filterId}`}
+						categoryId={category.id}
 						filterId={filterId}
 					/>
-
-					<DropdownMenu.Arrow className="fill-white" />
 				</DropdownMenu.Content>
 			</DropdownMenu.Portal>
 		</DropdownMenu.Root>
 	);
 }
+
+export default AppliedFilter;
