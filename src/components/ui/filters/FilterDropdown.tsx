@@ -64,22 +64,17 @@ const FilterDropdown = () => {
 				setNewFilterCreatedAtCutoff(Date.now());
 			}}
 		>
-			<div
-				id="new-filters-popover-anchor"
-				className="relative flex gap-2 items-center"
-			>
+			<div className="contents">
 				<DropdownMenu.Trigger asChild>
-					<div className="flex gap-2 items-center">
+					<div className="flex gap-2 items-center flex-wrap">
 						<AppliedFilters after={newFilterCreatedAtCutoff} />
-						<div>
-							<Button
-								variant="ghost"
-								className="group cursor-default data-[state=open]:bg-accent data-[state=open]:text-accent-foreground"
-							>
-								<ListFilter className="w-4 h-4 group-hover:text-accent-foreground text-muted-foreground group-data-[state=open]:text-accent-foreground" />{" "}
-								Filter
-							</Button>
-						</div>
+						<Button
+							variant="ghost"
+							className="group cursor-default data-[state=open]:bg-accent data-[state=open]:text-accent-foreground"
+						>
+							<ListFilter className="w-4 h-4 group-hover:text-accent-foreground text-muted-foreground group-data-[state=open]:text-accent-foreground" />{" "}
+							Filter
+						</Button>
 					</div>
 				</DropdownMenu.Trigger>
 				<DropdownMenu.Portal>
