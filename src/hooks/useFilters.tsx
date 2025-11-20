@@ -35,6 +35,7 @@ type FiltersContextType = {
 	getFilter: (filterId: string) => TAppliedFilter | undefined;
 	getFilterOrThrow: (filterId: string) => TAppliedFilter;
 	getOptionsForFilterCategory: (filterCategoryId: string) => ComboboxOption[];
+	getPropertyNameToDisplay: (filterId: string) => string;
 	matchType: MatchType;
 	removeAllFilters: () => void;
 	removeFilter: (filterId: string) => void;
@@ -213,12 +214,20 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
 		return optionsByFilterCategoryId[filterCategoryId];
 	};
 
+	const getPropertyNameToDisplay = (filterId: string) => {
+		const filter = getFilterOrThrow(filterId);
+		return filter.selectionType === RELATIONSHIP_TYPES.RADIO
+			? filter.propertyNameSingular
+			: filter.propertyNamePlural;
+	};
+
 	const value: FiltersContextType = {
 		addFilter,
 		filterCategories,
 		filters,
 		getFilter,
 		getFilterOrThrow,
+		getPropertyNameToDisplay,
 		getOptionsForFilterCategory,
 		matchType,
 		removeFilter,

@@ -13,23 +13,15 @@ const dropdownMenuContentClassNames =
 	"border border-slate-300 min-w-[220px] bg-white rounded-md p-1 shadow-lg animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2";
 
 const AppliedFilter = ({ id }: { id: string }) => {
-	const { getFilter } = useFilters();
-	const filter = getFilter(id);
-	if (!filter) {
-		return null;
-	}
-	const { selectionType, propertyNameSingular, propertyNamePlural } = filter;
-	const propertyNameToDisplay =
-		selectionType === RELATIONSHIP_TYPES.RADIO
-			? propertyNameSingular
-			: propertyNamePlural;
+	const { getPropertyNameToDisplay } = useFilters();
+	const propertyNameToDisplay = getPropertyNameToDisplay(id);
 
 	return (
 		<fieldset
 			name={`${propertyNameToDisplay} filter`}
 			className="border border-slate-300 text-slate-900 rounded inline-flex items-center h-9"
 		>
-			<Left propertyNameToDisplay={propertyNameToDisplay} />
+			<Left filterId={id} />
 			<Middle filterId={id} />
 			<Right filterId={id} />
 			<Remove filterId={id} />
@@ -37,7 +29,9 @@ const AppliedFilter = ({ id }: { id: string }) => {
 	);
 };
 
-function Left({ propertyNameToDisplay }: { propertyNameToDisplay: string }) {
+function Left({ filterId }: { filterId: string }) {
+	const { getPropertyNameToDisplay } = useFilters();
+	const propertyNameToDisplay = getPropertyNameToDisplay(filterId);
 	return (
 		<span className="px-2 rounded-tl rounded-bl border-r border-slate-200 h-full flex items-center">
 			{propertyNameToDisplay}
