@@ -1,5 +1,4 @@
 import { createContext, type ReactNode, useContext, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
 import type { UseStateSetter } from "@/utils";
 import type {
 	ComboboxOption,
@@ -28,17 +27,18 @@ type FilterValueUpdate =
 	| ((values: ComboboxOption[]) => ComboboxOption[]);
 
 type FiltersContextType = {
-	addFilter: (filter: Omit<TAppliedFilter, "relationship">) => void;
+	addFilter: (
+		filter: Omit<TAppliedFilter, "relationship" | "createdAt">,
+	) => void;
 	filters: TAppliedFilter[];
 	filterCategories: FilterOption[];
 	getFilter: (filterId: string) => TAppliedFilter | undefined;
 	getFilterOrThrow: (filterId: string) => TAppliedFilter;
 	getOptionsForFilterCategory: (filterCategoryId: string) => ComboboxOption[];
+	getPropertyNameToDisplay: (filterId: string) => string;
 	matchType: MatchType;
-	nextFilterId: string;
 	removeAllFilters: () => void;
 	removeFilter: (filterId: string) => void;
-	rotateNextFilterId: () => void;
 	setFilterCategories: UseStateSetter<FilterOption[]>;
 	setMatchType: UseStateSetter<MatchType>;
 	updateFilterRelationship: (
@@ -107,13 +107,9 @@ function getNewRelationship(
 }
 
 export function FiltersProvider({ children }: { children: ReactNode }) {
-	// nextFilterId is the ID for the filter that is "under construction", if any
-	const [nextFilterId, setNextFilterId] = useState<string>(() => uuidv4());
 	const [filters, setFilters] = useState<TAppliedFilter[]>([]);
 	const [matchType, setMatchType] = useState<MatchType>(MATCH_TYPES.ANY);
 	const [filterCategories, setFilterCategories] = useState<FilterOption[]>([]);
-
-	const rotateNextFilterId = () => setNextFilterId(uuidv4());
 
 	const addFilter = ({
 		id,
@@ -123,9 +119,10 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
 		propertyNamePlural,
 		selectionType,
 		values,
-	}: Omit<TAppliedFilter, "relationship">) => {
+	}: Omit<TAppliedFilter, "relationship" | "createdAt">) => {
 		const newFilter: TAppliedFilter = {
 			id,
+			createdAt: Date.now(),
 			categoryId,
 			options,
 			propertyNameSingular,
@@ -171,7 +168,7 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
 		);
 	};
 
-	// We can keep this method for manual relationship updates
+	// use this for manual relationship updates (e.g. switch from "is" to "is not")
 	const updateFilterRelationship = (
 		filterId: string,
 		relationship: Relationship,
@@ -217,18 +214,24 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
 		return optionsByFilterCategoryId[filterCategoryId];
 	};
 
+	const getPropertyNameToDisplay = (filterId: string) => {
+		const filter = getFilterOrThrow(filterId);
+		return filter.selectionType === RELATIONSHIP_TYPES.RADIO
+			? filter.propertyNameSingular
+			: filter.propertyNamePlural;
+	};
+
 	const value: FiltersContextType = {
 		addFilter,
 		filterCategories,
 		filters,
 		getFilter,
 		getFilterOrThrow,
+		getPropertyNameToDisplay,
 		getOptionsForFilterCategory,
 		matchType,
-		nextFilterId,
 		removeFilter,
 		removeAllFilters,
-		rotateNextFilterId,
 		setFilterCategories,
 		setMatchType,
 		updateFilterRelationship,

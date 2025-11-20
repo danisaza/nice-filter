@@ -1,0 +1,9 @@
+---
+alwaysApply: true
+---
+
+Use `aria-label` only as a last-resort. Strongly prefer semantic markup elements and contextually relevant text.
+
+For example, for a dropdown menu trigger: the trigger itself usually IS the description of what the dropdown menu does (e.g. "Status"). In these cases, we should not include an aria-label. However, in cases where the text does not describe the purpose of the dropdown (e.g. it only says the statuses that were chosen but does not indicate that this dropdown relates to the status property), then we should use an aria-label.
+
+Aria labels should be as succinct as possible to communicate the necessary information. Otherwise we risk annoying users who are using assistive technology.

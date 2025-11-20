@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from "uuid";
 import type { ComboboxOption, FilterOption } from "./constants";
 import { RELATIONSHIP_TYPES } from "./constants";
 
@@ -9,51 +10,51 @@ const STATUS_OPTIONS: ComboboxOption[] = [
 ];
 
 const PRIORITY_OPTIONS: ComboboxOption[] = [
-	{ label: "Low", value: "Low", id: "1" },
-	{ label: "Medium", value: "Medium", id: "2" },
-	{ label: "High", value: "High", id: "3" },
+	{ label: "Low", value: "Low", id: uuidv4() },
+	{ label: "Medium", value: "Medium", id: uuidv4() },
+	{ label: "High", value: "High", id: uuidv4() },
 ];
 
 const TAGS: ComboboxOption[] = [
-	{ label: "Bug", value: "Bug", id: "1" },
-	{ label: "Feature", value: "Feature", id: "2" },
-	{ label: "Documentation", value: "Documentation", id: "3" },
-	{ label: "Refactoring", value: "Refactoring", id: "4" },
-	{ label: "Testing", value: "Testing", id: "5" },
-	{ label: "Other", value: "Other", id: "6" },
+	{ label: "Bug", value: "Bug", id: uuidv4() },
+	{ label: "Feature", value: "Feature", id: uuidv4() },
+	{ label: "Documentation", value: "Documentation", id: uuidv4() },
+	{ label: "Refactoring", value: "Refactoring", id: uuidv4() },
+	{ label: "Testing", value: "Testing", id: uuidv4() },
+	{ label: "Other", value: "Other", id: uuidv4() },
 ];
 
 const ASSIGNEE_OPTIONS: ComboboxOption[] = [
-	{ label: "John Doe", value: "John Doe", id: "1" },
-	{ label: "Jane Smith", value: "Jane Smith", id: "2" },
-	{ label: "Alice Johnson", value: "Alice Johnson", id: "3" },
-	{ label: "Bob Brown", value: "Bob Brown", id: "4" },
+	{ label: "John Doe", value: "John Doe", id: uuidv4() },
+	{ label: "Jane Smith", value: "Jane Smith", id: uuidv4() },
+	{ label: "Alice Johnson", value: "Alice Johnson", id: uuidv4() },
+	{ label: "Bob Brown", value: "Bob Brown", id: uuidv4() },
 ];
 
 export const FILTER_CATEGORIES: FilterOption[] = [
 	{
-		id: "status",
+		id: uuidv4(),
 		selectionType: RELATIONSHIP_TYPES.RADIO,
 		propertyNameSingular: "status",
 		propertyNamePlural: "statuses",
 		options: STATUS_OPTIONS,
 	},
 	{
-		id: "priority",
+		id: uuidv4(),
 		selectionType: RELATIONSHIP_TYPES.RADIO,
 		propertyNameSingular: "priority",
 		propertyNamePlural: "priorities",
 		options: PRIORITY_OPTIONS,
 	},
 	{
-		id: "tags",
+		id: uuidv4(),
 		selectionType: RELATIONSHIP_TYPES.CHECKBOXES,
 		propertyNameSingular: "tag",
 		propertyNamePlural: "tags",
 		options: TAGS,
 	},
 	{
-		id: "assignee",
+		id: uuidv4(),
 		selectionType: RELATIONSHIP_TYPES.RADIO,
 		propertyNameSingular: "assignee",
 		propertyNamePlural: "assignees",

@@ -1,4 +1,5 @@
 import "./App.css";
+import FilterDropdown from "./components/ui/filters/FilterDropdown";
 import Filters, { type FilterOption } from "./Filters";
 import Grid from "./Grid";
 import {
@@ -6,6 +7,7 @@ import {
 	type Option,
 	RELATIONSHIP_TYPES,
 } from "./hooks/useFilters";
+import { NewFilterCreatedAtCutoffProvider } from "./hooks/useNewFilterCreatedAtCutoff";
 
 type Status = "Not Started" | "In Progress" | "Completed" | "Cancelled";
 type Priority = "Low" | "Medium" | "High";
@@ -169,8 +171,10 @@ const ROWS: Row[] = [
 export default function App() {
 	return (
 		<FiltersProvider>
-			<Filters />
-			<Grid rows={ROWS} />
+			<NewFilterCreatedAtCutoffProvider>
+				<Filters />
+				<Grid rows={ROWS} />
+			</NewFilterCreatedAtCutoffProvider>
 		</FiltersProvider>
 	);
 }

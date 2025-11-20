@@ -57,6 +57,7 @@ export type Relationship = (typeof RELATIONSHIPS)[keyof typeof RELATIONSHIPS];
 
 export type TAppliedFilter = {
 	id: string;
+	createdAt: number; // ms since unix epoch (i.e. `Date.now()`)
 	categoryId: string;
 	selectionType: RelationshipType;
 	propertyNameSingular: string;
