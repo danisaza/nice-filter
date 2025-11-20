@@ -13,17 +13,43 @@ const dropdownMenuContentClassNames =
 	"border border-slate-300 min-w-[220px] bg-white rounded-md p-1 shadow-lg animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2";
 
 const AppliedFilter = ({ id }: { id: string }) => {
-	const { getFilter, removeFilter, updateFilterRelationship } = useFilters();
+	const { getFilter } = useFilters();
 	const filter = getFilter(id);
 	if (!filter) {
 		return null;
 	}
-	const { selectionType, propertyNameSingular, propertyNamePlural, values } =
-		filter;
+	const { selectionType, propertyNameSingular, propertyNamePlural } = filter;
 	const propertyNameToDisplay =
 		selectionType === RELATIONSHIP_TYPES.RADIO
 			? propertyNameSingular
 			: propertyNamePlural;
+
+	return (
+		<fieldset
+			name={`${propertyNameToDisplay} filter`}
+			className="border border-slate-300 text-slate-900 rounded inline-flex items-center h-9"
+		>
+			<Left propertyNameToDisplay={propertyNameToDisplay} />
+			<Middle filterId={id} />
+			<Right filterId={id} />
+			<Remove filterId={id} />
+		</fieldset>
+	);
+};
+
+function Left({ propertyNameToDisplay }: { propertyNameToDisplay: string }) {
+	return (
+		<span className="px-2 rounded-tl rounded-bl border-r border-slate-200 h-full flex items-center">
+			{propertyNameToDisplay}
+		</span>
+	);
+}
+
+function Middle({ filterId }: { filterId: string }) {
+	const { getFilterOrThrow, updateFilterRelationship } = useFilters();
+	const filter = getFilterOrThrow(filterId);
+
+	const { selectionType, values } = filter;
 
 	// Get the relationship options based on the number of values
 	let relationshipOptions: readonly Relationship[];
@@ -36,70 +62,52 @@ const AppliedFilter = ({ id }: { id: string }) => {
 	} else {
 		relationshipOptions = relationshipOptionsByNumValues.MANY;
 	}
-
 	return (
-		<fieldset
-			name={`${propertyNameToDisplay} filter`}
-			className="border border-slate-300 text-slate-900 rounded inline-flex items-center h-9"
-		>
-			<span className="px-2 rounded-tl rounded-bl border-r border-slate-200 h-full flex items-center">
-				{propertyNameToDisplay}
-			</span>
-			<DropdownMenu.Root>
-				<DropdownMenu.Trigger asChild>
-					<button
-						type="button"
-						className="h-full px-2 whitespace-nowrap border-r border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
-						aria-label={`Filter relationship`}
+		<DropdownMenu.Root>
+			<DropdownMenu.Trigger asChild>
+				<button
+					type="button"
+					className="h-full px-2 whitespace-nowrap border-r border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
+					aria-label={`Filter relationship`}
+				>
+					{filter.relationship}
+				</button>
+			</DropdownMenu.Trigger>
+			<DropdownMenu.Portal>
+				<DropdownMenu.Content
+					className={dropdownMenuContentClassNames}
+					sideOffset={5}
+				>
+					<DropdownMenu.RadioGroup
+						value={filter.relationship}
+						onValueChange={(option) => {
+							// validate that this is a valid relationship option
+							if (!relationshipOptions.includes(option as Relationship)) {
+								console.error(`Invalid relationship option: ${option}`);
+								return;
+							}
+							updateFilterRelationship(filterId, option as Relationship);
+						}}
 					>
-						{filter.relationship}
-					</button>
-				</DropdownMenu.Trigger>
-				<DropdownMenu.Portal>
-					<DropdownMenu.Content
-						className={dropdownMenuContentClassNames}
-						sideOffset={5}
-					>
-						<DropdownMenu.RadioGroup
-							value={filter.relationship}
-							onValueChange={(option) => {
-								// validate that x is a valid relationship option
-								if (!relationshipOptions.includes(option as Relationship)) {
-									console.error(`Invalid relationship option: ${option}`);
-									return;
-								}
-								updateFilterRelationship(id, option as Relationship);
-							}}
-						>
-							{relationshipOptions.map((relationshipOption) => (
-								<DropdownMenu.RadioItem
-									className="text-nowrap relative flex items-center px-2 py-1.5 outline-none transition-colors focus:bg-slate-100 focus:text-slate-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-									key={relationshipOption}
-									value={relationshipOption}
-								>
-									{relationshipOption}
-								</DropdownMenu.RadioItem>
-							))}
-						</DropdownMenu.RadioGroup>
+						{relationshipOptions.map((relationshipOption) => (
+							<DropdownMenu.RadioItem
+								className="text-nowrap relative flex items-center px-2 py-1.5 outline-none transition-colors focus:bg-slate-100 focus:text-slate-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+								key={relationshipOption}
+								value={relationshipOption}
+							>
+								{relationshipOption}
+							</DropdownMenu.RadioItem>
+						))}
+					</DropdownMenu.RadioGroup>
 
-						<DropdownMenu.Arrow className="fill-white" />
-					</DropdownMenu.Content>
-				</DropdownMenu.Portal>
-			</DropdownMenu.Root>
-			<RightHandSide filterId={id} />
-			<button
-				type="button"
-				className="h-full px-2 rounded-tr rounded-br text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
-				onClick={() => removeFilter(id)}
-				aria-label={`Remove ${propertyNameToDisplay} filter`}
-			>
-				<X className="w-4 h-4" aria-hidden="true" />
-			</button>
-		</fieldset>
+					<DropdownMenu.Arrow className="fill-white" />
+				</DropdownMenu.Content>
+			</DropdownMenu.Portal>
+		</DropdownMenu.Root>
 	);
-};
+}
 
-function RightHandSide({ filterId }: { filterId: string }) {
+function Right({ filterId }: { filterId: string }) {
 	const { filterCategories, getFilterOrThrow } = useFilters();
 	const filter = getFilterOrThrow(filterId);
 	const { selectionType, propertyNameSingular, propertyNamePlural, values } =
@@ -144,6 +152,20 @@ function RightHandSide({ filterId }: { filterId: string }) {
 				</DropdownMenu.Content>
 			</DropdownMenu.Portal>
 		</DropdownMenu.Root>
+	);
+}
+
+function Remove({ filterId }: { filterId: string }) {
+	const { removeFilter } = useFilters();
+	return (
+		<button
+			type="button"
+			className="h-full px-2 rounded-tr rounded-br text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
+			onClick={() => removeFilter(filterId)}
+			aria-label={`Remove filter`}
+		>
+			<X className="w-4 h-4" aria-hidden="true" />
+		</button>
 	);
 }
 
