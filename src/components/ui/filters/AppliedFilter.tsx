@@ -38,22 +38,23 @@ const AppliedFilter = ({ id }: { id: string }) => {
 	}
 
 	return (
-		<div className="border border-slate-300 text-slate-900 rounded inline-flex items-center h-9">
+		<fieldset
+			name={`${propertyNameToDisplay} filter`}
+			className="border border-slate-300 text-slate-900 rounded inline-flex items-center h-9"
+		>
 			<span className="px-2 rounded-tl rounded-bl border-r border-slate-200 h-full flex items-center">
 				{propertyNameToDisplay}
 			</span>
 			<DropdownMenu.Root>
-				<div className="h-full border-r border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900">
-					<DropdownMenu.Trigger asChild>
-						<button
-							type="button"
-							className="h-full px-2 whitespace-nowrap"
-							aria-label={`Filter by ${propertyNameToDisplay}`}
-						>
-							{filter.relationship}
-						</button>
-					</DropdownMenu.Trigger>
-				</div>
+				<DropdownMenu.Trigger asChild>
+					<button
+						type="button"
+						className="h-full px-2 whitespace-nowrap border-r border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
+						aria-label={`Filter relationship`}
+					>
+						{filter.relationship}
+					</button>
+				</DropdownMenu.Trigger>
 				<DropdownMenu.Portal>
 					<DropdownMenu.Content
 						className={dropdownMenuContentClassNames}
@@ -88,17 +89,18 @@ const AppliedFilter = ({ id }: { id: string }) => {
 			<RightHandSide filterId={id} />
 			<button
 				type="button"
-				className="h-full px-2 rounded-tr rounded-br text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center"
+				className="h-full px-2 rounded-tr rounded-br text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
 				onClick={() => removeFilter(id)}
+				aria-label={`Remove ${propertyNameToDisplay} filter`}
 			>
-				<X className="w-4 h-4" />
+				<X className="w-4 h-4" aria-hidden="true" />
 			</button>
-		</div>
+		</fieldset>
 	);
 };
 
 function RightHandSide({ filterId }: { filterId: string }) {
-	const { filterCategories, removeFilter, getFilterOrThrow } = useFilters();
+	const { filterCategories, getFilterOrThrow } = useFilters();
 	const filter = getFilterOrThrow(filterId);
 	const { selectionType, propertyNameSingular, propertyNamePlural, values } =
 		filter;
@@ -116,27 +118,15 @@ function RightHandSide({ filterId }: { filterId: string }) {
 		values.length > 0 ? values.map((v) => v.label).join(", ") : "...";
 
 	return (
-		<DropdownMenu.Root>
+		<DropdownMenu.Root modal={false}>
 			<DropdownMenu.Trigger asChild>
-				<div className="h-full border-r border-slate-200 hover:bg-slate-100">
-					<button
-						type="button"
-						className="h-full px-2 whitespace-nowrap"
-						aria-label={`Filter by ${propertyNameToDisplay}`}
-						onClick={() => {
-							// if this is an "under construction" filter, clicking this area when there are no selected
-							// options should remove the filter, to avoid UI clutter
-							if (
-								values.length === 0 &&
-								filter.createdAt > newFilterCreatedAtCutoff
-							) {
-								removeFilter(filterId);
-							}
-						}}
-					>
-						{selectedOptionsLabel}
-					</button>
-				</div>
+				<button
+					type="button"
+					className="h-full px-2 whitespace-nowrap cursor-pointer border-r border-slate-200 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
+					aria-label={`Filter by ${propertyNameToDisplay}`}
+				>
+					{selectedOptionsLabel}
+				</button>
 			</DropdownMenu.Trigger>
 
 			<DropdownMenu.Portal>
