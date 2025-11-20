@@ -6,7 +6,7 @@ import FilterDropdownCategory from "@/components/ui/filters/FilterDropdownCatego
 import { Input } from "@/components/ui/input";
 import { type ComboboxOption, RELATIONSHIP_TYPES } from "@/hooks/constants";
 import useFilters from "@/hooks/useFilters";
-import type { UseStateSetter } from "@/utils";
+import useNewFilterCreatedAtCutoff from "@/hooks/useNewFilterCreatedAtCutoff";
 import AppliedFilters from "./AppliedFilters";
 
 type SubItem = {
@@ -20,10 +20,9 @@ const SUB_ITEMS: SubItem[] = [
 	{ text: "Name Window…" },
 ];
 
-const FilterDropdown = (props: {
-	lastOpen: number;
-	setLastOpen: UseStateSetter<number>;
-}) => {
+const FilterDropdown = () => {
+	const { newFilterCreatedAtCutoff, setNewFilterCreatedAtCutoff } =
+		useNewFilterCreatedAtCutoff();
 	const firstSubTriggerRef = React.useRef<HTMLDivElement>(null);
 	const lastSubTriggerRef = React.useRef<HTMLDivElement>(null);
 	const [searchText, setSearchText] = React.useState("");
@@ -62,7 +61,7 @@ const FilterDropdown = (props: {
 	return (
 		<DropdownMenu.Root
 			onOpenChange={() => {
-				props.setLastOpen(Date.now());
+				setNewFilterCreatedAtCutoff(Date.now());
 			}}
 		>
 			<div
@@ -71,7 +70,7 @@ const FilterDropdown = (props: {
 			>
 				<DropdownMenu.Trigger asChild>
 					<div className="flex gap-2 items-center">
-						<AppliedFilters after={props.lastOpen} />
+						<AppliedFilters after={newFilterCreatedAtCutoff} />
 						<div>
 							<Button
 								variant="ghost"
@@ -108,7 +107,7 @@ const FilterDropdown = (props: {
 						/>
 						{subItemsToRender.map((subItem, index) => (
 							<FilterDropdownCategory
-								after={props.lastOpen}
+								after={newFilterCreatedAtCutoff}
 								key={subItem.value}
 								category={subItem}
 								triggerText={subItem.label}

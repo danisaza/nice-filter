@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import useFilters from "@/hooks/useFilters";
+import useNewFilterCreatedAtCutoff from "@/hooks/useNewFilterCreatedAtCutoff";
 import AppliedFilters from "./components/ui/filters/AppliedFilters";
 import FilterDropdown from "./components/ui/filters/FilterDropdown";
 import MatchTypeSwitcher from "./components/ui/filters/MatchTypeSwitcher";
@@ -7,7 +8,7 @@ import { FILTER_CATEGORIES } from "./hooks/filter-options-mock-data";
 
 export default function Filters() {
 	const { filterCategories, setFilterCategories } = useFilters();
-	const [lastOpen, setLastOpen] = useState<number>(() => Date.now());
+	const { newFilterCreatedAtCutoff } = useNewFilterCreatedAtCutoff();
 
 	// NOTE: This `useEffect` is populating the filter categories, which usually would involve fetching data from the
 	//       server.
@@ -22,8 +23,8 @@ export default function Filters() {
 
 	return (
 		<div className="flex gap-2 items-center flex-wrap w-fit">
-			<AppliedFilters before={lastOpen} />
-			<FilterDropdown lastOpen={lastOpen} setLastOpen={setLastOpen} />
+			<AppliedFilters before={newFilterCreatedAtCutoff} />
+			<FilterDropdown />
 			<MatchTypeSwitcher />
 		</div>
 	);

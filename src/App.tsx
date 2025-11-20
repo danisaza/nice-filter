@@ -7,6 +7,7 @@ import {
 	type Option,
 	RELATIONSHIP_TYPES,
 } from "./hooks/useFilters";
+import { NewFilterCreatedAtCutoffProvider } from "./hooks/useNewFilterCreatedAtCutoff";
 
 type Status = "Not Started" | "In Progress" | "Completed" | "Cancelled";
 type Priority = "Low" | "Medium" | "High";
@@ -170,8 +171,10 @@ const ROWS: Row[] = [
 export default function App() {
 	return (
 		<FiltersProvider>
-			<Filters />
-			<Grid rows={ROWS} />
+			<NewFilterCreatedAtCutoffProvider>
+				<Filters />
+				<Grid rows={ROWS} />
+			</NewFilterCreatedAtCutoffProvider>
 		</FiltersProvider>
 	);
 }
