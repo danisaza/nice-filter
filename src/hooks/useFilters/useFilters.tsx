@@ -1,8 +1,9 @@
 import {
 	createContext,
 	type ReactNode,
+	useCallback,
 	useContext,
-	useEffect,
+	useMemo,
 	useState,
 } from "react";
 import type { UseStateSetter } from "@/utils";
@@ -82,145 +83,178 @@ export function FiltersProvider<T>({
 	const [filterCategories, setFilterCategories] = useState<FilterOption<T>[]>(
 		[],
 	);
-	const [filteredRows, setFilteredRows] = useState<T[]>(rows);
 
-	useEffect(() => {
-		setFilteredRows(
-			rows.filter((row) =>
-				filterRowByMatchType(row, filters, predicate, matchType),
-			),
+	const filteredRows = useMemo(() => {
+		return rows.filter((row) =>
+			filterRowByMatchType(row, filters, predicate, matchType),
 		);
 	}, [filters, predicate, matchType, rows]);
 
-	const addFilter = ({
-		id,
-		categoryId,
-		options,
-		propertyNameSingular,
-		propertyNamePlural,
-		selectionType,
-		values,
-	}: Omit<TAppliedFilter, "relationship" | "createdAt">) => {
-		const newFilter: TAppliedFilter = {
+	const addFilter = useCallback(
+		({
 			id,
-			createdAt: Date.now(),
 			categoryId,
 			options,
 			propertyNameSingular,
 			propertyNamePlural,
 			selectionType,
 			values,
-			relationship:
-				selectionType === RELATIONSHIP_TYPES.RADIO
-					? RELATIONSHIPS.IS
-					: RELATIONSHIPS.INCLUDE,
-		};
-		setFilters((prev) => [...prev, newFilter]);
-	};
-
-	const removeFilter = (filterId: string) => {
-		setFilters((prev) => prev.filter((f) => f.id !== filterId));
-	};
-
-	const removeAllFilters = () => {
-		setFilters([]);
-	};
-
-	// TODO: this is a mess; create a separate useEffect to update the relationship
-	const updateFilterValues = (
-		filterId: string,
-		filterValueUpdate: FilterValueUpdate,
-	) => {
-		setFilters((prev) =>
-			prev.map((f) => {
-				if (f.id !== filterId) return f;
-
-				const newValues =
-					typeof filterValueUpdate === "function"
-						? filterValueUpdate(f.values)
-						: filterValueUpdate;
-
-				return {
-					...f,
-					values: newValues,
-					relationship: getNewRelationship(f, newValues),
-				};
-			}),
-		);
-	};
-
-	// use this for manual relationship updates (e.g. switch from "is" to "is not")
-	const updateFilterRelationship = (
-		filterId: string,
-		relationship: Relationship,
-	) => {
-		setFilters((prev) =>
-			prev.map((f) =>
-				f.id !== filterId
-					? f
-					: {
-							...f,
-							relationship,
-						},
-			),
-		);
-	};
-
-	const getFilter = (filterId: string) => {
-		return filters.find((f) => f.id === filterId);
-	};
-
-	const getFilterOrThrow = (filterId: string) => {
-		const result = getFilter(filterId);
-		if (!result) {
-			throw new Error(`Filter not found: ${filterId}`);
-		}
-		return result;
-	};
-
-	const optionsByFilterCategoryId = filterCategories.reduce(
-		(acc, f) => {
-			acc[f.id] = f.options;
-			return acc;
+		}: Omit<TAppliedFilter, "relationship" | "createdAt">) => {
+			const newFilter: TAppliedFilter = {
+				id,
+				createdAt: Date.now(),
+				categoryId,
+				options,
+				propertyNameSingular,
+				propertyNamePlural,
+				selectionType,
+				values,
+				relationship:
+					selectionType === RELATIONSHIP_TYPES.RADIO
+						? RELATIONSHIPS.IS
+						: RELATIONSHIPS.INCLUDE,
+			};
+			setFilters((prev) => [...prev, newFilter]);
 		},
-		{} as Record<string, ComboboxOption[]>,
+		[],
 	);
 
-	const getOptionsForFilterCategory = (filterCategoryId: string) => {
-		if (!Object.keys(optionsByFilterCategoryId).includes(filterCategoryId)) {
-			throw new Error(
-				`The provided id does not match any of the filter categories: ${filterCategoryId}`,
+	const removeFilter = useCallback((filterId: string) => {
+		setFilters((prev) => prev.filter((f) => f.id !== filterId));
+	}, []);
+
+	const removeAllFilters = useCallback(() => {
+		setFilters([]);
+	}, []);
+
+	const updateFilterValues = useCallback(
+		(filterId: string, filterValueUpdate: FilterValueUpdate) => {
+			setFilters((prev) =>
+				prev.map((f) => {
+					if (f.id !== filterId) return f;
+
+					const newValues =
+						typeof filterValueUpdate === "function"
+							? filterValueUpdate(f.values)
+							: filterValueUpdate;
+
+					return {
+						...f,
+						values: newValues,
+						relationship: getNewRelationship(f, newValues),
+					};
+				}),
 			);
-		}
-		return optionsByFilterCategoryId[filterCategoryId];
-	};
+		},
+		[],
+	);
 
-	const getPropertyNameToDisplay = (filterId: string) => {
-		const filter = getFilterOrThrow(filterId);
-		return filter.selectionType === RELATIONSHIP_TYPES.RADIO
-			? filter.propertyNameSingular
-			: filter.propertyNamePlural;
-	};
+	// use this for manual relationship updates (e.g. switch from "is" to "is not")
+	const updateFilterRelationship = useCallback(
+		(filterId: string, relationship: Relationship) => {
+			setFilters((prev) =>
+				prev.map((f) =>
+					f.id !== filterId
+						? f
+						: {
+								...f,
+								relationship,
+							},
+				),
+			);
+		},
+		[],
+	);
 
-	const value: FiltersContextType<T> = {
-		addFilter,
-		filterCategories,
-		filteredRows,
-		filters,
-		getFilter,
-		getFilterOrThrow,
-		getPropertyNameToDisplay,
-		getOptionsForFilterCategory,
-		hiddenRowCount: rows.length - filteredRows.length,
-		matchType,
-		removeFilter,
-		removeAllFilters,
-		setFilterCategories,
-		setMatchType,
-		totalRowCount: rows.length,
-		updateFilterRelationship,
-		updateFilterValues,
-	};
+	const getFilter = useCallback(
+		(filterId: string) => {
+			return filters.find((f) => f.id === filterId);
+		},
+		[filters],
+	);
+
+	const getFilterOrThrow = useCallback(
+		(filterId: string) => {
+			const result = getFilter(filterId);
+			if (!result) {
+				throw new Error(`Filter not found: ${filterId}`);
+			}
+			return result;
+		},
+		[getFilter],
+	);
+
+	const optionsByFilterCategoryId = useMemo(
+		() =>
+			filterCategories.reduce(
+				(acc, f) => {
+					acc[f.id] = f.options;
+					return acc;
+				},
+				{} as Record<string, ComboboxOption[]>,
+			),
+		[filterCategories],
+	);
+
+	const getOptionsForFilterCategory = useCallback(
+		(filterCategoryId: string) => {
+			if (!Object.keys(optionsByFilterCategoryId).includes(filterCategoryId)) {
+				throw new Error(
+					`The provided id does not match any of the filter categories: ${filterCategoryId}`,
+				);
+			}
+			return optionsByFilterCategoryId[filterCategoryId];
+		},
+		[optionsByFilterCategoryId],
+	);
+
+	const getPropertyNameToDisplay = useCallback(
+		(filterId: string) => {
+			const filter = getFilterOrThrow(filterId);
+			return filter.selectionType === RELATIONSHIP_TYPES.RADIO
+				? filter.propertyNameSingular
+				: filter.propertyNamePlural;
+		},
+		[getFilterOrThrow],
+	);
+
+	const value: FiltersContextType<T> = useMemo(
+		() => ({
+			addFilter,
+			filterCategories,
+			filteredRows,
+			filters,
+			getFilter,
+			getFilterOrThrow,
+			getPropertyNameToDisplay,
+			getOptionsForFilterCategory,
+			hiddenRowCount: rows.length - filteredRows.length,
+			matchType,
+			removeFilter,
+			removeAllFilters,
+			setFilterCategories,
+			setMatchType,
+			totalRowCount: rows.length,
+			updateFilterRelationship,
+			updateFilterValues,
+		}),
+		[
+			addFilter,
+			filterCategories,
+			filteredRows,
+			filters,
+			getFilter,
+			getFilterOrThrow,
+			getPropertyNameToDisplay,
+			getOptionsForFilterCategory,
+			matchType,
+			removeFilter,
+			removeAllFilters,
+			rows.length,
+			updateFilterRelationship,
+			updateFilterValues,
+		],
+	);
 
 	return <context.Provider value={value}>{children}</context.Provider>;
 }
