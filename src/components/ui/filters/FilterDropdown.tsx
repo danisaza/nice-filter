@@ -25,11 +25,14 @@ const SUB_ITEMS: SubItem[] = [
 const FilterDropdown = ({
 	dropdownMenuOpen,
 	setDropdownMenuOpen,
+	renderTrigger,
 }: {
 	dropdownMenuOpen: boolean;
 	setDropdownMenuOpen: UseStateSetter<boolean>;
+	renderTrigger: () => React.ReactNode;
 }) => {
 	const { newFilterCreatedAtCutoff } = useNewFilterCreatedAtCutoff();
+	const { filters } = useFilters();
 	const firstSubTriggerRef = React.useRef<HTMLDivElement>(null);
 	const lastSubTriggerRef = React.useRef<HTMLDivElement>(null);
 	const [searchText, setSearchText] = React.useState("");
@@ -56,7 +59,6 @@ const FilterDropdown = ({
 	const focusSearchInput = () => {
 		const searchInput = document.getElementById("search-input");
 		if (searchInput) {
-			console.log("focusing search input");
 			searchInput.focus();
 		}
 	};
@@ -65,24 +67,33 @@ const FilterDropdown = ({
 		filterCategory.label.toLowerCase().includes(searchText.toLowerCase()),
 	);
 
+	// render the trigger if there are no "under-construction" filters
+	const shouldRenderTrigger = filters.every(
+		(filter) => filter.createdAt < newFilterCreatedAtCutoff,
+	);
+
 	return (
 		<div className="contents">
-			<AppliedFilters after={newFilterCreatedAtCutoff} />
+			<AppliedFilters
+				after={newFilterCreatedAtCutoff}
+				renderPrefixElement={renderTrigger}
+			/>
 			<Button
 				onClick={() => setDropdownMenuOpen((prev) => !prev)}
 				variant="ghost"
 				className={twMerge(
 					"group cursor-default data-[state=open]:bg-accent data-[state=open]:text-accent-foreground",
-					dropdownMenuOpen ? "bg-accent text-accent-foreground" : "",
+					dropdownMenuOpen ? "relative bg-accent text-accent-foreground" : "",
 				)}
 			>
+				{shouldRenderTrigger ? renderTrigger() : null}
 				<ListFilter className="w-4 h-4 group-hover:text-accent-foreground text-muted-foreground group-data-[state=open]:text-accent-foreground" />{" "}
 				Filter
 			</Button>
 			<DropdownMenu.Content
 				align="start"
 				className="border border-gray-300 w-[260px] rounded bg-white shadow-md data-[state=open]:data-[side=bottom]:animate-slideUpAndFade data-[state=open]:data-[side=left]:animate-slideRightAndFade data-[state=open]:data-[side=right]:animate-slideLeftAndFade data-[state=open]:data-[side=top]:animate-slideDownAndFade"
-				sideOffset={5}
+				sideOffset={25}
 				alignOffset={0}
 			>
 				<Input

@@ -5,24 +5,20 @@ import AppliedFilter from "./AppliedFilter";
 const AppliedFilters = ({
 	before,
 	after,
-	renderSuffixElement,
-}: { renderSuffixElement?: () => ReactNode } & (
+	renderPrefixElement,
+}: { renderPrefixElement?: () => ReactNode } & (
 	| {
 			before: number;
 			after?: undefined;
-			renderSuffixElement?: () => ReactNode;
+			renderPrefixElement?: undefined;
 	  }
 	| {
 			before?: undefined;
 			after: number;
-			renderSuffixElement?: undefined;
+			renderPrefixElement: () => ReactNode;
 	  }
 )) => {
 	const { filters } = useFilters();
-
-	console.log("[exp] after", after);
-
-	console.log("[exp] filters", filters);
 
 	const filtersToDisplay = filters.filter((filter) => {
 		if (before) {
@@ -34,26 +30,16 @@ const AppliedFilters = ({
 		return true;
 	});
 
-	// if (
-	// 	renderSuffixElement &&
-	// 	filtersToDisplay.length === 0 &&
-	// 	filters.length > 0
-	// ) {
-	// 	console.log("checkpoint A");
-	// 	return renderSuffixElement();
-	// }
-
-	console.log("checkpoint B");
 	return (
 		<div className="contents">
 			{filtersToDisplay
 				.sort((a, b) => a.createdAt - b.createdAt)
 				.map((filter, index) => {
-					if (index === filtersToDisplay.length - 1 && renderSuffixElement) {
+					if (index === 0 && renderPrefixElement) {
 						return (
-							<div className="relative bg-purple-500">
+							<div className="relative">
+								{renderPrefixElement()}
 								<AppliedFilter key={filter.id} id={filter.id} />
-								{renderSuffixElement()}
 							</div>
 						);
 					}

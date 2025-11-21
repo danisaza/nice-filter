@@ -18,13 +18,12 @@ const FilterDropdownCategory = React.forwardRef<
 	props: FilterDropdownCategoryProps,
 	forwardedRef,
 ) {
-	console.log("[test] FilterDropdownCategory after:", props.after);
 	return (
 		<DropdownMenu.Sub {...props}>
 			<DropdownMenu.SubTrigger
 				ref={forwardedRef}
 				onKeyDown={props.onKeyDown}
-				className="px-2 py-1.5 h-10 relative flex cursor-default gap-2 select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled=true]:pointer-events-none data-[highlighted]:bg-accent data-highlighted:data-[state=open]:bg-accent data-[state=open]:bg-accent/70 data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50 data-[highlighted]:text-accent-foreground data-[state=open]:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+				className="h-10 relative flex cursor-default gap-2 select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled=true]:pointer-events-none data-[highlighted]:bg-accent data-highlighted:data-[state=open]:bg-accent data-[state=open]:bg-accent/70 data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50 data-[highlighted]:text-accent-foreground data-[state=open]:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
 			>
 				{props.triggerText}
 				<div className="ml-auto pl-5 text-mauve11 group-data-[disabled]:text-mauve8 group-data-[highlighted]:text-white">

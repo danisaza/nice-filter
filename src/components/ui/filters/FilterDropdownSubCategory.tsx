@@ -52,11 +52,9 @@ const FilterDropdownSubCategory = forwardRef<
 	if (!after && !standalone) {
 		throw new Error("`after` prop is required when `standalone` is false");
 	}
-	console.log("[exp] standalone", standalone);
 	const relevantFilter = standalone
 		? getFilter(filterId)
 		: getNewFilterByCategoryId(after, categoryId, filters);
-	console.log("[exp] relevantFilter", relevantFilter);
 
 	if (
 		standalone &&
