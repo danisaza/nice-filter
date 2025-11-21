@@ -1,10 +1,10 @@
 import { v4 as uuidv4 } from "uuid";
-import type { MyRow } from "@/App";
 import type {
 	ComboboxOption,
 	FilterOption,
 } from "@/hooks/useFilters/constants";
 import { RELATIONSHIP_TYPES } from "@/hooks/useFilters/constants";
+import type { MyRow } from "@/mock-data/grid-data";
 
 const STATUS_OPTIONS: ComboboxOption[] = [
 	{ label: "Not Started", value: "Not Started", id: "1" },

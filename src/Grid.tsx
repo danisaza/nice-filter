@@ -1,6 +1,6 @@
 import { X } from "lucide-react";
-import type { Priority, Status } from "@/App";
 import { useFilters } from "@/App";
+import type { Priority, Status } from "@/mock-data/grid-data";
 import { Button } from "./components/ui/button";
 
 export default function Grid() {

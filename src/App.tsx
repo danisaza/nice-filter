@@ -6,7 +6,7 @@ import createFiltersContext, {
 	FiltersProvider,
 } from "@/hooks/useFilters/useFilters";
 import { NewFilterCreatedAtCutoffProvider } from "@/hooks/useNewFilterCreatedAtCutoff";
-import type { MyRow } from "@/mock-data/grid-data";
+import { type MyRow, ROWS } from "@/mock-data/grid-data";
 
 const GETTERS = {
 	status: (row: MyRow) => row.status,
