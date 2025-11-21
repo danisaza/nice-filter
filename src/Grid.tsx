@@ -1,23 +1,10 @@
 import { X } from "lucide-react";
-import type { Row } from "./App";
+import type { Priority, Status } from "@/App";
+import { useFilters } from "@/App";
 import { Button } from "./components/ui/button";
-import {
-	CHECKBOX_SELECTION_RELATIONSHIPS,
-	MATCH_TYPES,
-	type MatchType,
-	RADIO_SELECTION_RELATIONSHIPS,
-	RELATIONSHIP_TYPES,
-	RELATIONSHIPS,
-	type Relationship,
-	type RelationshipType,
-	type TAppliedFilter,
-} from "./hooks/constants";
-import useFilters from "./hooks/useFilters";
 
-export default function Grid({ rows }: { rows: Row[] }) {
-	const { filters, matchType, removeAllFilters } = useFilters();
-	const filteredRows = filterRows(rows, filters, matchType);
-	const numRowsHidden = rows.length - filteredRows.length;
+export default function Grid() {
+	const { removeAllFilters, filteredRows, hiddenRowCount } = useFilters();
 	return (
 		<div className="w-full">
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
@@ -76,11 +63,11 @@ export default function Grid({ rows }: { rows: Row[] }) {
 					</div>
 				))}
 			</div>
-			{numRowsHidden > 0 ? (
+			{hiddenRowCount > 0 ? (
 				<div className="flex justify-center items-center gap-4 mt-4">
 					<div className="text-sm text-gray-500">
 						<span className="font-bold">
-							{numRowsHidden} {numRowsHidden === 1 ? "item" : "items"}
+							{hiddenRowCount} {hiddenRowCount === 1 ? "item" : "items"}
 						</span>{" "}
 						hidden by filters
 					</div>
@@ -96,145 +83,6 @@ export default function Grid({ rows }: { rows: Row[] }) {
 			) : null}
 		</div>
 	);
-}
-
-function filterRows(
-	rows: Row[],
-	filters: TAppliedFilter[],
-	matchType: MatchType,
-) {
-	if (filters.length === 0) {
-		return rows;
-	}
-	return matchType === MATCH_TYPES.ALL
-		? filterRowsByAll(rows, filters)
-		: filterRowsByAny(rows, filters);
-}
-
-function filterRowsByAll(rows: Row[], filters: TAppliedFilter[]) {
-	return rows.filter((row) => {
-		return filters.every((filter) => {
-			return filterRow(row, filter);
-		});
-	});
-}
-
-function filterRowsByAny(rows: Row[], filters: TAppliedFilter[]) {
-	return rows.filter((row) => {
-		return filters.some((filter) => {
-			return filterRow(row, filter);
-		});
-	});
-}
-
-const GETTERS = {
-	status: (row: Row) => row.status,
-	priority: (row: Row) => row.priority,
-	tag: (row: Row) => row.tags,
-	assignee: (row: Row) => row.assignee,
-};
-
-/** Returns `true` if the row should be displayed, according to the filter.
- *
- *  If an error is encountered, it returns `true` so that the row is still displayed */
-function filterRow(row: Row, filter: TAppliedFilter) {
-	const getter: (row: Row) => any =
-		GETTERS[filter.propertyNameSingular as keyof typeof GETTERS] ??
-		(() =>
-			row[filter.propertyNameSingular as keyof Row] ??
-			row[filter.propertyNamePlural as keyof Row]);
-	const selectionType: RelationshipType = filter.selectionType;
-	if (
-		selectionType !== RELATIONSHIP_TYPES.RADIO &&
-		selectionType !== RELATIONSHIP_TYPES.CHECKBOXES
-	) {
-		console.error(`Invalid selection type: ${selectionType}`);
-		return true;
-	}
-
-	// if there are zero values selected, it's equivalent to not having the filter applied
-	if (filter.values.length === 0) {
-		return true;
-	}
-
-	if (selectionType === RELATIONSHIP_TYPES.RADIO) {
-		const relationshipOptions: readonly Relationship[] =
-			filter.values.length <= 1
-				? RADIO_SELECTION_RELATIONSHIPS["ONE"]
-				: RADIO_SELECTION_RELATIONSHIPS["MANY"];
-		const isRelationshipValid = relationshipOptions.includes(
-			filter.relationship,
-		);
-		if (!isRelationshipValid) {
-			console.error(`Invalid relationship: ${filter.relationship}`);
-			return true; // default to true so that at least the user can see the row
-		}
-
-		const rowValue = getter(row);
-		if (filter.relationship === RELATIONSHIPS.IS) {
-			if (filter.values.length !== 1) {
-				console.error(
-					`Invalid number of values for relationship ${filter.relationship}: ${filter.values.length}`,
-				);
-				return filter.values.some((value) => rowValue === value.value); // sensible default
-			}
-			return rowValue === filter.values[0].value;
-		}
-
-		if (filter.relationship === RELATIONSHIPS.IS_ANY_OF) {
-			return filter.values.some((value) => rowValue === value.value);
-		}
-
-		if (filter.relationship === RELATIONSHIPS.IS_NOT) {
-			return !filter.values.some((value) => rowValue === value.value);
-		}
-
-		console.error(`Invalid relationship: ${filter.relationship}`);
-		return true;
-	} else if (selectionType === RELATIONSHIP_TYPES.CHECKBOXES) {
-		const relationshipOptions: readonly Relationship[] =
-			filter.values.length === 1
-				? CHECKBOX_SELECTION_RELATIONSHIPS["ONE"]
-				: CHECKBOX_SELECTION_RELATIONSHIPS["MANY"];
-		const isRelationshipValid = relationshipOptions.includes(
-			filter.relationship,
-		);
-		if (!isRelationshipValid) {
-			console.error(`Invalid relationship: ${filter.relationship}`);
-			return true; // default to true so that at least the user can see the row
-		}
-
-		const rowValues = getter(row);
-		if (filter.relationship === RELATIONSHIPS.INCLUDE) {
-			return filter.values.some((value) => rowValues.includes(value.value));
-		}
-
-		if (filter.relationship === RELATIONSHIPS.DO_NOT_INCLUDE) {
-			return !filter.values.some((value) => rowValues.includes(value.value));
-		}
-
-		if (filter.relationship === RELATIONSHIPS.INCLUDE_ALL_OF) {
-			return filter.values.every((value) => rowValues.includes(value.value));
-		}
-
-		if (filter.relationship === RELATIONSHIPS.INCLUDE_ANY_OF) {
-			return filter.values.some((value) => rowValues.includes(value.value));
-		}
-
-		if (filter.relationship === RELATIONSHIPS.EXCLUDE_IF_ALL) {
-			return !filter.values.every((value) => rowValues.includes(value.value));
-		}
-
-		if (filter.relationship === RELATIONSHIPS.EXCLUDE_IF_ANY_OF) {
-			return !filter.values.some((value) => rowValues.includes(value.value));
-		}
-
-		console.error(`Invalid relationship: ${filter.relationship}`);
-		return true;
-	} else {
-		console.error(`Invalid selection type: ${selectionType}`);
-		return true;
-	}
 }
 
 // Helper functions for color classes

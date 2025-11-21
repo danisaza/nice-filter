@@ -1,6 +1,6 @@
+import { useFilters } from "@/App.tsx";
 import { Button } from "@/components/ui/button";
-import { MATCH_TYPES } from "@/hooks/constants";
-import useFilters from "@/hooks/useFilters";
+import { MATCH_TYPES } from "@/hooks/useFilters/constants";
 
 export default function MatchTypeSwitcher() {
 	const { filters, matchType, setMatchType } = useFilters();

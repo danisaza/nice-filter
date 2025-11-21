@@ -1,13 +1,13 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { X } from "lucide-react";
+import { useFilters } from "@/App.tsx";
 import FilterDropdownSubCategory from "@/components/ui/filters/FilterDropdownSubCategory";
 import {
 	CHECKBOX_SELECTION_RELATIONSHIPS,
 	RADIO_SELECTION_RELATIONSHIPS,
 	RELATIONSHIP_TYPES,
 	type Relationship,
-} from "@/hooks/constants";
-import useFilters from "@/hooks/useFilters";
+} from "@/hooks/useFilters/constants";
 
 const dropdownMenuContentClassNames =
 	"border border-slate-300 min-w-[220px] bg-white rounded-md p-1 shadow-lg animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2";

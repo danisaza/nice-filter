@@ -1,12 +1,15 @@
-import "./App.css";
-import Filters from "./Filters";
-import Grid from "./Grid";
-import { FiltersProvider } from "./hooks/useFilters";
-import { NewFilterCreatedAtCutoffProvider } from "./hooks/useNewFilterCreatedAtCutoff";
+import "@/App.css";
+import Filters from "@/Filters";
+import Grid from "@/Grid";
+import type { Predicate } from "@/hooks/useFilters/constants";
+import createFiltersContext, {
+	FiltersProvider,
+} from "@/hooks/useFilters/useFilters";
+import { NewFilterCreatedAtCutoffProvider } from "@/hooks/useNewFilterCreatedAtCutoff";
 
-type Status = "Not Started" | "In Progress" | "Completed" | "Cancelled";
-type Priority = "Low" | "Medium" | "High";
-type Tag =
+export type Status = "Not Started" | "In Progress" | "Completed" | "Cancelled";
+export type Priority = "Low" | "Medium" | "High";
+export type Tag =
 	| "Bug"
 	| "Feature"
 	| "Documentation"
@@ -15,7 +18,9 @@ type Tag =
 	| "Other";
 type Assignee = "John Doe" | "Jane Smith" | "Alice Johnson" | "Bob Brown";
 
-export type Row = {
+// NOTE: I'm calling this `MyRow` to avoid confusion with the `Row` type from `useFilters`, and to stress that this is
+//       the shape of the _user's_ data.
+export type MyRow = {
 	id: string;
 	text: string;
 	status: Status;
@@ -24,7 +29,7 @@ export type Row = {
 	priority: Priority;
 };
 
-const ROWS: Row[] = [
+const ROWS: MyRow[] = [
 	{
 		id: "1",
 		text: "Add polish to this page",
@@ -163,12 +168,38 @@ const ROWS: Row[] = [
 	},
 ];
 
+const GETTERS = {
+	status: (row: MyRow) => row.status,
+	priority: (row: MyRow) => row.priority,
+	tag: (row: MyRow) => row.tags,
+	assignee: (row: MyRow) => row.assignee,
+};
+
+const myPredicate: Predicate<MyRow> = (row, filter, filterValue) => {
+	const getter =
+		GETTERS[filter.propertyNameSingular as keyof typeof GETTERS] ??
+		(() =>
+			row[filter.propertyNameSingular as keyof MyRow] ??
+			row[filter.propertyNamePlural as keyof MyRow]);
+
+	const rowValue = getter(row);
+	return rowValue === filterValue.value;
+};
+
+const [useFilters, FiltersContext] = createFiltersContext<MyRow>();
+
+export { useFilters };
+
 export default function App() {
 	return (
-		<FiltersProvider>
+		<FiltersProvider
+			context={FiltersContext}
+			predicate={myPredicate}
+			rows={ROWS}
+		>
 			<NewFilterCreatedAtCutoffProvider>
 				<Filters />
-				<Grid rows={ROWS} />
+				<Grid />
 			</NewFilterCreatedAtCutoffProvider>
 		</FiltersProvider>
 	);

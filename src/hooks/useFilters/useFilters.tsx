@@ -1,9 +1,16 @@
-import { createContext, type ReactNode, useContext, useState } from "react";
+import {
+	createContext,
+	type ReactNode,
+	useContext,
+	useEffect,
+	useState,
+} from "react";
 import type { UseStateSetter } from "@/utils";
 import type {
 	ComboboxOption,
 	FilterOption,
 	MatchType,
+	Predicate,
 	Relationship,
 	RelationshipType,
 	TAppliedFilter,
@@ -15,6 +22,8 @@ import {
 	RELATIONSHIP_TYPES,
 	RELATIONSHIPS,
 } from "./constants";
+import { filterRowByMatchType } from "./filtering-functions";
+import { getNewRelationship } from "./utils";
 
 export function getRelationshipOptions(selectionType: RelationshipType) {
 	return selectionType === RELATIONSHIP_TYPES.RADIO
@@ -26,21 +35,25 @@ type FilterValueUpdate =
 	| ComboboxOption[]
 	| ((values: ComboboxOption[]) => ComboboxOption[]);
 
-type FiltersContextType = {
+type FiltersContextType<T> = {
 	addFilter: (
 		filter: Omit<TAppliedFilter, "relationship" | "createdAt">,
 	) => void;
 	filters: TAppliedFilter[];
-	filterCategories: FilterOption[];
+	// TODO: Consider updating filterCategories here to include a second type parameter for the property key
+	filterCategories: FilterOption<T>[];
+	filteredRows: T[];
 	getFilter: (filterId: string) => TAppliedFilter | undefined;
 	getFilterOrThrow: (filterId: string) => TAppliedFilter;
 	getOptionsForFilterCategory: (filterCategoryId: string) => ComboboxOption[];
 	getPropertyNameToDisplay: (filterId: string) => string;
+	hiddenRowCount: number;
 	matchType: MatchType;
 	removeAllFilters: () => void;
 	removeFilter: (filterId: string) => void;
-	setFilterCategories: UseStateSetter<FilterOption[]>;
+	setFilterCategories: UseStateSetter<FilterOption<T>[]>;
 	setMatchType: UseStateSetter<MatchType>;
+	totalRowCount: number;
 	updateFilterRelationship: (
 		filterId: string,
 		relationship: Relationship,
@@ -51,65 +64,33 @@ type FiltersContextType = {
 	) => void;
 };
 
-const FiltersContext = createContext<FiltersContextType | null>(null);
+type FiltersProviderProps<T> = {
+	children: ReactNode;
+	predicate: Predicate<T>;
+	rows: T[];
+	context: React.Context<FiltersContextType<T> | null>;
+};
 
-function getNewRelationship(
-	filter: TAppliedFilter,
-	newValues: ComboboxOption[],
-): Relationship {
-	if (filter.values.length === newValues.length) {
-		return filter.relationship;
-	}
-
-	const newlyAppliedFilter = filter.values.length === 0;
-
-	if (newlyAppliedFilter) {
-		return newValues.length === 1 ? RELATIONSHIPS.IS : RELATIONSHIPS.IS_ANY_OF;
-	}
-
-	if (newValues.length === 1) {
-		// Finds the new relationship based on the previous relationship when downsizing from N to 1 selected value
-		const downsizingMap = {
-			[RELATIONSHIPS.INCLUDE_ALL_OF]: RELATIONSHIPS.INCLUDE,
-			[RELATIONSHIPS.INCLUDE_ANY_OF]: RELATIONSHIPS.INCLUDE,
-			[RELATIONSHIPS.EXCLUDE_IF_ANY_OF]: RELATIONSHIPS.DO_NOT_INCLUDE,
-			[RELATIONSHIPS.EXCLUDE_IF_ALL]: RELATIONSHIPS.DO_NOT_INCLUDE,
-			[RELATIONSHIPS.IS_ANY_OF]: RELATIONSHIPS.IS,
-			[RELATIONSHIPS.IS_NOT]: RELATIONSHIPS.IS_NOT,
-			// -----------------
-			// We don't expect these cases to happen, but just coding defensively here...
-			[RELATIONSHIPS.IS]: RELATIONSHIPS.IS,
-			[RELATIONSHIPS.INCLUDE]: RELATIONSHIPS.INCLUDE,
-			[RELATIONSHIPS.DO_NOT_INCLUDE]: RELATIONSHIPS.IS_NOT,
-		};
-		return downsizingMap[filter.relationship];
-	}
-
-	if (newValues.length > 1) {
-		// Finds the new relationship based on the previous relationship when upsizing from 1 to N selected values
-		const upsizingMap: Record<Relationship, Relationship> = {
-			[RELATIONSHIPS.IS]: RELATIONSHIPS.IS_ANY_OF,
-			[RELATIONSHIPS.IS_NOT]: RELATIONSHIPS.IS_NOT,
-			[RELATIONSHIPS.INCLUDE]: RELATIONSHIPS.INCLUDE_ALL_OF,
-			[RELATIONSHIPS.DO_NOT_INCLUDE]: RELATIONSHIPS.EXCLUDE_IF_ANY_OF,
-			// -----------------
-			// We don't expect these cases to happen, but just coding defensively here...
-			[RELATIONSHIPS.IS_ANY_OF]: RELATIONSHIPS.IS_ANY_OF,
-			[RELATIONSHIPS.EXCLUDE_IF_ANY_OF]: RELATIONSHIPS.EXCLUDE_IF_ANY_OF,
-			[RELATIONSHIPS.INCLUDE_ALL_OF]: RELATIONSHIPS.INCLUDE_ALL_OF,
-			[RELATIONSHIPS.INCLUDE_ANY_OF]: RELATIONSHIPS.INCLUDE_ANY_OF,
-			[RELATIONSHIPS.EXCLUDE_IF_ALL]: RELATIONSHIPS.EXCLUDE_IF_ALL,
-		};
-		return upsizingMap[filter.relationship];
-	}
-
-	return filter.relationship;
-}
-
-export function FiltersProvider({ children }: { children: ReactNode }) {
+export function FiltersProvider<T>({
+	children,
+	predicate,
+	rows,
+	context,
+}: FiltersProviderProps<T>) {
 	const [filters, setFilters] = useState<TAppliedFilter[]>([]);
 	const [matchType, setMatchType] = useState<MatchType>(MATCH_TYPES.ANY);
-	const [filterCategories, setFilterCategories] = useState<FilterOption[]>([]);
+	const [filterCategories, setFilterCategories] = useState<FilterOption<T>[]>(
+		[],
+	);
+	const [filteredRows, setFilteredRows] = useState<T[]>(rows);
+
+	useEffect(() => {
+		setFilteredRows(
+			rows.filter((row) =>
+				filterRowByMatchType(row, filters, predicate, matchType),
+			),
+		);
+	}, [filters, predicate, matchType, rows]);
 
 	const addFilter = ({
 		id,
@@ -221,47 +202,56 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
 			: filter.propertyNamePlural;
 	};
 
-	const value: FiltersContextType = {
+	const value: FiltersContextType<T> = {
 		addFilter,
 		filterCategories,
+		filteredRows,
 		filters,
 		getFilter,
 		getFilterOrThrow,
 		getPropertyNameToDisplay,
 		getOptionsForFilterCategory,
+		hiddenRowCount: rows.length - filteredRows.length,
 		matchType,
 		removeFilter,
 		removeAllFilters,
 		setFilterCategories,
 		setMatchType,
+		totalRowCount: rows.length,
 		updateFilterRelationship,
 		updateFilterValues,
 	};
 
-	return (
-		<FiltersContext.Provider value={value}>{children}</FiltersContext.Provider>
-	);
+	return <context.Provider value={value}>{children}</context.Provider>;
 }
 
-// FUTURE IMPROVEMENTS:
-// --------------------
-// This hook could eventually take a `fetchFilterCategories` function as an argument and handle the
-// data-fetching on behalf of the caller, using something like react-query to handle the caching and state management.
-//
-// For now, I'll just let the caller handle the data-fetching.
-//
-// ---
-// Also, note that this hook currently assumes that all of the filter categories can be provided at once.
-// This assumption may not hold in situations where a filter could take on a large number of values - like a task
-// management system with hundreds of possible task owners.
-//
-// In cases like that, it would be sensible to allow the caller to provide a function that fetches all of the owners
-// that the tasks could be filtered by, in a paginated way. (to follow the above example)
-export default function useFilters() {
-	const context = useContext(FiltersContext);
-	if (!context) {
-		throw new Error("useFilters must be used within a FiltersProvider");
-	}
+/**
+ * Note: We don't have the user's data at instantiation time, so we can't instantiate the context with the right type.
+ *
+ * To get around this, we instantiate it with a less specific type and keep a reference to it by capturing it in a closure.
+ *
+ * We give the caller a reference to the context, and we use validation logic inside of `useFilters` to confirm that
+ * they have, in fact, provided a non-null value.
+ *
+ * This way, we have a guarantee that `useFilters` will return the correct type, even though we don't know the shape of
+ * the user's data upfront.
+ */
+const createFiltersContext = <T,>() => {
+	const context = createContext<FiltersContextType<T> | null>(null);
 
-	return context;
-}
+	const useFilters = (): FiltersContextType<T> => {
+		// `context` is caught in the closure of `useFilters`, so we keep a reference to it,
+		// allowing us to not specify its final type at instantiation time and let the user
+		const contextValue = useContext(context);
+
+		if (!contextValue) {
+			throw new Error("useFilters must be used within a FiltersProvider");
+		}
+
+		return contextValue;
+	};
+
+	return [useFilters, context] as const;
+};
+
+export default createFiltersContext;

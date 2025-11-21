@@ -1,6 +1,10 @@
 import { v4 as uuidv4 } from "uuid";
-import type { ComboboxOption, FilterOption } from "./constants";
-import { RELATIONSHIP_TYPES } from "./constants";
+import type { MyRow } from "@/App";
+import type {
+	ComboboxOption,
+	FilterOption,
+} from "@/hooks/useFilters/constants";
+import { RELATIONSHIP_TYPES } from "@/hooks/useFilters/constants";
 
 const STATUS_OPTIONS: ComboboxOption[] = [
 	{ label: "Not Started", value: "Not Started", id: "1" },
@@ -31,7 +35,7 @@ const ASSIGNEE_OPTIONS: ComboboxOption[] = [
 	{ label: "Bob Brown", value: "Bob Brown", id: uuidv4() },
 ];
 
-export const FILTER_CATEGORIES: FilterOption[] = [
+export const FILTER_CATEGORIES: FilterOption<MyRow>[] = [
 	{
 		id: uuidv4(),
 		selectionType: RELATIONSHIP_TYPES.RADIO,

@@ -27,13 +27,21 @@ export const RELATIONSHIP_TYPES = {
 export type RelationshipType =
 	(typeof RELATIONSHIP_TYPES)[keyof typeof RELATIONSHIP_TYPES];
 
-export type FilterOption = {
+/**
+ * Type helper that ensures at least one of `propertyNameSingular` or `propertyNamePlural`
+ * must be a key of type T.
+ */
+type AtLeastOnePropertyKey<T, K extends keyof T = keyof T> =
+	| { propertyNameSingular: K; propertyNamePlural: K | string }
+	| { propertyNamePlural: K; propertyNameSingular: K | string };
+
+export type FilterOption<T, K extends keyof T = keyof T> = {
 	id: string;
 	selectionType: RelationshipType;
-	propertyNameSingular: string; // e.g. "status"
-	propertyNamePlural: string; // e.g. "statuses"
+	propertyNameSingular: K | string; // e.g. "status"
+	propertyNamePlural: K | string; // e.g. "statuses"
 	options: ComboboxOption[];
-};
+} & AtLeastOnePropertyKey<T, K>;
 
 // For fields like "status" where a row can only have one value
 export const RADIO_SELECTION_RELATIONSHIPS = {
@@ -54,6 +62,12 @@ export const CHECKBOX_SELECTION_RELATIONSHIPS = {
 } as const;
 
 export type Relationship = (typeof RELATIONSHIPS)[keyof typeof RELATIONSHIPS];
+
+export type Predicate<T> = (
+	row: T,
+	filter: TAppliedFilter,
+	filterValue: TAppliedFilter["values"][number],
+) => boolean;
 
 export type TAppliedFilter = {
 	id: string;

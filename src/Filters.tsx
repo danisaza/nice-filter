@@ -1,7 +1,7 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
-import useFilters from "@/hooks/useFilters";
+import { useFilters } from "@/App.tsx";
 import useNewFilterCreatedAtCutoff from "@/hooks/useNewFilterCreatedAtCutoff";
 import AppliedFilters from "./components/ui/filters/AppliedFilters";
 import FilterDropdown from "./components/ui/filters/FilterDropdown";

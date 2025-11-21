@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import useFilters from "@/hooks/useFilters";
+import { useFilters } from "@/App.tsx";
 import AppliedFilter from "./AppliedFilter";
 
 const AppliedFilters = ({
@@ -37,7 +37,7 @@ const AppliedFilters = ({
 				.map((filter, index) => {
 					if (index === 0 && renderPrefixElement) {
 						return (
-							<div className="relative">
+							<div key={filter.id} className="relative">
 								{renderPrefixElement()}
 								<AppliedFilter key={filter.id} id={filter.id} />
 							</div>

@@ -1,9 +1,12 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { forwardRef } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { useFilters } from "@/App.tsx";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { ComboboxOption, TAppliedFilter } from "@/hooks/constants";
-import useFilters from "@/hooks/useFilters";
+import type {
+	ComboboxOption,
+	TAppliedFilter,
+} from "@/hooks/useFilters/constants";
 
 // NOTE: standalone indicates that the subcategory is NOT being displayed in the filter-builder
 //       (i.e. the user is updating an existing filter from an AppliedFilter dropdown)
