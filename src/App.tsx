@@ -1,12 +1,7 @@
 import "./App.css";
-import FilterDropdown from "./components/ui/filters/FilterDropdown";
-import Filters, { type FilterOption } from "./Filters";
+import Filters from "./Filters";
 import Grid from "./Grid";
-import {
-	FiltersProvider,
-	type Option,
-	RELATIONSHIP_TYPES,
-} from "./hooks/useFilters";
+import { FiltersProvider } from "./hooks/useFilters";
 import { NewFilterCreatedAtCutoffProvider } from "./hooks/useNewFilterCreatedAtCutoff";
 
 type Status = "Not Started" | "In Progress" | "Completed" | "Cancelled";
