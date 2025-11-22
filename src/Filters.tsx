@@ -1,5 +1,5 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { useFilters } from "@/App.tsx";
 import useNewFilterCreatedAtCutoff from "@/hooks/useNewFilterCreatedAtCutoff";
@@ -25,10 +25,13 @@ export default function Filters() {
 		setFilterCategories(FILTER_CATEGORIES);
 	});
 
-	const renderTrigger = () => (
-		<DropdownMenu.Trigger asChild>
-			<div className="absolute w-0 h-0 left-0 inset-y-1/2"></div>
-		</DropdownMenu.Trigger>
+	const renderTrigger = useCallback(
+		() => (
+			<DropdownMenu.Trigger asChild>
+				<div className="absolute w-0 h-0 left-0 inset-y-1/2"></div>
+			</DropdownMenu.Trigger>
+		),
+		[],
 	);
 
 	return (

@@ -1,5 +1,6 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { X } from "lucide-react";
+import { memo } from "react";
 import { useFilters } from "@/App.tsx";
 import FilterDropdownSubCategory from "@/components/ui/filters/FilterDropdownSubCategory";
 import {
@@ -7,41 +8,39 @@ import {
 	RADIO_SELECTION_RELATIONSHIPS,
 	RELATIONSHIP_TYPES,
 	type Relationship,
+	type TAppliedFilter,
 } from "@/hooks/useFilters/constants";
 
 const dropdownMenuContentClassNames =
 	"border border-slate-300 min-w-[220px] bg-white rounded-md p-1 shadow-lg animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2";
 
-const AppliedFilter = ({ id }: { id: string }) => {
+const AppliedFilter = memo(({ filter }: { filter: TAppliedFilter }) => {
 	const { getPropertyNameToDisplay } = useFilters();
-	const propertyNameToDisplay = getPropertyNameToDisplay(id);
+	const propertyNameToDisplay = getPropertyNameToDisplay(filter.id);
 
 	return (
 		<fieldset
 			name={`${propertyNameToDisplay} filter`}
 			className="border border-slate-300 text-slate-900 rounded inline-flex items-center h-9"
 		>
-			<Left filterId={id} />
-			<Middle filterId={id} />
-			<Right filterId={id} />
-			<Remove filterId={id} />
+			<Left propertyNameToDisplay={propertyNameToDisplay} />
+			<Middle filter={filter} />
+			<Right filter={filter} />
+			<Remove filterId={filter.id} />
 		</fieldset>
 	);
-};
+});
 
-function Left({ filterId }: { filterId: string }) {
-	const { getPropertyNameToDisplay } = useFilters();
-	const propertyNameToDisplay = getPropertyNameToDisplay(filterId);
+const Left = ({ propertyNameToDisplay }: { propertyNameToDisplay: string }) => {
 	return (
 		<span className="px-2 rounded-tl rounded-bl border-r border-slate-200 h-full flex items-center">
 			{propertyNameToDisplay}
 		</span>
 	);
-}
+};
 
-function Middle({ filterId }: { filterId: string }) {
-	const { getFilterOrThrow, updateFilterRelationship } = useFilters();
-	const filter = getFilterOrThrow(filterId);
+const Middle = ({ filter }: { filter: TAppliedFilter }) => {
+	const { updateFilterRelationship } = useFilters();
 
 	const { selectionType, values } = filter;
 
@@ -80,7 +79,7 @@ function Middle({ filterId }: { filterId: string }) {
 								console.error(`Invalid relationship option: ${option}`);
 								return;
 							}
-							updateFilterRelationship(filterId, option as Relationship);
+							updateFilterRelationship(filter.id, option as Relationship);
 						}}
 					>
 						{relationshipOptions.map((relationshipOption) => (
@@ -99,11 +98,10 @@ function Middle({ filterId }: { filterId: string }) {
 			</DropdownMenu.Portal>
 		</DropdownMenu.Root>
 	);
-}
+};
 
-function Right({ filterId }: { filterId: string }) {
-	const { filterCategories, getFilterOrThrow } = useFilters();
-	const filter = getFilterOrThrow(filterId);
+const Right = ({ filter }: { filter: TAppliedFilter }) => {
+	const { filterCategories } = useFilters();
 	const { selectionType, propertyNameSingular, propertyNamePlural, values } =
 		filter;
 	const category = filterCategories.find((c) => c.id === filter.categoryId);
@@ -139,17 +137,18 @@ function Right({ filterId }: { filterId: string }) {
 				>
 					<FilterDropdownSubCategory
 						standalone
-						key={`applied-filter-subcategory-${filterId}`}
+						key={`applied-filter-subcategory-${filter.id}`}
 						categoryId={category.id}
-						filterId={filterId}
+						filterId={filter.id}
 					/>
 				</DropdownMenu.Content>
 			</DropdownMenu.Portal>
 		</DropdownMenu.Root>
 	);
-}
+};
 
-function Remove({ filterId }: { filterId: string }) {
+// not memoizing this component because it's already so cheap to render
+const Remove = ({ filterId }: { filterId: string }) => {
 	const { removeFilter } = useFilters();
 	return (
 		<button
@@ -161,6 +160,6 @@ function Remove({ filterId }: { filterId: string }) {
 			<X className="w-4 h-4" aria-hidden="true" />
 		</button>
 	);
-}
+};
 
 export default AppliedFilter;
