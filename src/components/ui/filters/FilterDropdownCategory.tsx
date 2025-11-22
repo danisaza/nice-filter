@@ -2,7 +2,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ChevronRightIcon } from "@radix-ui/react-icons";
 import * as React from "react";
 import FilterDropdownSubCategory from "@/components/ui/filters/FilterDropdownSubCategory";
-import type { ComboboxOption } from "@/hooks/useFilters/constants";
+import type { ComboboxOption } from "@/hooks/useFilters/types";
 
 type FilterDropdownCategoryProps = {
 	after: number;

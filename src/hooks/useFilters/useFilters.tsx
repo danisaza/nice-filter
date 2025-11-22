@@ -7,15 +7,6 @@ import {
 	useState,
 } from "react";
 import type { UseStateSetter } from "@/utils";
-import type {
-	ComboboxOption,
-	FilterOption,
-	MatchType,
-	Predicate,
-	Relationship,
-	RelationshipType,
-	TAppliedFilter,
-} from "./constants";
 import {
 	CHECKBOX_SELECTION_RELATIONSHIPS,
 	MATCH_TYPES,
@@ -24,6 +15,15 @@ import {
 	RELATIONSHIPS,
 } from "./constants";
 import { filterRowByMatchType } from "./filtering-functions";
+import type {
+	ComboboxOption,
+	FilterOption,
+	MatchType,
+	Predicate,
+	Relationship,
+	RelationshipType,
+	TAppliedFilter,
+} from "./types";
 import { getNewRelationship } from "./utils";
 
 export function getRelationshipOptions(selectionType: RelationshipType) {

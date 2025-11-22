@@ -1,7 +1,7 @@
 import "@/App.css";
 import Filters from "@/Filters";
 import Grid from "@/Grid";
-import type { Predicate } from "@/hooks/useFilters/constants";
+import type { Predicate } from "@/hooks/useFilters/types";
 import createFiltersContext, {
 	FiltersProvider,
 } from "@/hooks/useFilters/useFilters";

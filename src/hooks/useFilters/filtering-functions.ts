@@ -1,15 +1,17 @@
 import {
 	CHECKBOX_SELECTION_RELATIONSHIPS,
 	MATCH_TYPES,
-	type MatchType,
-	type Predicate,
 	RADIO_SELECTION_RELATIONSHIPS,
 	RELATIONSHIP_TYPES,
 	RELATIONSHIPS,
-	type Relationship,
-	type RelationshipType,
-	type TAppliedFilter,
 } from "./constants";
+import type {
+	MatchType,
+	Predicate,
+	Relationship,
+	RelationshipType,
+	TAppliedFilter,
+} from "./types";
 
 export function filterRowByMatchType<T>(
 	row: T,

@@ -1,9 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
-import type {
-	ComboboxOption,
-	FilterOption,
-} from "@/hooks/useFilters/constants";
 import { RELATIONSHIP_TYPES } from "@/hooks/useFilters/constants";
+import type { ComboboxOption, FilterOption } from "@/hooks/useFilters/types";
 import type { MyRow } from "@/mock-data/grid-data";
 
 // Generate many options for stress testing

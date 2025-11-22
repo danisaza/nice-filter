@@ -7,9 +7,8 @@ import {
 	CHECKBOX_SELECTION_RELATIONSHIPS,
 	RADIO_SELECTION_RELATIONSHIPS,
 	RELATIONSHIP_TYPES,
-	type Relationship,
-	type TAppliedFilter,
 } from "@/hooks/useFilters/constants";
+import type { Relationship, TAppliedFilter } from "@/hooks/useFilters/types";
 
 const dropdownMenuContentClassNames =
 	"border border-slate-300 min-w-[220px] bg-white rounded-md p-1 shadow-lg animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2";

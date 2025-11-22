@@ -6,10 +6,8 @@ import { useFilters } from "@/App.tsx";
 import { Button } from "@/components/ui/button";
 import FilterDropdownCategory from "@/components/ui/filters/FilterDropdownCategory";
 import { Input } from "@/components/ui/input";
-import {
-	type ComboboxOption,
-	RELATIONSHIP_TYPES,
-} from "@/hooks/useFilters/constants";
+import { RELATIONSHIP_TYPES } from "@/hooks/useFilters/constants";
+import type { ComboboxOption } from "@/hooks/useFilters/types";
 import useNewFilterCreatedAtCutoff from "@/hooks/useNewFilterCreatedAtCutoff";
 import type { UseStateSetter } from "@/utils";
 import AppliedFilters from "./AppliedFilters";

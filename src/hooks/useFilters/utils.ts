@@ -1,9 +1,5 @@
-import {
-	type ComboboxOption,
-	RELATIONSHIPS,
-	type Relationship,
-	type TAppliedFilter,
-} from "./constants";
+import { RELATIONSHIPS } from "./constants";
+import type { ComboboxOption, Relationship, TAppliedFilter } from "./types";
 
 export function getNewRelationship(
 	filter: TAppliedFilter,
