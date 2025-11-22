@@ -47,7 +47,7 @@ export default function Filters() {
 			>
 				<AppliedFilters before={newFilterCreatedAtCutoff} />
 				<FilterDropdown
-					renderTrigger={() => renderTrigger()}
+					renderTrigger={renderTrigger}
 					dropdownMenuOpen={open}
 					setDropdownMenuOpen={setOpen}
 				/>

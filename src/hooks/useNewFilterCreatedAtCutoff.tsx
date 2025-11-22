@@ -1,4 +1,10 @@
-import { createContext, type ReactNode, useContext, useState } from "react";
+import {
+	createContext,
+	type ReactNode,
+	useContext,
+	useMemo,
+	useState,
+} from "react";
 import type { UseStateSetter } from "@/utils";
 
 type NewFilterCreatedAtCutoffContextType = {
@@ -17,10 +23,13 @@ export function NewFilterCreatedAtCutoffProvider({
 	const [newFilterCreatedAtCutoff, setNewFilterCreatedAtCutoff] =
 		useState<number>(() => Date.now());
 
-	const value: NewFilterCreatedAtCutoffContextType = {
-		newFilterCreatedAtCutoff,
-		setNewFilterCreatedAtCutoff,
-	};
+	const value: NewFilterCreatedAtCutoffContextType = useMemo(
+		() => ({
+			newFilterCreatedAtCutoff,
+			setNewFilterCreatedAtCutoff,
+		}),
+		[newFilterCreatedAtCutoff],
+	);
 
 	return (
 		<NewFilterCreatedAtCutoffContext.Provider value={value}>

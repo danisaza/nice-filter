@@ -39,38 +39,62 @@ const FilterDropdown = ({
 	const [searchText, setSearchText] = React.useState("");
 
 	const { filterCategories } = useFilters();
-	const formattedFilterCategories: ComboboxOption[] = filterCategories.map(
-		(f) => {
-			const name =
-				f.selectionType === RELATIONSHIP_TYPES.RADIO
-					? f.propertyNameSingular
-					: f.propertyNamePlural;
-			const titleCaseName = name
-				.split(" ")
-				.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-				.join(" ");
-			return {
-				id: f.id,
-				label: titleCaseName,
-				value: name,
-			};
-		},
+	const formattedFilterCategories: ComboboxOption[] = React.useMemo(
+		() =>
+			filterCategories.map((f) => {
+				const name =
+					f.selectionType === RELATIONSHIP_TYPES.RADIO
+						? f.propertyNameSingular
+						: f.propertyNamePlural;
+				const titleCaseName = name
+					.split(" ")
+					.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+					.join(" ");
+				return {
+					id: f.id,
+					label: titleCaseName,
+					value: name,
+				};
+			}),
+		[filterCategories],
 	);
 
-	const focusSearchInput = () => {
+	const focusSearchInput = React.useCallback(() => {
 		const searchInput = document.getElementById("search-input");
 		if (searchInput) {
 			searchInput.focus();
 		}
-	};
+	}, []);
 
-	const subItemsToRender = formattedFilterCategories.filter((filterCategory) =>
-		filterCategory.label.toLowerCase().includes(searchText.toLowerCase()),
+	const subItemsToRender = React.useMemo(
+		() =>
+			formattedFilterCategories.filter((filterCategory) =>
+				filterCategory.label.toLowerCase().includes(searchText.toLowerCase()),
+			),
+		[formattedFilterCategories, searchText],
 	);
 
 	// render the trigger if there are no "under-construction" filters
 	const shouldRenderTrigger = filters.every(
 		(filter) => filter.createdAt < newFilterCreatedAtCutoff,
+	);
+
+	const firstCategoryOnKeyDown = React.useCallback(
+		(e: React.KeyboardEvent<HTMLDivElement>) => {
+			if (e.key === "ArrowUp") {
+				focusSearchInput();
+			}
+		},
+		[focusSearchInput],
+	);
+
+	const lastCategoryOnKeyDown = React.useCallback(
+		(e: React.KeyboardEvent<HTMLDivElement>) => {
+			if (e.key === "ArrowDown") {
+				focusSearchInput();
+			}
+		},
+		[focusSearchInput],
 	);
 
 	return (
@@ -122,17 +146,9 @@ const FilterDropdown = ({
 						triggerText={subItem.label}
 						onKeyDown={
 							index === 0
-								? (e) => {
-										if (e.key === "ArrowUp") {
-											focusSearchInput();
-										}
-									}
+								? firstCategoryOnKeyDown
 								: index === SUB_ITEMS.length - 1
-									? (e) => {
-											if (e.key === "ArrowDown") {
-												focusSearchInput();
-											}
-										}
+									? lastCategoryOnKeyDown
 									: undefined
 						}
 						ref={
