@@ -1,0 +1,8 @@
+---
+description: Consider useMemo and useCallback when memoizing a React component with `memo` / `React.memo`
+alwaysApply: false
+---
+
+When you memoize a React component with `memo` / `React.memo`, you should check its props to see whether there are any objects / arrays / functions.
+
+Any objects, arrays, or functions that are getting passed as props should be stable references in these cases, so that React knows that the props of the memoized component haven't changed and it can avoid re-rendering it.

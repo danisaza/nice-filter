@@ -1,0 +1,39 @@
+---
+description: When to use the useMemo and useCallback hooks in React
+alwaysApply: false
+---
+
+The `useMemo` hook should be used to memoize heavy computations and create stable references to objects and arrays. The `useCallback` hook should be used to create stable references to functions.
+
+In general, keep in mind that React is quite optimized already. Using these hooks is not free! You are essentially trading off CPU utilization for a higher memory footprint, which could have unintended performance implications. It's often possible to avoid the use of these hooks by using other techniques, such as state localization (keeping state as close as possible to where it's used).
+
+In general, it's best to make performance optimization decisions based on the results of profiling. Guessing can lead to unintended results.
+
+That said, there are some cases where it's obvious just from looking at the code that using `useMemo` or `useCallback` is appropriate.
+
+They are:
+
+1. Extremely expensive computations (useMemo)
+2. Creating stable references to objects and arrays (useMemo and useCallback)
+
+## Case 1: Extremely expensive computations
+
+Sometimes we need to perform expensive computations in the browser. If the computation is expensive enough and we are okey with increasing the memory footprint of our application in order to reduce CPU usage, we can use `useMemo`.
+
+Consider, however, that it may be preferable to offload this computation to the server.
+
+## Case 2: Stable references to objects and arrays (for `useMemo`) and functions (for `useCallback`)
+
+Having stable references to objects, arrays, and functions can be helpful when these objects/arrays/functions are dependencies for other things that are memoized. For example, if you are memoizing a component with `React.memo` but you are constantly re-creating objects/arrays/functions the parent component and passing them in, then component will re-render because the references are unstable. To avoid this, use `useMemo` or `useCallback`.
+
+In other words: When you see `React.memo` on a component, that should make you check it's props and consider whether they should be memoized with `useMemo` / `useCallback`.
+
+Someone might think "hmm... maybe I should memoize all objects/arrays/functions to avoid re-renders downstream in the component hierarchy." However, it's important to keep in mind that when a component re-renders, ALL of its descendents will be re-rendered (unless they are memoized or are the descendent of a memoized component). Maintaining stable references will not help you in cases where descendants are going to be re-rendered regardless.
+
+## Caveats
+
+Here are some caveats, which are pulled directly from the [useMemo docs](https://react.dev/reference/react/useMemo).
+
+> - useMemo is a Hook, so you can only call it at the top level of your component or your own Hooks. You can’t call it inside loops or conditions. If you need that, extract a new component and move the state into it.
+> - In Strict Mode, React will call your calculation function twice in order to help you find accidental impurities. This is development-only behavior and does not affect production. If your calculation function is pure (as it should be), this should not affect your logic. The result from one of the calls will be ignored.
+> - React will not throw away the cached value unless there is a specific reason to do that. For example, in development, React throws away the cache when you edit the file of your component. Both in development and in production, React will throw away the cache if your component suspends during the initial mount. In the future, React may add more features that take advantage of throwing away the cache—for example, if React adds built-in support for virtualized lists in the future, it would make sense to throw away the cache for items that scroll out of the virtualized table viewport. This should be fine if you rely on useMemo solely as a performance optimization. Otherwise, a state variable or a ref may be more appropriate.

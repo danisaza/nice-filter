@@ -1,5 +1,6 @@
 ---
-alwaysApply: true
+description: This is helpful when considering whether to add `aria-label` to an element. (usually HTML or JSX/TSX)
+alwaysApply: false
 ---
 
 Use `aria-label` only as a last-resort. Strongly prefer semantic markup elements and contextually relevant text.
