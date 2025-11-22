@@ -7,13 +7,7 @@ import {
 	useState,
 } from "react";
 import type { UseStateSetter } from "@/utils";
-import {
-	CHECKBOX_SELECTION_RELATIONSHIPS,
-	MATCH_TYPES,
-	RADIO_SELECTION_RELATIONSHIPS,
-	RELATIONSHIP_TYPES,
-	RELATIONSHIPS,
-} from "./constants";
+import { MATCH_TYPES, RELATIONSHIP_TYPES, RELATIONSHIPS } from "./constants";
 import { filterRowByMatchType } from "./filtering-functions";
 import type {
 	ComboboxOption,
@@ -21,16 +15,9 @@ import type {
 	MatchType,
 	Predicate,
 	Relationship,
-	RelationshipType,
 	TAppliedFilter,
 } from "./types";
 import { getNewRelationship } from "./utils";
-
-export function getRelationshipOptions(selectionType: RelationshipType) {
-	return selectionType === RELATIONSHIP_TYPES.RADIO
-		? RADIO_SELECTION_RELATIONSHIPS
-		: CHECKBOX_SELECTION_RELATIONSHIPS;
-}
 
 type FilterValueUpdate =
 	| ComboboxOption[]
