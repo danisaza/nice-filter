@@ -1,6 +1,6 @@
+import * as ReactDOM from "react-dom/client";
 import "@/App.css";
 import Filters from "@/Filters";
-import Grid from "@/Grid";
 import type { Predicate } from "@/hooks/useFilters/constants";
 import createFiltersContext, {
 	FiltersProvider,
@@ -39,7 +39,6 @@ export default function App() {
 		>
 			<NewFilterCreatedAtCutoffProvider>
 				<Filters />
-				<Grid />
 			</NewFilterCreatedAtCutoffProvider>
 		</FiltersProvider>
 	);
