@@ -1,0 +1,37 @@
+---
+description: Children props only re-render when the parent that provides them re-renders
+alwaysApply: false
+---
+
+In React, when a component re-renders, all of its descendents re-render.
+
+However, there's an unintuitive case that's worth taking into account: the `children` prop.
+
+If a component receives `children` as a prop, the `children` will not re-render when it re-renders. Rather, `children` will re-render when the component re-renders _that provided `children` as a prop_ to the other component.
+
+Consider the example below. Note that `Parent` takes a `children` prop, which is provided to it by `GrandParent`.
+
+As the user clicks the button rendered by `Parent`, the `count` state variable will change, causing `Parent` to re-render. However, the `Child` component, which `Parent` receives via the `children` prop, will not re-render. Instead, `Child` will re-render when `GrandParent` re-renders.
+
+```
+function GrandParent() {
+    return (
+        <Parent>
+            <Child />
+        </Parent>
+    )
+}
+
+function Parent({ children }) {
+    const [count, setCount] = useState(0);
+    return (
+        <div>
+            <span>Count is {count}</span>
+            <button onClick={() => setCount(prev => prev + 1)}>
+                Increment count
+            </button>
+            {children}
+        </div>
+    )
+}
+```
