@@ -68,6 +68,8 @@ const FilterDropdownSubCategory = forwardRef<
 	const handleValueSelected = (value: ComboboxOption) => {
 		if (relevantFilter) {
 			updateFilterValues(relevantFilter.id, (prevValues) => {
+				// Note that it could arguably be safer to make this check by `id`, but I'm taking care to maintain
+				// consistent references to the same filter objects, so referential equality works as expected.
 				const alreadySelected = prevValues.includes(value);
 				return alreadySelected
 					? prevValues.filter((v) => v !== value)

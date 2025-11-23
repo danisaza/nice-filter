@@ -19,17 +19,6 @@ import useNewFilterCreatedAtCutoff from "@/hooks/useNewFilterCreatedAtCutoff";
 import type { UseStateSetter } from "@/utils";
 import AppliedFilters from "./AppliedFilters";
 
-type SubItem = {
-	text: string;
-};
-
-const SUB_ITEMS: SubItem[] = [
-	{ text: "More Tools" },
-	{ text: "Save Page As…" },
-	{ text: "Create Shortcut…" },
-	{ text: "Name Window…" },
-];
-
 const FilterDropdown = ({
 	dropdownMenuOpen,
 	setDropdownMenuOpen,
@@ -154,14 +143,14 @@ const FilterDropdown = ({
 						onKeyDown={
 							index === 0
 								? firstCategoryOnKeyDown
-								: index === SUB_ITEMS.length - 1
+								: index === subItemsToRender.length - 1
 									? lastCategoryOnKeyDown
 									: undefined
 						}
 						ref={
 							index === 0
 								? firstSubTriggerRef
-								: index === SUB_ITEMS.length - 1
+								: index === subItemsToRender.length - 1
 									? lastSubTriggerRef
 									: undefined
 						}
