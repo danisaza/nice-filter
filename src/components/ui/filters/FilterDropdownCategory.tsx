@@ -1,18 +1,18 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ChevronRightIcon } from "@radix-ui/react-icons";
-import * as React from "react";
+import { forwardRef, type KeyboardEventHandler, memo } from "react";
 import FilterDropdownSubCategory from "@/components/ui/filters/FilterDropdownSubCategory";
 import type { ComboboxOption } from "@/hooks/useFilters/types";
 
 type FilterDropdownCategoryProps = {
 	after: number;
 	category: ComboboxOption;
-	onKeyDown?: React.KeyboardEventHandler<HTMLDivElement> | undefined;
+	onKeyDown?: KeyboardEventHandler<HTMLDivElement> | undefined;
 	triggerText: string;
 };
 
-const FilterDropdownCategory = React.memo(
-	React.forwardRef<HTMLDivElement, FilterDropdownCategoryProps>(
+const FilterDropdownCategory = memo(
+	forwardRef<HTMLDivElement, FilterDropdownCategoryProps>(
 		function FilterDropdownCategory(
 			props: FilterDropdownCategoryProps,
 			forwardedRef,

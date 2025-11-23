@@ -1,6 +1,13 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ListFilter } from "lucide-react";
-import * as React from "react";
+import {
+	type KeyboardEvent,
+	type ReactNode,
+	useCallback,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { twMerge } from "tailwind-merge";
 import { useFilters } from "@/App.tsx";
 import { Button } from "@/components/ui/button";
@@ -30,16 +37,16 @@ const FilterDropdown = ({
 }: {
 	dropdownMenuOpen: boolean;
 	setDropdownMenuOpen: UseStateSetter<boolean>;
-	renderTrigger: () => React.ReactNode;
+	renderTrigger: () => ReactNode;
 }) => {
 	const { newFilterCreatedAtCutoff } = useNewFilterCreatedAtCutoff();
 	const { filters } = useFilters();
-	const firstSubTriggerRef = React.useRef<HTMLDivElement>(null);
-	const lastSubTriggerRef = React.useRef<HTMLDivElement>(null);
-	const [searchText, setSearchText] = React.useState("");
+	const firstSubTriggerRef = useRef<HTMLDivElement>(null);
+	const lastSubTriggerRef = useRef<HTMLDivElement>(null);
+	const [searchText, setSearchText] = useState("");
 
 	const { filterCategories } = useFilters();
-	const formattedFilterCategories: ComboboxOption[] = React.useMemo(
+	const formattedFilterCategories: ComboboxOption[] = useMemo(
 		() =>
 			filterCategories.map((f) => {
 				const name =
@@ -59,14 +66,14 @@ const FilterDropdown = ({
 		[filterCategories],
 	);
 
-	const focusSearchInput = React.useCallback(() => {
+	const focusSearchInput = useCallback(() => {
 		const searchInput = document.getElementById("search-input");
 		if (searchInput) {
 			searchInput.focus();
 		}
 	}, []);
 
-	const subItemsToRender = React.useMemo(
+	const subItemsToRender = useMemo(
 		() =>
 			formattedFilterCategories.filter((filterCategory) =>
 				filterCategory.label.toLowerCase().includes(searchText.toLowerCase()),
@@ -79,8 +86,8 @@ const FilterDropdown = ({
 		(filter) => filter.createdAt < newFilterCreatedAtCutoff,
 	);
 
-	const firstCategoryOnKeyDown = React.useCallback(
-		(e: React.KeyboardEvent<HTMLDivElement>) => {
+	const firstCategoryOnKeyDown = useCallback(
+		(e: KeyboardEvent<HTMLDivElement>) => {
 			if (e.key === "ArrowUp") {
 				focusSearchInput();
 			}
@@ -88,8 +95,8 @@ const FilterDropdown = ({
 		[focusSearchInput],
 	);
 
-	const lastCategoryOnKeyDown = React.useCallback(
-		(e: React.KeyboardEvent<HTMLDivElement>) => {
+	const lastCategoryOnKeyDown = useCallback(
+		(e: KeyboardEvent<HTMLDivElement>) => {
 			if (e.key === "ArrowDown") {
 				focusSearchInput();
 			}
