@@ -1,11 +1,13 @@
 import { memo } from "react";
 import type { MyRow, Priority, Status } from "./mock-data/grid-data";
 
-// NOTE: memoizing this component is a good idea, but unfortunately it's useless to do because the context provider
-//       is not memoizing the object that it provides as a value, so every time that the context provider re-renders,
-//       it provides a new object as context and causes the grid to re-render.
+// NOTE: Given the current state of the codebase, memoizing this component is quite effective. Despite not using any
+//       memoization in the context provider (in this unoptimized branch of the codebase), I am still maintaining stable
+//       references to the rows in the grid.
 //
-//       In other words, you need to BOTH memoize this component AND maintain referential integrity in the context provider.
+//       I am NOT, however, memoizing the value object returned by the context provider, which means that any time that
+//       the context provider re-renders, it triggers a re-render of all components that consume its context, including
+//       the filters and the Grid component.
 const GridItem = memo(({ row }: { row: MyRow }) => {
 	return (
 		<div
