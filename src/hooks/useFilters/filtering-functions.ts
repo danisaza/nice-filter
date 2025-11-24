@@ -116,7 +116,7 @@ function filterByRadio<T extends Row>(row: T, filter: TAppliedFilter) {
 		);
 	}
 
-	console.error(`Invalid relationship: $filter.relationship`);
+	console.error(`Invalid relationship: ${filter.relationship}`);
 	return true;
 }
 
@@ -185,6 +185,6 @@ function filterByCheckbox<T extends Row>(row: T, filter: TAppliedFilter) {
 		return !filter.values.some((value) => rowValues.includes(value.value));
 	}
 
-	console.error(`Invalid relationship: $filter.relationship`);
+	console.error(`Invalid relationship: ${filter.relationship}`);
 	return true;
 }
