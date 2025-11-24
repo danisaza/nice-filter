@@ -7,23 +7,32 @@ import {
 	useState,
 } from "react";
 import type { UseStateSetter } from "@/utils";
-import { MATCH_TYPES, RELATIONSHIP_TYPES, RELATIONSHIPS } from "./constants";
+import {
+	CHECKBOX_SELECTION_OPERATORS,
+	MATCH_TYPES,
+	OPERATORS,
+	RADIO_SELECTION_OPERATORS,
+	SELECTION_TYPES,
+} from "./constants";
 import { filterRowByMatchType } from "./filtering-functions";
 import type {
+	CheckboxOperator,
 	ComboboxOption,
 	FilterOption,
 	MatchType,
+	Operator,
 	Predicate,
-	Relationship,
+	RadioOperator,
+	Row,
 	TAppliedFilter,
 } from "./types";
-import { getNewRelationship } from "./utils";
+import { updateFilterValueAndRelationship } from "./utils";
 
 type FilterValueUpdate =
 	| ComboboxOption[]
 	| ((values: ComboboxOption[]) => ComboboxOption[]);
 
-type FiltersContextType<T> = {
+type FiltersContextType<T extends Row> = {
 	addFilter: (
 		filter: Omit<TAppliedFilter, "relationship" | "createdAt">,
 	) => void;
@@ -42,35 +51,35 @@ type FiltersContextType<T> = {
 	setFilterCategories: UseStateSetter<FilterOption<T>[]>;
 	setMatchType: UseStateSetter<MatchType>;
 	totalRowCount: number;
-	updateFilterRelationship: (
-		filterId: string,
-		relationship: Relationship,
-	) => void;
+	updateFilterRelationship: (filterId: string, relationship: Operator) => void;
 	updateFilterValues: (
 		filterId: string,
 		filterValueUpdate: FilterValueUpdate,
 	) => void;
 };
 
-type FiltersProviderProps<T> = {
+type FiltersProviderProps<T extends Row> = {
 	children: ReactNode;
 	predicate: Predicate<T>;
 	rows: T[];
 	context: React.Context<FiltersContextType<T> | null>;
 };
 
-export function FiltersProvider<T>({
+// TODO: Consider memoizing the predicate function in case the user passes in a new function each time
+export function FiltersProvider<T extends Row>({
 	children,
 	predicate,
 	rows,
 	context,
 }: FiltersProviderProps<T>) {
 	const [filters, setFilters] = useState<TAppliedFilter[]>([]);
+	//              ^?
 	const [matchType, setMatchType] = useState<MatchType>(MATCH_TYPES.ANY);
 	const [filterCategories, setFilterCategories] = useState<FilterOption<T>[]>(
 		[],
 	);
 
+	// TODO: There are a ton of performance improvements you could make around memoizing these checks
 	const filteredRows = useMemo(() => {
 		return rows.filter((row) =>
 			filterRowByMatchType(row, filters, predicate, matchType),
@@ -86,22 +95,46 @@ export function FiltersProvider<T>({
 			propertyNamePlural,
 			selectionType,
 			values,
-		}: Omit<TAppliedFilter, "relationship" | "createdAt">) => {
-			const newFilter: TAppliedFilter = {
+		}: Omit<TAppliedFilter, "createdAt" | "relationship">) => {
+			const newFilter = {
 				id,
 				createdAt: Date.now(),
 				categoryId,
 				options,
-				propertyNameSingular,
-				propertyNamePlural,
-				selectionType,
 				values,
-				relationship:
-					selectionType === RELATIONSHIP_TYPES.RADIO
-						? RELATIONSHIPS.IS
-						: RELATIONSHIPS.INCLUDE,
 			};
-			setFilters((prev) => [...prev, newFilter]);
+
+			if (selectionType === SELECTION_TYPES.RADIO) {
+				if (!propertyNameSingular) {
+					throw new Error("propertyNameSingular is required for radio filters");
+				}
+				const radioValues = {
+					propertyNameSingular: propertyNameSingular,
+					propertyNamePlural: undefined,
+					selectionType: SELECTION_TYPES.RADIO,
+					relationship: OPERATORS.IS,
+				};
+				setFilters((prev) => [...prev, { ...newFilter, ...radioValues }]);
+				return;
+			}
+
+			if (selectionType === SELECTION_TYPES.CHECKBOXES) {
+				if (!propertyNamePlural) {
+					throw new Error(
+						"propertyNamePlural is required for checkbox filters",
+					);
+				}
+				const checkboxValues = {
+					propertyNameSingular: undefined,
+					propertyNamePlural: propertyNamePlural,
+					selectionType: SELECTION_TYPES.CHECKBOXES,
+					relationship: OPERATORS.INCLUDE,
+				};
+				setFilters((prev) => [...prev, { ...newFilter, ...checkboxValues }]);
+				return;
+			}
+
+			throw new Error(`Got invalid selection type: ${selectionType}`);
 		},
 		[],
 	);
@@ -125,11 +158,7 @@ export function FiltersProvider<T>({
 							? filterValueUpdate(f.values)
 							: filterValueUpdate;
 
-					return {
-						...f,
-						values: newValues,
-						relationship: getNewRelationship(f, newValues),
-					};
+					return updateFilterValueAndRelationship(f, newValues);
 				}),
 			);
 		},
@@ -138,16 +167,53 @@ export function FiltersProvider<T>({
 
 	// use this for manual relationship updates (e.g. switch from "is" to "is not")
 	const updateFilterRelationship = useCallback(
-		(filterId: string, relationship: Relationship) => {
+		(filterId: string, relationship: Operator) => {
 			setFilters((prev) =>
-				prev.map((f) =>
-					f.id !== filterId
-						? f
-						: {
-								...f,
-								relationship,
-							},
-				),
+				prev.map((f) => {
+					if (f.id !== filterId) return f;
+
+					// Validate relationship based on selection type
+					if (f.selectionType === SELECTION_TYPES.RADIO) {
+						const validRadioOperators = [
+							...RADIO_SELECTION_OPERATORS.ONE,
+							...RADIO_SELECTION_OPERATORS.MANY,
+						];
+						if (!validRadioOperators.includes(relationship as RadioOperator)) {
+							throw new Error(
+								`Invalid relationship "${relationship}" for radio filter. Valid relationships are: ${validRadioOperators.join(", ")}`,
+							);
+						}
+						return {
+							...f,
+							propertyNameSingular: f.propertyNameSingular,
+							relationship: relationship as RadioOperator,
+						};
+					}
+
+					if (f.selectionType === SELECTION_TYPES.CHECKBOXES) {
+						const validCheckboxOperators = [
+							...CHECKBOX_SELECTION_OPERATORS.ONE,
+							...CHECKBOX_SELECTION_OPERATORS.MANY,
+						];
+						if (
+							!validCheckboxOperators.includes(relationship as CheckboxOperator)
+						) {
+							throw new Error(
+								`Invalid relationship "${relationship}" for checkbox filter. Valid relationships are: ${validCheckboxOperators.join(", ")}`,
+							);
+						}
+						return {
+							...f,
+							propertyNamePlural: f.propertyNamePlural,
+							relationship: relationship as CheckboxOperator,
+						};
+					}
+
+					// appeasing the typescript compiler, which correctly identifies that `f` is of type `never` here
+					throw new Error(
+						`Invalid selection type: ${(f as { selectionType: string }).selectionType}`,
+					);
+				}),
 			);
 		},
 		[],
@@ -198,7 +264,7 @@ export function FiltersProvider<T>({
 	const getPropertyNameToDisplay = useCallback(
 		(filterId: string) => {
 			const filter = getFilterOrThrow(filterId);
-			return filter.selectionType === RELATIONSHIP_TYPES.RADIO
+			return filter.selectionType === SELECTION_TYPES.RADIO
 				? filter.propertyNameSingular
 				: filter.propertyNamePlural;
 		},
@@ -257,7 +323,7 @@ export function FiltersProvider<T>({
  * This way, we have a guarantee that `useFilters` will return the correct type, even though we don't know the shape of
  * the user's data upfront.
  */
-const createFiltersContext = <T,>() => {
+const createFiltersContext = <T extends Row>() => {
 	const context = createContext<FiltersContextType<T> | null>(null);
 
 	const useFilters = (): FiltersContextType<T> => {

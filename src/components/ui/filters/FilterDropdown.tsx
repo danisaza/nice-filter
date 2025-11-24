@@ -13,7 +13,7 @@ import { useFilters } from "@/App.tsx";
 import { Button } from "@/components/ui/button";
 import FilterDropdownCategory from "@/components/ui/filters/FilterDropdownCategory";
 import { Input } from "@/components/ui/input";
-import { RELATIONSHIP_TYPES } from "@/hooks/useFilters/constants";
+import { SELECTION_TYPES } from "@/hooks/useFilters/constants";
 import type { ComboboxOption } from "@/hooks/useFilters/types";
 import useNewFilterCreatedAtCutoff from "@/hooks/useNewFilterCreatedAtCutoff";
 import type { UseStateSetter } from "@/utils";
@@ -39,7 +39,7 @@ const FilterDropdown = ({
 		() =>
 			filterCategories.map((f) => {
 				const name =
-					f.selectionType === RELATIONSHIP_TYPES.RADIO
+					f.selectionType === SELECTION_TYPES.RADIO
 						? f.propertyNameSingular
 						: f.propertyNamePlural;
 				const titleCaseName = name
@@ -137,7 +137,7 @@ const FilterDropdown = ({
 				{subItemsToRender.map((subItem, index) => (
 					<FilterDropdownCategory
 						after={newFilterCreatedAtCutoff}
-						key={subItem.value}
+						key={subItem.id}
 						category={subItem}
 						triggerText={subItem.label}
 						onKeyDown={

@@ -1,19 +1,20 @@
 import {
-	CHECKBOX_SELECTION_RELATIONSHIPS,
+	CHECKBOX_SELECTION_OPERATORS,
 	MATCH_TYPES,
-	RADIO_SELECTION_RELATIONSHIPS,
-	RELATIONSHIP_TYPES,
-	RELATIONSHIPS,
+	OPERATORS,
+	RADIO_SELECTION_OPERATORS,
+	SELECTION_TYPES,
 } from "./constants";
 import type {
 	MatchType,
+	Operator,
 	Predicate,
-	Relationship,
 	RelationshipType,
+	Row,
 	TAppliedFilter,
 } from "./types";
 
-export function filterRowByMatchType<T>(
+export function filterRowByMatchType<T extends Row>(
 	row: T,
 	filters: TAppliedFilter[],
 	predicate: Predicate<T>,
@@ -32,7 +33,7 @@ export function filterRowByMatchType<T>(
 	}
 }
 
-function filterRowByAll<T>(
+function filterRowByAll<T extends Row>(
 	row: T,
 	filters: TAppliedFilter[],
 	predicate: Predicate<T>,
@@ -42,7 +43,7 @@ function filterRowByAll<T>(
 	});
 }
 
-function filterRowByAny<T>(
+function filterRowByAny<T extends Row>(
 	row: T,
 	filters: TAppliedFilter[],
 	predicate: Predicate<T>,
@@ -55,11 +56,15 @@ function filterRowByAny<T>(
 /** Returns `true` if the row should be displayed, according to the filter.
  *
  *  If an error is encountered, it returns `true` so that the row is still displayed */
-function filterRow<T>(row: T, filter: TAppliedFilter, predicate: Predicate<T>) {
+function filterRow<T extends Row>(
+	row: T,
+	filter: TAppliedFilter,
+	predicate: Predicate<T>,
+) {
 	const selectionType: RelationshipType = filter.selectionType;
 	if (
-		selectionType !== RELATIONSHIP_TYPES.RADIO &&
-		selectionType !== RELATIONSHIP_TYPES.CHECKBOXES
+		selectionType !== SELECTION_TYPES.RADIO &&
+		selectionType !== SELECTION_TYPES.CHECKBOXES
 	) {
 		// NOTE: It's arguably not necessary to have these runtime checks, since typescript gives us guarantees.
 		//       But if there ARE things that are slipping past the type-checker, these error logs will make it
@@ -78,9 +83,9 @@ function filterRow<T>(row: T, filter: TAppliedFilter, predicate: Predicate<T>) {
 		return true;
 	}
 
-	if (selectionType === RELATIONSHIP_TYPES.RADIO) {
+	if (selectionType === SELECTION_TYPES.RADIO) {
 		return filterByRadio(row, filter, predicate);
-	} else if (selectionType === RELATIONSHIP_TYPES.CHECKBOXES) {
+	} else if (selectionType === SELECTION_TYPES.CHECKBOXES) {
 		return filterByCheckbox(row, filter, predicate);
 	} else {
 		console.error(`Invalid selection type: ${selectionType}`);
@@ -88,82 +93,112 @@ function filterRow<T>(row: T, filter: TAppliedFilter, predicate: Predicate<T>) {
 	}
 }
 
-function filterByRadio<T>(
+function filterByRadio<T extends Row>(
 	row: T,
 	filter: TAppliedFilter,
 	predicate: Predicate<T>,
 ) {
-	const relationshipOptions: readonly Relationship[] =
+	const relationshipOptions: readonly Operator[] =
 		filter.values.length <= 1
-			? RADIO_SELECTION_RELATIONSHIPS.ONE
-			: RADIO_SELECTION_RELATIONSHIPS.MANY;
+			? RADIO_SELECTION_OPERATORS.ONE
+			: RADIO_SELECTION_OPERATORS.MANY;
 	const isRelationshipValid = relationshipOptions.includes(filter.relationship);
 	if (!isRelationshipValid) {
 		console.error(`Invalid relationship: ${filter.relationship}`);
 		return true; // default to true so that at least the user can see the row
 	}
 
-	if (filter.relationship === RELATIONSHIPS.IS) {
+	if (filter.relationship === OPERATORS.IS) {
 		if (filter.values.length !== 1) {
-			console.error(
+			throw new Error(
 				`Invalid number of values for relationship ${filter.relationship}: ${filter.values.length}`,
 			);
-			return filter.values.some((value) => predicate(row, filter, value)); // sensible default
 		}
 		return predicate(row, filter, filter.values[0]);
 	}
 
-	if (filter.relationship === RELATIONSHIPS.IS_ANY_OF) {
+	if (filter.relationship === OPERATORS.IS_ANY_OF) {
 		return filter.values.some((value) => predicate(row, filter, value));
 	}
 
-	if (filter.relationship === RELATIONSHIPS.IS_NOT) {
+	if (filter.relationship === OPERATORS.IS_NOT) {
 		return !filter.values.some((value) => predicate(row, filter, value));
 	}
 
-	console.error(`Invalid relationship: ${filter.relationship}`);
+	console.error(`Invalid relationship: $filter.relationship`);
 	return true;
 }
 
-function filterByCheckbox<T>(
+function filterByCheckbox<T extends Row>(
 	row: T,
 	filter: TAppliedFilter,
-	predicate: Predicate<T>,
+	_predicate: Predicate<T>,
 ) {
-	const relationshipOptions: readonly Relationship[] =
+	if (!filter.propertyNamePlural) {
+		console.error("propertyNamePlural is required for checkbox filters");
+		return true; // default to true so that at least the user can see the row
+	}
+	const propertyNamePlural = filter.propertyNamePlural;
+	const relationshipOptions: readonly Operator[] =
 		filter.values.length === 1
-			? CHECKBOX_SELECTION_RELATIONSHIPS.ONE
-			: CHECKBOX_SELECTION_RELATIONSHIPS.MANY;
+			? CHECKBOX_SELECTION_OPERATORS.ONE
+			: CHECKBOX_SELECTION_OPERATORS.MANY;
 	const isRelationshipValid = relationshipOptions.includes(filter.relationship);
 	if (!isRelationshipValid) {
-		console.error(`Invalid relationship: ${filter.relationship}`);
+		console.error(
+			`Invalid relationship: ${filter.relationship} for ${filter.values.length} value(s). Valid relationships for ${filter.values.length} value(s) are: ${relationshipOptions.join(", ")}`,
+		);
 		return true; // default to true so that at least the user can see the row
 	}
 
-	if (filter.relationship === RELATIONSHIPS.INCLUDE) {
-		return filter.values.some((value) => predicate(row, filter, value));
+	if (filter.values.length === 0) {
+		return true; // equivalent to not having the filter applied
 	}
 
-	if (filter.relationship === RELATIONSHIPS.DO_NOT_INCLUDE) {
-		return !filter.values.some((value) => predicate(row, filter, value));
+	if (filter.values.length === 1) {
+		const rowPropertyValue = row[propertyNamePlural];
+		if (!rowPropertyValue || !Array.isArray(rowPropertyValue)) {
+			console.error(
+				`Expected an array of values for property ${propertyNamePlural}, but got ${rowPropertyValue}`,
+			);
+			return true; // default to true so that at least the user can see the row
+		}
+		const rowValue = rowPropertyValue[0];
+		if (filter.relationship === OPERATORS.INCLUDE) {
+			return filter.values.some((value) => value.value === rowValue);
+		}
+		if (filter.relationship === OPERATORS.DO_NOT_INCLUDE) {
+			return !filter.values.some((value) => value.value === rowValue);
+		}
+		throw new Error(
+			`Invalid relationship: ${filter.relationship} with 1 value`,
+		);
 	}
 
-	if (filter.relationship === RELATIONSHIPS.INCLUDE_ALL_OF) {
-		return filter.values.every((value) => predicate(row, filter, value));
+	const rowValues = row[propertyNamePlural];
+	if (!rowValues || !Array.isArray(rowValues)) {
+		console.error(
+			`Expected an array of values for property ${propertyNamePlural}, but got ${rowValues}`,
+		);
+		return true; // default to true so that at least the user can see the row
 	}
 
-	if (filter.relationship === RELATIONSHIPS.INCLUDE_ANY_OF) {
-		return filter.values.some((value) => predicate(row, filter, value));
+	if (filter.relationship === OPERATORS.INCLUDE_ALL_OF) {
+		return filter.values.every((value) => rowValues.includes(value.value));
 	}
 
-	if (filter.relationship === RELATIONSHIPS.EXCLUDE_IF_ALL) {
-		return !filter.values.every((value) => predicate(row, filter, value));
+	if (filter.relationship === OPERATORS.INCLUDE_ANY_OF) {
+		return filter.values.some((value) => rowValues.includes(value.value));
 	}
 
-	if (filter.relationship === RELATIONSHIPS.EXCLUDE_IF_ANY_OF) {
-		return !filter.values.some((value) => predicate(row, filter, value));
+	if (filter.relationship === OPERATORS.EXCLUDE_IF_ALL) {
+		return !filter.values.every((value) => rowValues.includes(value.value));
 	}
 
-	console.error(`Invalid relationship: ${filter.relationship}`);
+	if (filter.relationship === OPERATORS.EXCLUDE_IF_ANY_OF) {
+		return !filter.values.some((value) => rowValues.includes(value.value));
+	}
+
+	console.error(`Invalid relationship: $filter.relationship`);
 	return true;
 }
