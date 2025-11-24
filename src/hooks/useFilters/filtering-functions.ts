@@ -143,19 +143,18 @@ function filterByCheckbox<T extends Row>(row: T, filter: TAppliedFilter) {
 	}
 
 	if (filter.values.length === 1) {
-		const rowPropertyValue = row[propertyNamePlural];
-		if (!rowPropertyValue || !Array.isArray(rowPropertyValue)) {
+		const rowValue = row[propertyNamePlural];
+		if (!rowValue || !Array.isArray(rowValue)) {
 			console.error(
-				`Expected an array of values for property ${propertyNamePlural}, but got ${rowPropertyValue}`,
+				`Expected an array of values for property ${propertyNamePlural}, but got ${rowValue}`,
 			);
 			return true; // default to true so that at least the user can see the row
 		}
-		const rowValue = rowPropertyValue[0];
 		if (filter.relationship === OPERATORS.INCLUDE) {
-			return filter.values.some((value) => value.value === rowValue);
+			return filter.values.some((value) => rowValue.includes(value.value));
 		}
 		if (filter.relationship === OPERATORS.DO_NOT_INCLUDE) {
-			return !filter.values.some((value) => value.value === rowValue);
+			return !filter.values.some((value) => rowValue.includes(value.value));
 		}
 		throw new Error(
 			`Invalid relationship: ${filter.relationship} with 1 value`,
