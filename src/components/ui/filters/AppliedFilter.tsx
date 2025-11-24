@@ -1,6 +1,6 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { X } from "lucide-react";
-import { memo } from "react";
+import { memo, useRef, useState } from "react";
 import { useFilters } from "@/App.tsx";
 import FilterDropdownSubCategory from "@/components/ui/filters/FilterDropdownSubCategory";
 import {
@@ -104,6 +104,13 @@ const Right = ({ filter }: { filter: TAppliedFilter }) => {
 	const { selectionType, propertyNameSingular, propertyNamePlural, values } =
 		filter;
 	const category = filterCategories.find((c) => c.id === filter.categoryId);
+	const [isOpen, setIsOpen] = useState(false);
+	const buttonRef = useRef<HTMLButtonElement>(null);
+	const [triggerPosition, setTriggerPosition] = useState<{
+		top: number;
+		left: number;
+	} | null>(null);
+
 	if (!category) {
 		console.error("Category not found");
 		return null;
@@ -116,17 +123,43 @@ const Right = ({ filter }: { filter: TAppliedFilter }) => {
 	const selectedOptionsLabel =
 		values.length > 0 ? values.map((v) => v.label).join(", ") : "...";
 
+	const handleOpenChange = (open: boolean) => {
+		if (open && buttonRef.current) {
+			// Capture the button's position when opening
+			const rect = buttonRef.current.getBoundingClientRect();
+			setTriggerPosition({
+				top: rect.top,
+				left: rect.left,
+			});
+		}
+		setIsOpen(open);
+	};
+
 	return (
-		<DropdownMenu.Root modal={false}>
-			<DropdownMenu.Trigger asChild>
-				<button
-					type="button"
-					className="h-full px-2 whitespace-nowrap cursor-pointer border-r border-slate-200 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
-					aria-label={`Filter by ${propertyNameToDisplay}`}
-				>
-					{selectedOptionsLabel}
-				</button>
-			</DropdownMenu.Trigger>
+		<DropdownMenu.Root modal={false} open={isOpen} onOpenChange={handleOpenChange}>
+			{/* Invisible trigger positioned at the captured location */}
+			{isOpen && triggerPosition && (
+				<DropdownMenu.Trigger asChild>
+					<div
+						className="fixed w-0 h-0 pointer-events-none"
+						style={{
+							top: triggerPosition.top,
+							left: triggerPosition.left,
+						}}
+					/>
+				</DropdownMenu.Trigger>
+			)}
+			
+			{/* Visible button that acts as the interactive element */}
+			<button
+				ref={buttonRef}
+				type="button"
+				onClick={() => handleOpenChange(!isOpen)}
+				className="h-full px-2 whitespace-nowrap cursor-pointer border-r border-slate-200 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
+				aria-label={`Filter by ${propertyNameToDisplay}`}
+			>
+				{selectedOptionsLabel}
+			</button>
 
 			<DropdownMenu.Portal>
 				<DropdownMenu.Content
