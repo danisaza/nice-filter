@@ -1,9 +1,13 @@
 import { X } from "lucide-react";
+import { memo } from "react";
 import { useFilters } from "@/App";
 import type { Priority, Status } from "@/mock-data/grid-data";
 import { Button } from "./components/ui/button";
 
-export default function Grid() {
+// NOTE: memoizing the grid is a good idea, but unfortunately it's rendered useless because the context provider
+//       is not memoizing the object that it provides as a value, so every time that the context provider re-renders,
+//       it provides a new object as context and causes the grid to re-render.
+const Grid = memo(() => {
 	const { removeAllFilters, filteredRows, hiddenRowCount } = useFilters();
 	return (
 		<div className="w-full">
@@ -83,7 +87,7 @@ export default function Grid() {
 			) : null}
 		</div>
 	);
-}
+});
 
 // Helper functions for color classes
 function getPriorityColor(priority: Priority): string {
@@ -104,3 +108,5 @@ function getStatusColor(status: Status): string {
 	};
 	return colors[status];
 }
+
+export default Grid;

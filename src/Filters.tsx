@@ -23,7 +23,7 @@ export default function Filters() {
 	useEffect(() => {
 		if (filterCategories.length > 0) return;
 		setFilterCategories(FILTER_CATEGORIES);
-	});
+	}, []);
 
 	const renderTrigger = () => (
 		<DropdownMenu.Trigger asChild>

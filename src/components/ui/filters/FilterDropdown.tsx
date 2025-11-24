@@ -118,8 +118,8 @@ const FilterDropdown = ({
 				/>
 				{subItemsToRender.map((subItem, index) => (
 					<FilterDropdownCategory
+						key={subItem.id}
 						after={newFilterCreatedAtCutoff}
-						key={subItem.value}
 						category={subItem}
 						triggerText={subItem.label}
 						onKeyDown={

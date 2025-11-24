@@ -1,4 +1,3 @@
-import * as ReactDOM from "react-dom/client";
 import "@/App.css";
 import Filters from "@/Filters";
 import type { Predicate } from "@/hooks/useFilters/constants";
@@ -6,7 +5,10 @@ import createFiltersContext, {
 	FiltersProvider,
 } from "@/hooks/useFilters/useFilters";
 import { NewFilterCreatedAtCutoffProvider } from "@/hooks/useNewFilterCreatedAtCutoff";
-import { type MyRow, ROWS } from "@/mock-data/grid-data";
+import { generateRows, type MyRow } from "@/mock-data/grid-data";
+import Grid from "./Grid";
+
+const ROWS = generateRows(10_000);
 
 const GETTERS = {
 	status: (row: MyRow) => row.status,
@@ -39,6 +41,7 @@ export default function App() {
 		>
 			<NewFilterCreatedAtCutoffProvider>
 				<Filters />
+				<Grid />
 			</NewFilterCreatedAtCutoffProvider>
 		</FiltersProvider>
 	);
