@@ -11,23 +11,79 @@ export type Tag =
 	| "Other";
 type Assignee = "John Doe" | "Jane Smith" | "Alice Johnson" | "Bob Brown";
 
-const STATUSES: Status[] = ["Not Started", "In Progress", "Completed", "Cancelled"];
+const STATUSES: Status[] = [
+	"Not Started",
+	"In Progress",
+	"Completed",
+	"Cancelled",
+];
 const PRIORITIES: Priority[] = ["Low", "Medium", "High"];
-const TAGS: Tag[] = ["Bug", "Feature", "Documentation", "Refactoring", "Testing", "Other"];
-const ASSIGNEES: Assignee[] = ["John Doe", "Jane Smith", "Alice Johnson", "Bob Brown"];
+const TAGS: Tag[] = [
+	"Bug",
+	"Feature",
+	"Documentation",
+	"Refactoring",
+	"Testing",
+	"Other",
+];
+const ASSIGNEES: Assignee[] = [
+	"John Doe",
+	"Jane Smith",
+	"Alice Johnson",
+	"Bob Brown",
+];
 
 const TASK_PREFIXES = [
-	"Implement", "Fix", "Refactor", "Add", "Update", "Remove", "Optimize",
-	"Debug", "Test", "Review", "Deploy", "Configure", "Migrate", "Document",
-	"Analyze", "Design", "Build", "Integrate", "Validate", "Audit"
+	"Implement",
+	"Fix",
+	"Refactor",
+	"Add",
+	"Update",
+	"Remove",
+	"Optimize",
+	"Debug",
+	"Test",
+	"Review",
+	"Deploy",
+	"Configure",
+	"Migrate",
+	"Document",
+	"Analyze",
+	"Design",
+	"Build",
+	"Integrate",
+	"Validate",
+	"Audit",
 ];
 
 const TASK_SUBJECTS = [
-	"authentication", "database", "API", "UI", "dashboard", "reports",
-	"notifications", "search", "filters", "export", "import", "settings",
-	"permissions", "logging", "caching", "pagination", "validation",
-	"error handling", "testing", "documentation", "deployment", "monitoring",
-	"analytics", "performance", "security", "accessibility", "mobile view"
+	"authentication",
+	"database",
+	"API",
+	"UI",
+	"dashboard",
+	"reports",
+	"notifications",
+	"search",
+	"filters",
+	"export",
+	"import",
+	"settings",
+	"permissions",
+	"logging",
+	"caching",
+	"pagination",
+	"validation",
+	"error handling",
+	"testing",
+	"documentation",
+	"deployment",
+	"monitoring",
+	"analytics",
+	"performance",
+	"security",
+	"accessibility",
+	"mobile view",
 ];
 
 function randomItem<T>(arr: T[]): T {
@@ -67,4 +123,4 @@ export type MyRow = {
 };
 
 // Generate 10,000 rows for performance profiling
-export const ROWS: MyRow[] = generateRows(10000);
+export const ROWS: MyRow[] = generateRows(10_000);
