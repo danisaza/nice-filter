@@ -57,16 +57,6 @@ export type RadioSelectionOperators =
 export type Operator = (typeof OPERATORS)[keyof typeof OPERATORS];
 
 /**
- * This is the predicate function that you can use to define whether a particular row should be
- * shown when a particular filter is present. Return `true` to show the row and `false` to hide it.
- */
-export type Predicate<T extends Row> = (
-	row: T,
-	filter: TAppliedFilter,
-	filterValue: TAppliedFilter["values"][number],
-) => boolean;
-
-/**
  * The discriminated union part of TAppliedFilter that varies between filter types.
  * This is extracted as a separate type so VariableKeys can automatically derive
  * the varying keys without duplication.

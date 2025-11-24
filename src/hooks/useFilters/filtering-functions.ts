@@ -8,7 +8,6 @@ import {
 import type {
 	MatchType,
 	Operator,
-	Predicate,
 	RelationshipType,
 	Row,
 	TAppliedFilter,
@@ -17,50 +16,37 @@ import type {
 export function filterRowByMatchType<T extends Row>(
 	row: T,
 	filters: TAppliedFilter[],
-	predicate: Predicate<T>,
 	matchType: MatchType,
 ) {
 	if (filters.length === 0) {
 		return row;
 	}
 	if (matchType === MATCH_TYPES.ALL) {
-		return filterRowByAll(row, filters, predicate);
+		return filterRowByAll(row, filters);
 	} else if (matchType === MATCH_TYPES.ANY) {
-		return filterRowByAny(row, filters, predicate);
+		return filterRowByAny(row, filters);
 	} else {
 		console.error(`Invalid match type: ${matchType}`);
 		return true; // default to true so that at least the user can see their data
 	}
 }
 
-function filterRowByAll<T extends Row>(
-	row: T,
-	filters: TAppliedFilter[],
-	predicate: Predicate<T>,
-) {
+function filterRowByAll<T extends Row>(row: T, filters: TAppliedFilter[]) {
 	return filters.every((filter) => {
-		return filterRow(row, filter, predicate);
+		return filterRow(row, filter);
 	});
 }
 
-function filterRowByAny<T extends Row>(
-	row: T,
-	filters: TAppliedFilter[],
-	predicate: Predicate<T>,
-) {
+function filterRowByAny<T extends Row>(row: T, filters: TAppliedFilter[]) {
 	return filters.some((filter) => {
-		return filterRow(row, filter, predicate);
+		return filterRow(row, filter);
 	});
 }
 
 /** Returns `true` if the row should be displayed, according to the filter.
  *
  *  If an error is encountered, it returns `true` so that the row is still displayed */
-function filterRow<T extends Row>(
-	row: T,
-	filter: TAppliedFilter,
-	predicate: Predicate<T>,
-) {
+function filterRow<T extends Row>(row: T, filter: TAppliedFilter) {
 	const selectionType: RelationshipType = filter.selectionType;
 	if (
 		selectionType !== SELECTION_TYPES.RADIO &&
@@ -84,20 +70,21 @@ function filterRow<T extends Row>(
 	}
 
 	if (selectionType === SELECTION_TYPES.RADIO) {
-		return filterByRadio(row, filter, predicate);
+		return filterByRadio(row, filter);
 	} else if (selectionType === SELECTION_TYPES.CHECKBOXES) {
-		return filterByCheckbox(row, filter, predicate);
+		return filterByCheckbox(row, filter);
 	} else {
 		console.error(`Invalid selection type: ${selectionType}`);
 		return true;
 	}
 }
 
-function filterByRadio<T extends Row>(
-	row: T,
-	filter: TAppliedFilter,
-	predicate: Predicate<T>,
-) {
+function filterByRadio<T extends Row>(row: T, filter: TAppliedFilter) {
+	if (!filter.propertyNameSingular) {
+		console.error("propertyNameSingular is required for radio filters");
+		return true; // default to true so that at least the user can see the row
+	}
+	const propertyNameSingular = filter.propertyNameSingular;
 	const relationshipOptions: readonly Operator[] =
 		filter.values.length <= 1
 			? RADIO_SELECTION_OPERATORS.ONE
@@ -114,26 +101,26 @@ function filterByRadio<T extends Row>(
 				`Invalid number of values for relationship ${filter.relationship}: ${filter.values.length}`,
 			);
 		}
-		return predicate(row, filter, filter.values[0]);
+		return row[propertyNameSingular] === filter.values[0].value;
 	}
 
 	if (filter.relationship === OPERATORS.IS_ANY_OF) {
-		return filter.values.some((value) => predicate(row, filter, value));
+		return filter.values.some(
+			(value) => row[propertyNameSingular] === value.value,
+		);
 	}
 
 	if (filter.relationship === OPERATORS.IS_NOT) {
-		return !filter.values.some((value) => predicate(row, filter, value));
+		return !filter.values.some(
+			(value) => row[propertyNameSingular] === value.value,
+		);
 	}
 
 	console.error(`Invalid relationship: $filter.relationship`);
 	return true;
 }
 
-function filterByCheckbox<T extends Row>(
-	row: T,
-	filter: TAppliedFilter,
-	_predicate: Predicate<T>,
-) {
+function filterByCheckbox<T extends Row>(row: T, filter: TAppliedFilter) {
 	if (!filter.propertyNamePlural) {
 		console.error("propertyNamePlural is required for checkbox filters");
 		return true; // default to true so that at least the user can see the row

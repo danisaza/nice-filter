@@ -21,7 +21,6 @@ import type {
 	FilterOption,
 	MatchType,
 	Operator,
-	Predicate,
 	RadioOperator,
 	Row,
 	TAppliedFilter,
@@ -60,15 +59,12 @@ type FiltersContextType<T extends Row> = {
 
 type FiltersProviderProps<T extends Row> = {
 	children: ReactNode;
-	predicate: Predicate<T>;
 	rows: T[];
 	context: React.Context<FiltersContextType<T> | null>;
 };
 
-// TODO: Consider memoizing the predicate function in case the user passes in a new function each time
 export function FiltersProvider<T extends Row>({
 	children,
-	predicate,
 	rows,
 	context,
 }: FiltersProviderProps<T>) {
@@ -82,9 +78,9 @@ export function FiltersProvider<T extends Row>({
 	// TODO: There are a ton of performance improvements you could make around memoizing these checks
 	const filteredRows = useMemo(() => {
 		return rows.filter((row) =>
-			filterRowByMatchType(row, filters, predicate, matchType),
+			filterRowByMatchType(row, filters, matchType),
 		);
-	}, [filters, predicate, matchType, rows]);
+	}, [filters, matchType, rows]);
 
 	const addFilter = useCallback(
 		({
