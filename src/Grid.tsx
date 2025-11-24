@@ -32,6 +32,6 @@ const Grid = () => {
 			) : null}
 		</div>
 	);
-});
+};
 
 export default Grid;
