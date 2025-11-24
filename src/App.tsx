@@ -1,4 +1,5 @@
 import "@/App.css";
+import FiltersFooterSection from "@/components/ui/filters/FilterFooterSection";
 import Filters from "@/Filters";
 import Grid from "@/Grid";
 import createFiltersContext, {
@@ -13,13 +14,19 @@ export { useFilters };
 
 export default function App() {
 	return (
-		<FiltersProvider
-			context={FiltersContext}
-			rows={ROWS}
-		>
+		<FiltersProvider context={FiltersContext} rows={ROWS}>
 			<NewFilterCreatedAtCutoffProvider>
-				<Filters />
-				<Grid />
+				<div className="grid grid-rows-[auto_1fr_auto] h-screen">
+					<header className="p-4 border-b">
+						<Filters />
+					</header>
+					<main className="overflow-auto p-4">
+						<Grid />
+					</main>
+					<footer className="border-t">
+						<FiltersFooterSection />
+					</footer>
+				</div>
 			</NewFilterCreatedAtCutoffProvider>
 		</FiltersProvider>
 	);
