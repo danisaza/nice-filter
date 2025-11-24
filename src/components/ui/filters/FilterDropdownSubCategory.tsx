@@ -71,9 +71,10 @@ const FilterDropdownSubCategory = forwardRef<
 				// Note that it could arguably be safer to make this check by `id`, but I'm taking care to maintain
 				// consistent references to the same filter objects, so referential equality works as expected.
 				const alreadySelected = prevValues.includes(value);
-				return alreadySelected
+				const newValues = alreadySelected
 					? prevValues.filter((v) => v !== value)
 					: [...prevValues, value];
+				return newValues;
 			});
 			return;
 		}

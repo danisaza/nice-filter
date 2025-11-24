@@ -4,11 +4,11 @@ import { memo } from "react";
 import { useFilters } from "@/App.tsx";
 import FilterDropdownSubCategory from "@/components/ui/filters/FilterDropdownSubCategory";
 import {
-	CHECKBOX_SELECTION_RELATIONSHIPS,
-	RADIO_SELECTION_RELATIONSHIPS,
-	RELATIONSHIP_TYPES,
+	CHECKBOX_SELECTION_OPERATORS,
+	RADIO_SELECTION_OPERATORS,
+	SELECTION_TYPES,
 } from "@/hooks/useFilters/constants";
-import type { Relationship, TAppliedFilter } from "@/hooks/useFilters/types";
+import type { Operator, TAppliedFilter } from "@/hooks/useFilters/types";
 
 const dropdownMenuContentClassNames =
 	"border border-slate-300 min-w-[220px] bg-white rounded-md p-1 shadow-lg animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2";
@@ -44,11 +44,11 @@ const Middle = ({ filter }: { filter: TAppliedFilter }) => {
 	const { selectionType, values } = filter;
 
 	// Get the relationship options based on the number of values
-	let relationshipOptions: readonly Relationship[];
+	let relationshipOptions: readonly Operator[];
 	const relationshipOptionsByNumValues =
-		selectionType === RELATIONSHIP_TYPES.RADIO
-			? RADIO_SELECTION_RELATIONSHIPS
-			: CHECKBOX_SELECTION_RELATIONSHIPS;
+		selectionType === SELECTION_TYPES.RADIO
+			? RADIO_SELECTION_OPERATORS
+			: CHECKBOX_SELECTION_OPERATORS;
 	if (values.length === 1) {
 		relationshipOptions = relationshipOptionsByNumValues.ONE;
 	} else {
@@ -74,11 +74,11 @@ const Middle = ({ filter }: { filter: TAppliedFilter }) => {
 						value={filter.relationship}
 						onValueChange={(option) => {
 							// validate that this is a valid relationship option
-							if (!relationshipOptions.includes(option as Relationship)) {
+							if (!relationshipOptions.includes(option as Operator)) {
 								console.error(`Invalid relationship option: ${option}`);
 								return;
 							}
-							updateFilterRelationship(filter.id, option as Relationship);
+							updateFilterRelationship(filter.id, option as Operator);
 						}}
 					>
 						{relationshipOptions.map((relationshipOption) => (
@@ -109,7 +109,7 @@ const Right = ({ filter }: { filter: TAppliedFilter }) => {
 		return null;
 	}
 	const propertyNameToDisplay =
-		selectionType === RELATIONSHIP_TYPES.RADIO
+		selectionType === SELECTION_TYPES.RADIO
 			? propertyNameSingular
 			: propertyNamePlural;
 

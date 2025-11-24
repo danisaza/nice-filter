@@ -1,30 +1,12 @@
 import "@/App.css";
+import FiltersFooterSection from "@/components/ui/filters/FilterFooterSection";
 import Filters from "@/Filters";
 import Grid from "@/Grid";
-import type { Predicate } from "@/hooks/useFilters/types";
 import createFiltersContext, {
 	FiltersProvider,
 } from "@/hooks/useFilters/useFilters";
 import { NewFilterCreatedAtCutoffProvider } from "@/hooks/useNewFilterCreatedAtCutoff";
 import { type MyRow, ROWS } from "@/mock-data/grid-data";
-
-const GETTERS = {
-	status: (row: MyRow) => row.status,
-	priority: (row: MyRow) => row.priority,
-	tag: (row: MyRow) => row.tags,
-	assignee: (row: MyRow) => row.assignee,
-};
-
-const myPredicate: Predicate<MyRow> = (row, filter, filterValue) => {
-	const getter =
-		GETTERS[filter.propertyNameSingular as keyof typeof GETTERS] ??
-		(() =>
-			row[filter.propertyNameSingular as keyof MyRow] ??
-			row[filter.propertyNamePlural as keyof MyRow]);
-
-	const rowValue = getter(row);
-	return rowValue === filterValue.value;
-};
 
 const [useFilters, FiltersContext] = createFiltersContext<MyRow>();
 
@@ -32,14 +14,19 @@ export { useFilters };
 
 export default function App() {
 	return (
-		<FiltersProvider
-			context={FiltersContext}
-			predicate={myPredicate}
-			rows={ROWS}
-		>
+		<FiltersProvider context={FiltersContext} rows={ROWS}>
 			<NewFilterCreatedAtCutoffProvider>
-				<Filters />
-				<Grid />
+				<div className="grid grid-rows-[auto_1fr_auto] h-screen">
+					<header className="p-4 border-b">
+						<Filters />
+					</header>
+					<main className="overflow-auto p-4">
+						<Grid />
+					</main>
+					<footer className="border-t">
+						<FiltersFooterSection />
+					</footer>
+				</div>
 			</NewFilterCreatedAtCutoffProvider>
 		</FiltersProvider>
 	);
