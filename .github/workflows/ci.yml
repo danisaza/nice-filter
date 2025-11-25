@@ -8,6 +8,9 @@ on:
     branches:
       - main
 
+env:
+  HUSKY: 0 # avoids installing git hooks on CI servers
+
 permissions:
   contents: read
 
