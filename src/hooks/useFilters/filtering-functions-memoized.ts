@@ -27,7 +27,7 @@ function escapeDelimiter(str: string, delimiter: string): string {
 	return str
 		.replace(/\\/g, "\\\\")
 		.replace(
-			new RegExp(`\\${delimiter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "g"),
+			new RegExp(delimiter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
 			`\\${delimiter}`,
 		);
 }
@@ -235,13 +235,15 @@ export class MemoizedFilterSystem {
 			return;
 		}
 
-		// now get the rowCache entry for that rowDataHash and clear it
-		const cache = this.rowCache.get(rowDataHash);
+		// now get the rowCache entry for that rowId:rowDataHash combination
+		const cacheKey = `${rowId}:${rowDataHash}`;
+		const cache = this.rowCache.get(cacheKey);
 		if (!cache) {
 			return;
 		}
 
 		cache.clear();
+		this.rowCache.delete(cacheKey);
 		this.rowDataHashes.delete(rowId);
 	}
 
