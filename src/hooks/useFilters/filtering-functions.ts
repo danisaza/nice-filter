@@ -17,9 +17,9 @@ export function filterRowByMatchType<T extends Row>(
 	row: T,
 	filters: TAppliedFilter[],
 	matchType: MatchType,
-) {
+): boolean {
 	if (filters.length === 0) {
-		return row;
+		return true;
 	}
 	if (matchType === MATCH_TYPES.ALL) {
 		return filterRowByAll(row, filters);
@@ -31,13 +31,19 @@ export function filterRowByMatchType<T extends Row>(
 	}
 }
 
-function filterRowByAll<T extends Row>(row: T, filters: TAppliedFilter[]) {
+function filterRowByAll<T extends Row>(
+	row: T,
+	filters: TAppliedFilter[],
+): boolean {
 	return filters.every((filter) => {
 		return filterRow(row, filter);
 	});
 }
 
-function filterRowByAny<T extends Row>(row: T, filters: TAppliedFilter[]) {
+function filterRowByAny<T extends Row>(
+	row: T,
+	filters: TAppliedFilter[],
+): boolean {
 	return filters.some((filter) => {
 		return filterRow(row, filter);
 	});
@@ -46,7 +52,7 @@ function filterRowByAny<T extends Row>(row: T, filters: TAppliedFilter[]) {
 /** Returns `true` if the row should be displayed, according to the filter.
  *
  *  If an error is encountered, it returns `true` so that the row is still displayed */
-function filterRow<T extends Row>(row: T, filter: TAppliedFilter) {
+function filterRow<T extends Row>(row: T, filter: TAppliedFilter): boolean {
 	const selectionType: RelationshipType = filter.selectionType;
 	if (
 		selectionType !== SELECTION_TYPES.RADIO &&
@@ -79,7 +85,7 @@ function filterRow<T extends Row>(row: T, filter: TAppliedFilter) {
 	}
 }
 
-function filterByRadio<T extends Row>(row: T, filter: TAppliedFilter) {
+function filterByRadio<T extends Row>(row: T, filter: TAppliedFilter): boolean {
 	if (!filter.propertyNameSingular) {
 		console.error("propertyNameSingular is required for radio filters");
 		return true; // default to true so that at least the user can see the row
@@ -120,7 +126,10 @@ function filterByRadio<T extends Row>(row: T, filter: TAppliedFilter) {
 	return true;
 }
 
-function filterByCheckbox<T extends Row>(row: T, filter: TAppliedFilter) {
+function filterByCheckbox<T extends Row>(
+	row: T,
+	filter: TAppliedFilter,
+): boolean {
 	if (!filter.propertyNamePlural) {
 		console.error("propertyNamePlural is required for checkbox filters");
 		return true; // default to true so that at least the user can see the row
