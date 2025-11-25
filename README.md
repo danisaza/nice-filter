@@ -9,6 +9,12 @@ To show the hook in use, the repo also includes a UI. It's a rough reproduction 
 
 ## Limitations and future extensions
 
+### Better / more granular caching
+
+Right now, if the filters don't change, I don't recompute the filtered rows. However, if ANY filter changes, I recompute EVERYTHING. That's obviously inefficient.
+
+[This PR](https://github.com/danisaza/nice-filter/pull/6) adds more granular caching. However, it needs some work because the profiling results indicate that it causes the number of commits made by React to balloon, for some reason.
+
 ### Adding more supported column types
 
 Currently, only `string` and `string[]` values are supported. (good for things like statuses, tags, etc). I'd like to extend it to other data types in the future (numbers, dates, etc)
