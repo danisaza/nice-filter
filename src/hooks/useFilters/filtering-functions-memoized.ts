@@ -22,7 +22,7 @@ const DELIMITERS = {
  * @param delimiter - The delimiter character to escape
  * @returns The escaped string
  */
-function escapeDelimiter(str: string, delimiter: string): string {
+export function escapeDelimiter(str: string, delimiter: string): string {
 	// Escape backslashes first, then escape the specified delimiter
 	return str
 		.replace(/\\/g, "\\\\")
