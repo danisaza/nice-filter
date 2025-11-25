@@ -1,3 +1,6 @@
+Hey, Streak team! Here's a Loom walkthrough for this code sample:
+https://www.loom.com/share/40ab62dd3c864038a21247b8280a7bc4
+
 # Nice Filter
 
 A sophisticated, reusable filtering system for React applications built with TypeScript. The core of this project is the `useFilters` hook—a fully self-contained, reusable hook that manages all filtering logic on behalf of the caller. Simply provide your data and filter categories, and the hook handles filter state management, filtering logic, and provides filtered results automatically.
