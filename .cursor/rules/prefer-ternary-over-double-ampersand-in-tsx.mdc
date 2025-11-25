@@ -1,0 +1,14 @@
+---
+description: When conditionally rendering something in JSX/TSX
+alwaysApply: false
+---
+
+When you have conditionally rendered content in JSX/TSX, prefer a ternary (`condition ? then : else`) over logical AND (`condition && then`) in order to explicitly handle both branches and avoid unintended values being rendered.
+
+Key guiding principles:
+
+- Use `condition ? <ThenContent/> : <ElseContent/>` rather than `condition && <ThenContent/>`.
+- If you want nothing to render on the "false" branch, use `: null`.
+- Avoid relying on && because falsy values can get rendered (e.g., 0, undefined, false, '') and lead to unexpected UI bugs.
+- Using explicit branching makes your intent clearer and improves testability (e.g., code coverage tools can detect the "else" branch).
+- If you prefer, you can also create the content ahead of return via an if statement, but using a ternary inline is often most readable.

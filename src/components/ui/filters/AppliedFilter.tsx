@@ -136,9 +136,13 @@ const Right = ({ filter }: { filter: TAppliedFilter }) => {
 	};
 
 	return (
-		<DropdownMenu.Root modal={false} open={isOpen} onOpenChange={handleOpenChange}>
+		<DropdownMenu.Root
+			modal={false}
+			open={isOpen}
+			onOpenChange={handleOpenChange}
+		>
 			{/* Invisible trigger positioned at the captured location */}
-			{isOpen && triggerPosition && (
+			{isOpen && triggerPosition ? (
 				<DropdownMenu.Trigger asChild>
 					<div
 						className="fixed w-0 h-0 pointer-events-none"
@@ -148,8 +152,8 @@ const Right = ({ filter }: { filter: TAppliedFilter }) => {
 						}}
 					/>
 				</DropdownMenu.Trigger>
-			)}
-			
+			) : null}
+
 			{/* Visible button that acts as the interactive element */}
 			<button
 				ref={buttonRef}
@@ -164,7 +168,7 @@ const Right = ({ filter }: { filter: TAppliedFilter }) => {
 			<DropdownMenu.Portal>
 				<DropdownMenu.Content
 					align="start"
-					sideOffset={5}
+					sideOffset={40}
 					className="border shadow-md border-gray-300 min-w-[220px] rounded-md bg-white p-[5px] will-change-[opacity,transform] data-[side=bottom]:animate-slideUpAndFade data-[side=left]:animate-slideRightAndFade data-[side=right]:animate-slideLeftAndFade data-[side=top]:animate-slideDownAndFade"
 				>
 					<FilterDropdownSubCategory
