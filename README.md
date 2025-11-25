@@ -29,10 +29,11 @@ Also, the hook assumes that you'll provide it a bunch of data right now, and all
 
 This is relatively complex code and would definitely benefit from some tests.
 
-## Usage
+## Usage / setup
 
 ```bash
 pnpm install
+pnpm prepare  # sets up pre-commit hooks with husky
 pnpm dev
 ```
 
