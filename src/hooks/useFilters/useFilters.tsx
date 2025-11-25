@@ -3,7 +3,9 @@ import {
 	type ReactNode,
 	useCallback,
 	useContext,
+	useEffect,
 	useMemo,
+	useRef,
 	useState,
 } from "react";
 import type { UseStateSetter } from "@/utils";
@@ -15,6 +17,7 @@ import {
 	SELECTION_TYPES,
 } from "./constants";
 import { filterRowByMatchType } from "./filtering-functions";
+import { MemoizedFilterSystem } from "./filtering-functions-memoized";
 import type {
 	CheckboxOperator,
 	ComboboxOption,
@@ -61,12 +64,14 @@ type FiltersProviderProps<T extends Row> = {
 	children: ReactNode;
 	rows: T[];
 	context: React.Context<FiltersContextType<T> | null>;
+	enableCaching?: boolean;
 };
 
 export function FiltersProvider<T extends Row>({
 	children,
 	rows,
 	context,
+	enableCaching = true,
 }: FiltersProviderProps<T>) {
 	const [filters, setFilters] = useState<TAppliedFilter[]>([]);
 	//              ^?
@@ -75,12 +80,31 @@ export function FiltersProvider<T extends Row>({
 		[],
 	);
 
-	// TODO: There are a ton of performance improvements you could make around memoizing these checks
+	// Memoized filter system instance (only created if caching is enabled)
+	const filterSystemRef = useRef<MemoizedFilterSystem | null>(null);
+	if (enableCaching && !filterSystemRef.current) {
+		filterSystemRef.current = new MemoizedFilterSystem();
+	}
+	if (!enableCaching && filterSystemRef.current) {
+		filterSystemRef.current.clearCache();
+		filterSystemRef.current = null;
+	}
+
+	// Clear cache when rows change (if caching is enabled)
+	useEffect(() => {
+		if (enableCaching && filterSystemRef.current) {
+			filterSystemRef.current.clearCache();
+		}
+	}, [rows, enableCaching]);
+
 	const filteredRows = useMemo(() => {
-		return rows.filter((row) =>
-			filterRowByMatchType(row, filters, matchType),
-		);
-	}, [filters, matchType, rows]);
+		if (enableCaching && filterSystemRef.current) {
+			return rows.filter((row) =>
+				filterSystemRef.current!.filterRowByMatchType(row, filters, matchType),
+			);
+		}
+		return rows.filter((row) => filterRowByMatchType(row, filters, matchType));
+	}, [filters, matchType, rows, enableCaching]);
 
 	const addFilter = useCallback(
 		({
@@ -135,9 +159,15 @@ export function FiltersProvider<T extends Row>({
 		[],
 	);
 
-	const removeFilter = useCallback((filterId: string) => {
-		setFilters((prev) => prev.filter((f) => f.id !== filterId));
-	}, []);
+	const removeFilter = useCallback(
+		(filterId: string) => {
+			if (enableCaching && filterSystemRef.current) {
+				filterSystemRef.current.clearFilterCache(filterId);
+			}
+			setFilters((prev) => prev.filter((f) => f.id !== filterId));
+		},
+		[enableCaching],
+	);
 
 	const removeAllFilters = useCallback(() => {
 		setFilters([]);

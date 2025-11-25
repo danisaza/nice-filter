@@ -1,7 +1,8 @@
+import { memo } from "react";
 import { useFilters } from "@/App";
 import GridItem from "./GridItem";
 
-const Grid = () => {
+const Grid = memo(() => {
 	const { filteredRows } = useFilters();
 	return (
 		<div className="w-full">
@@ -12,6 +13,6 @@ const Grid = () => {
 			</div>
 		</div>
 	);
-};
+});
 
 export default Grid;
