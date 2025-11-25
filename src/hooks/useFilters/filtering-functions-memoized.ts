@@ -23,18 +23,44 @@ const DELIMITERS = {
  * @returns The escaped string
  */
 export function escapeDelimiter(str: string, delimiter: string): string {
-	// Escape backslashes first, then escape the specified delimiter
-	return str
-		.replace(/\\/g, "\\\\")
-		.replace(
-			new RegExp(delimiter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g"),
-			`\\${delimiter}`,
-		);
+	// First pass: escape backslashes
+	// Second pass: escape the delimiter
+	// We do this in two passes to ensure backslashes are escaped first,
+	// so that delimiter escaping doesn't interfere with backslash escaping.
+
+	// Note: "\\" is a single backslash character (the backslash is escaped in the string literal)
+	const BACKSLASH = "\\";
+	const ESCAPED_BACKSLASH = "\\\\";
+
+	let firstPassResult = "";
+
+	// First pass: escape backslashes
+	for (let i = 0; i < str.length; i++) {
+		const char = str[i];
+		if (char === BACKSLASH) {
+			firstPassResult += ESCAPED_BACKSLASH;
+		} else {
+			firstPassResult += char;
+		}
+	}
+
+	// Second pass: escape delimiters
+	let finalResult = "";
+	for (let i = 0; i < firstPassResult.length; i++) {
+		const char = firstPassResult[i];
+		if (char === delimiter) {
+			finalResult += `\\${delimiter}`;
+		} else {
+			finalResult += char;
+		}
+	}
+
+	return finalResult;
 }
 
 /**
- * Creates a stable signature/hash for a filter based on its relevant properties.
- * This allows us to detect when a filter has actually changed.
+ * Creates a stable signature for a filter based on its relevant properties.
+ * This allows us to detect when a filter has changed.
  *
  * Uses comma (,) to separate filter values. Escapes commas in user data to prevent collisions.
  */
