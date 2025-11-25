@@ -31,23 +31,11 @@ jobs:
       - name: Install Dependencies
         run: pnpm install
 
+      - name: Run Typechecker
+        run: pnpm tsc
+
       # - name: Check format
       #   run: pnpm check
 
       - name: Run Tests
         run: pnpm test:run
-
-  test-action:
-    name: GitHub Actions Test
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Test Local Action
-        uses: ./
-        with:
-          milliseconds: 1000
-
-      - name: Print Output
-        run: echo "${{ steps.test-action.outputs.time }}"
