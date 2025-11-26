@@ -8,17 +8,18 @@ import createFiltersContext, {
 import { NewFilterCreatedAtCutoffProvider } from "@/hooks/useNewFilterCreatedAtCutoff";
 import { type MyRow, ROWS } from "@/mock-data/grid-data";
 
-const {
-	useFilters,
-	useFilteredRows,
-	context: filtersContext,
-} = createFiltersContext<MyRow>();
+const { useFilters, useFilteredRows, filtersContext, filteredRowsContext } =
+	createFiltersContext<MyRow>();
 
 export { useFilters, useFilteredRows };
 
 export default function App() {
 	return (
-		<FiltersProvider context={filtersContext} rows={ROWS}>
+		<FiltersProvider
+			context={filtersContext}
+			filteredRowsContext={filteredRowsContext}
+			rows={ROWS}
+		>
 			<NewFilterCreatedAtCutoffProvider>
 				<div className="grid grid-rows-[auto_1fr_auto] h-screen">
 					<header className="p-4 border-b">
