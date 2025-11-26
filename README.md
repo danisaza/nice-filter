@@ -3,7 +3,7 @@ https://www.loom.com/share/40ab62dd3c864038a21247b8280a7bc4
 
 # Nice Filter
 
-A sophisticated, reusable filtering system for React applications built with TypeScript. The core of this project is the `useFilters` hook—a fully self-contained, reusable hook that manages all filtering logic on behalf of the caller. Simply provide your data and filter categories, and the hook handles filter state management, filtering logic, and provides filtered results automatically.
+A sophisticated, reusable filtering system for React applications built with TypeScript. The core of this project is `useFilters` - a reusable hook that manages filter state and filters data client-side. Simply provide your data and filter categories, and the hook handles filter state management, filtering logic, and provides filtered results automatically.
 
 To show the hook in use, the repo also includes a UI. It's a rough reproduction of Linear's filtering experience, with a focus on performance, accessibility, and aesthetics.'
 
