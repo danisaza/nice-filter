@@ -327,7 +327,7 @@ export function FiltersProvider<T extends Row>({
  */
 const createFiltersContext = <T extends Row>() => {
 	const filtersContext = createContext<FiltersContextType<T> | null>(null);
-	const filteredRowsContext = createContext<T[]>([]);
+	const filteredRowsContext = createContext<T[] | null>(null);
 
 	const useFilters = (): FiltersContextType<T> => {
 		// `context` is caught in the closure of `useFilters`, so we keep a reference to it,
@@ -343,6 +343,9 @@ const createFiltersContext = <T extends Row>() => {
 
 	const useFilteredRows = (): T[] => {
 		const filteredRows = useContext(filteredRowsContext);
+		if (!filteredRows) {
+			throw new Error("useFilteredRows must be used within a FiltersProvider");
+		}
 		return filteredRows;
 	};
 
