@@ -24,12 +24,12 @@ function createMockFilter(
 	} as TAppliedFilter;
 }
 
-test("returns row when filters array is empty", () => {
+test("row is not filtered out when filters array is empty", () => {
 	const row: Row = { status: "value1" };
 	const filters: TAppliedFilter[] = [];
 	const result = filterRowByMatchType(row, filters, MATCH_TYPES.ALL);
 
-	expect(result).toBe(row);
+	expect(result).toBe(true);
 });
 
 test("filters with MATCH_TYPES.ALL - all filters must match", () => {

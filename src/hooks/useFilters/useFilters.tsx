@@ -91,6 +91,7 @@ export function FiltersProvider<T extends Row>({
 	}
 
 	// Clear cache when rows change (if caching is enabled)
+	// biome-ignore lint/correctness/useExhaustiveDependencies: we actually *do* want `rows` here so we can clear the cache when it changes
 	useEffect(() => {
 		if (enableCaching && filterSystemRef.current) {
 			filterSystemRef.current.clearCache();
@@ -100,6 +101,7 @@ export function FiltersProvider<T extends Row>({
 	const filteredRows = useMemo(() => {
 		if (enableCaching && filterSystemRef.current) {
 			return rows.filter((row) =>
+				// biome-ignore lint/style/noNonNullAssertion: we just checked that it's not null
 				filterSystemRef.current!.filterRowByMatchType(row, filters, matchType),
 			);
 		}
@@ -364,7 +366,12 @@ const createFiltersContext = <T extends Row>() => {
 		return contextValue;
 	};
 
-	return [useFilters, context] as const;
+	const useFilteredRows = () => {
+		const { filteredRows } = useFilters();
+		return filteredRows;
+	};
+
+	return { useFilters, useFilteredRows, context } as const;
 };
 
 export default createFiltersContext;

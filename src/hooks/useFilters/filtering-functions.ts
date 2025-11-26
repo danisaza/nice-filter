@@ -44,7 +44,10 @@ export function filterRowByMatchType<T extends Row>(
 /** Returns `true` if the row should be displayed, according to the filter.
  *
  *  If an error is encountered, it returns `true` so that the row is still displayed */
-export function filterRow<T extends Row>(row: T, filter: TAppliedFilter) {
+export function filterRow<T extends Row>(
+	row: T,
+	filter: TAppliedFilter,
+): boolean {
 	const selectionType: RelationshipType = filter.selectionType;
 	if (
 		selectionType !== SELECTION_TYPES.RADIO &&
@@ -77,7 +80,10 @@ export function filterRow<T extends Row>(row: T, filter: TAppliedFilter) {
 	}
 }
 
-export function filterByRadio<T extends Row>(row: T, filter: TAppliedFilter) {
+export function filterByRadio<T extends Row>(
+	row: T,
+	filter: TAppliedFilter,
+): boolean {
 	if (!filter.propertyNameSingular) {
 		console.error("propertyNameSingular is required for radio filters");
 		return true; // default to true so that at least the user can see the row
@@ -121,7 +127,7 @@ export function filterByRadio<T extends Row>(row: T, filter: TAppliedFilter) {
 export function filterByCheckbox<T extends Row>(
 	row: T,
 	filter: TAppliedFilter,
-) {
+): boolean {
 	if (!filter.propertyNamePlural) {
 		console.error("propertyNamePlural is required for checkbox filters");
 		return true; // default to true so that at least the user can see the row
