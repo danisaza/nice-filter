@@ -70,9 +70,9 @@ const FilterDropdown = ({
 		[formattedFilterCategories, searchText],
 	);
 
-	// Check if trigger will be rendered via AppliedFilters
-	const hasNewFilters = filters.some(
-		(filter) => filter.createdAt > newFilterCreatedAtCutoff,
+	// render the trigger if there are no "under-construction" filters
+	const shouldRenderTrigger = filters.every(
+		(filter) => filter.createdAt < newFilterCreatedAtCutoff,
 	);
 
 	const firstCategoryOnKeyDown = useCallback(
@@ -107,10 +107,7 @@ const FilterDropdown = ({
 					dropdownMenuOpen ? "relative bg-accent text-accent-foreground" : "",
 				)}
 			>
-				{/* Always render trigger to maintain focus management, but hide it when rendered elsewhere */}
-				<div className={hasNewFilters ? "hidden" : ""}>
-					{renderTrigger()}
-				</div>
+				{shouldRenderTrigger ? renderTrigger() : null}
 				<ListFilter className="w-4 h-4 group-hover:text-accent-foreground text-muted-foreground group-data-[state=open]:text-accent-foreground" />{" "}
 				Filter
 			</Button>
