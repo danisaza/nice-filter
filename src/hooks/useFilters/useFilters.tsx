@@ -36,7 +36,10 @@ type FilterValueUpdate =
 
 type FiltersContextType<T extends Row> = {
 	addFilter: (
-		filter: Omit<TAppliedFilter, "relationship" | "createdAt">,
+		filter: Omit<
+			TAppliedFilter,
+			"relationship" | "createdAt" | "_cacheVersion"
+		>,
 	) => void;
 	filters: TAppliedFilter[];
 	// TODO: Consider updating filterCategories here to include a second type parameter for the property key
@@ -119,7 +122,10 @@ export function FiltersProvider<T extends Row>({
 			propertyNamePlural,
 			selectionType,
 			values,
-		}: Omit<TAppliedFilter, "createdAt" | "relationship" | "_cacheVersion">) => {
+		}: Omit<
+			TAppliedFilter,
+			"createdAt" | "relationship" | "_cacheVersion"
+		>) => {
 			const newFilter = {
 				id,
 				createdAt: Date.now(),
