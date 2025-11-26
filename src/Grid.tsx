@@ -1,8 +1,8 @@
-import { useFilters } from "@/App";
+import { useFilteredRows } from "@/App";
 import GridItem from "./GridItem";
 
 const Grid = () => {
-	const { filteredRows } = useFilters();
+	const filteredRows = useFilteredRows();
 	return (
 		<div className="w-full">
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

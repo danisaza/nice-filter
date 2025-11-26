@@ -77,9 +77,7 @@ export function FiltersProvider<T extends Row>({
 
 	// TODO: There are a ton of performance improvements you could make around memoizing these checks
 	const filteredRows = useMemo(() => {
-		return rows.filter((row) =>
-			filterRowByMatchType(row, filters, matchType),
-		);
+		return rows.filter((row) => filterRowByMatchType(row, filters, matchType));
 	}, [filters, matchType, rows]);
 
 	const addFilter = useCallback(
@@ -334,7 +332,12 @@ const createFiltersContext = <T extends Row>() => {
 		return contextValue;
 	};
 
-	return [useFilters, context] as const;
+	const useFilteredRows = (): T[] => {
+		const { filteredRows } = useFilters();
+		return filteredRows;
+	};
+
+	return { useFilters, useFilteredRows, context } as const;
 };
 
 export default createFiltersContext;
