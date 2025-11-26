@@ -82,6 +82,13 @@ export type TAppliedFilter = {
 	options: ComboboxOption[];
 	values: ComboboxOption[];
 	relationship: Operator;
+	/**
+	 * Internal version counter for cache invalidation.
+	 * Incremented whenever the filter's values or relationship changes.
+	 * This allows the memoization system to use a simple numeric comparison
+	 * instead of computing expensive signatures.
+	 */
+	_cacheVersion: number;
 } & FilterDiscriminatedUnionVariant;
 
 /**

@@ -59,19 +59,15 @@ export function escapeDelimiter(str: string, delimiter: string): string {
 }
 
 /**
- * Creates a stable signature for a filter based on its relevant properties.
- * This allows us to detect when a filter has changed.
+ * Creates a stable signature for a filter based on its id and cache version.
  *
- * Uses comma (,) to separate filter values. Escapes commas in user data to prevent collisions.
+ * The _cacheVersion is incremented by the state management layer (useFilters)
+ * whenever the filter's values or relationship changes. This allows us to use
+ * a simple numeric comparison instead of computing expensive signatures by
+ * sorting and escaping filter values.
  */
 function getFilterSignature(filter: TAppliedFilter): string {
-	// Sort values by id to ensure consistent signature even if order changes
-	const sortedValues = [...filter.values]
-		.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
-		.map((v) => escapeDelimiter(v.value, DELIMITERS.ARRAY_ELEMENT))
-		.join(DELIMITERS.ARRAY_ELEMENT);
-
-	return `${filter.id}:${filter.relationship}:${sortedValues}`;
+	return `${filter.id}:${filter._cacheVersion}`;
 }
 
 /**

@@ -119,13 +119,14 @@ export function FiltersProvider<T extends Row>({
 			propertyNamePlural,
 			selectionType,
 			values,
-		}: Omit<TAppliedFilter, "createdAt" | "relationship">) => {
+		}: Omit<TAppliedFilter, "createdAt" | "relationship" | "_cacheVersion">) => {
 			const newFilter = {
 				id,
 				createdAt: Date.now(),
 				categoryId,
 				options,
 				values,
+				_cacheVersion: 0,
 			};
 
 			if (selectionType === SELECTION_TYPES.RADIO) {
@@ -188,7 +189,10 @@ export function FiltersProvider<T extends Row>({
 							? filterValueUpdate(f.values)
 							: filterValueUpdate;
 
-					return updateFilterValueAndRelationship(f, newValues);
+					return {
+						...updateFilterValueAndRelationship(f, newValues),
+						_cacheVersion: f._cacheVersion + 1,
+					};
 				}),
 			);
 		},
@@ -217,6 +221,7 @@ export function FiltersProvider<T extends Row>({
 							...f,
 							propertyNameSingular: f.propertyNameSingular,
 							relationship: relationship as RadioOperator,
+							_cacheVersion: f._cacheVersion + 1,
 						};
 					}
 
@@ -236,6 +241,7 @@ export function FiltersProvider<T extends Row>({
 							...f,
 							propertyNamePlural: f.propertyNamePlural,
 							relationship: relationship as CheckboxOperator,
+							_cacheVersion: f._cacheVersion + 1,
 						};
 					}
 
