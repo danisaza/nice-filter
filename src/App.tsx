@@ -1,5 +1,4 @@
 import "@/App.css";
-import { useMemo } from "react";
 import FiltersFooterSection from "@/components/ui/filters/FilterFooterSection";
 import Filters from "@/Filters";
 import Grid from "@/Grid";
@@ -7,21 +6,19 @@ import createFiltersContext, {
 	FiltersProvider,
 } from "@/hooks/useFilters/useFilters";
 import { NewFilterCreatedAtCutoffProvider } from "@/hooks/useNewFilterCreatedAtCutoff";
-import { generateRows, type MyRow } from "@/mock-data/grid-data";
+import { type MyRow, ROWS } from "@/mock-data/grid-data";
 
 const { useFilters, useFilteredRows, filtersContext, filteredRowsContext } =
 	createFiltersContext<MyRow>();
 
 export { useFilters, useFilteredRows };
-const ROW_COUNT = 100;
 
 export default function App() {
-	const rows = useMemo(() => generateRows(ROW_COUNT), []);
 	return (
 		<FiltersProvider
 			context={filtersContext}
 			filteredRowsContext={filteredRowsContext}
-			rows={rows}
+			rows={ROWS}
 		>
 			<NewFilterCreatedAtCutoffProvider>
 				<div className="grid grid-rows-[auto_1fr_auto] h-screen">

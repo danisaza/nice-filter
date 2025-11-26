@@ -14,7 +14,5 @@ export default defineConfig({
 	},
 	test: {
 		// Vitest configuration
-		environment: "node",
-		globals: true,
 	},
 });
