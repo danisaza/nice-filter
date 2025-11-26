@@ -1,7 +1,6 @@
-import { memo, useRef } from "react";
+import { useRef } from "react";
 import { useFilteredRows } from "@/App";
 import GridItem from "./GridItem";
-import type { MyRow } from "./mock-data/grid-data";
 
 const Grid = () => {
 	const filteredRows = useFilteredRows();
