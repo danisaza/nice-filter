@@ -61,7 +61,7 @@ type FiltersProviderProps<T extends Row> = {
 	children: ReactNode;
 	rows: T[];
 	context: React.Context<FiltersContextType<T> | null>;
-	filteredRowsContext: React.Context<T[]>;
+	filteredRowsContext: React.Context<T[] | null>;
 };
 
 export function FiltersProvider<T extends Row>({
