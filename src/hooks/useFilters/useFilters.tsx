@@ -64,7 +64,7 @@ type FiltersProviderProps<T extends Row> = {
 	children: ReactNode;
 	rows: T[];
 	context: React.Context<FiltersContextType<T> | null>;
-	filteredRowsContext: React.Context<T[]>;
+	filteredRowsContext: React.Context<T[] | null>;
 	enableCaching?: boolean;
 };
 
@@ -375,7 +375,7 @@ const createFiltersContext = <T extends Row>() => {
 		return contextValue;
 	};
 
-	const useFilteredRows = () => {
+	const useFilteredRows = (): T[] => {
 		const filteredRows = useContext(filteredRowsContext);
 		if (!filteredRows) {
 			throw new Error("useFilteredRows must be used within a FiltersProvider");
