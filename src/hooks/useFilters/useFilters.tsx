@@ -64,6 +64,7 @@ type FiltersProviderProps<T extends Row> = {
 	children: ReactNode;
 	rows: T[];
 	context: React.Context<FiltersContextType<T> | null>;
+	filteredRowsContext: React.Context<T[]>;
 	enableCaching?: boolean;
 };
 
@@ -71,6 +72,7 @@ export function FiltersProvider<T extends Row>({
 	children,
 	rows,
 	context,
+	filteredRowsContext,
 	enableCaching = true,
 }: FiltersProviderProps<T>) {
 	const [filters, setFilters] = useState<TAppliedFilter[]>([]);
@@ -337,7 +339,13 @@ export function FiltersProvider<T extends Row>({
 		],
 	);
 
-	return <context.Provider value={value}>{children}</context.Provider>;
+	return (
+		<context.Provider value={value}>
+			<filteredRowsContext.Provider value={filteredRows}>
+				{children}
+			</filteredRowsContext.Provider>
+		</context.Provider>
+	);
 }
 
 /**
@@ -352,12 +360,13 @@ export function FiltersProvider<T extends Row>({
  * the user's data upfront.
  */
 const createFiltersContext = <T extends Row>() => {
-	const context = createContext<FiltersContextType<T> | null>(null);
+	const filtersContext = createContext<FiltersContextType<T> | null>(null);
+	const filteredRowsContext = createContext<T[]>([]);
 
 	const useFilters = (): FiltersContextType<T> => {
 		// `context` is caught in the closure of `useFilters`, so we keep a reference to it,
 		// allowing us to not specify its final type at instantiation time and let the user
-		const contextValue = useContext(context);
+		const contextValue = useContext(filtersContext);
 
 		if (!contextValue) {
 			throw new Error("useFilters must be used within a FiltersProvider");
@@ -367,11 +376,16 @@ const createFiltersContext = <T extends Row>() => {
 	};
 
 	const useFilteredRows = () => {
-		const { filteredRows } = useFilters();
+		const filteredRows = useContext(filteredRowsContext);
 		return filteredRows;
 	};
 
-	return { useFilters, useFilteredRows, context } as const;
+	return {
+		useFilters,
+		useFilteredRows,
+		filtersContext,
+		filteredRowsContext,
+	} as const;
 };
 
 export default createFiltersContext;
