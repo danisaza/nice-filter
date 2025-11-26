@@ -3,7 +3,9 @@ import {
 	type ReactNode,
 	useCallback,
 	useContext,
+	useEffect,
 	useMemo,
+	useRef,
 	useState,
 } from "react";
 import type { UseStateSetter } from "@/utils";
@@ -15,6 +17,7 @@ import {
 	SELECTION_TYPES,
 } from "./constants";
 import { filterRowByMatchType } from "./filtering-functions";
+import { MemoizedFilterSystem } from "./filtering-functions-memoized";
 import type {
 	CheckboxOperator,
 	ComboboxOption,
@@ -33,7 +36,10 @@ type FilterValueUpdate =
 
 type FiltersContextType<T extends Row> = {
 	addFilter: (
-		filter: Omit<TAppliedFilter, "relationship" | "createdAt">,
+		filter: Omit<
+			TAppliedFilter,
+			"relationship" | "createdAt" | "_cacheVersion"
+		>,
 	) => void;
 	filters: TAppliedFilter[];
 	// TODO: Consider updating filterCategories here to include a second type parameter for the property key
@@ -62,6 +68,7 @@ type FiltersProviderProps<T extends Row> = {
 	rows: T[];
 	context: React.Context<FiltersContextType<T> | null>;
 	filteredRowsContext: React.Context<T[] | null>;
+	enableCaching?: boolean;
 };
 
 export function FiltersProvider<T extends Row>({
@@ -69,6 +76,7 @@ export function FiltersProvider<T extends Row>({
 	rows,
 	context,
 	filteredRowsContext,
+	enableCaching = true,
 }: FiltersProviderProps<T>) {
 	const [filters, setFilters] = useState<TAppliedFilter[]>([]);
 	//              ^?
@@ -77,10 +85,33 @@ export function FiltersProvider<T extends Row>({
 		[],
 	);
 
-	// TODO: There are a ton of performance improvements you could make around memoizing these checks
+	// Memoized filter system instance (only created if caching is enabled)
+	const filterSystemRef = useRef<MemoizedFilterSystem | null>(null);
+	if (enableCaching && !filterSystemRef.current) {
+		filterSystemRef.current = new MemoizedFilterSystem();
+	}
+	if (!enableCaching && filterSystemRef.current) {
+		filterSystemRef.current.clearCache();
+		filterSystemRef.current = null;
+	}
+
+	// Clear cache when rows change (if caching is enabled)
+	// biome-ignore lint/correctness/useExhaustiveDependencies: we actually *do* want `rows` here so we can clear the cache when it changes
+	useEffect(() => {
+		if (enableCaching && filterSystemRef.current) {
+			filterSystemRef.current.clearCache();
+		}
+	}, [rows, enableCaching]);
+
 	const filteredRows = useMemo(() => {
+		if (enableCaching && filterSystemRef.current) {
+			return rows.filter((row) =>
+				// biome-ignore lint/style/noNonNullAssertion: we just checked that it's not null
+				filterSystemRef.current!.filterRowByMatchType(row, filters, matchType),
+			);
+		}
 		return rows.filter((row) => filterRowByMatchType(row, filters, matchType));
-	}, [filters, matchType, rows]);
+	}, [filters, matchType, rows, enableCaching]);
 
 	const addFilter = useCallback(
 		({
@@ -91,13 +122,17 @@ export function FiltersProvider<T extends Row>({
 			propertyNamePlural,
 			selectionType,
 			values,
-		}: Omit<TAppliedFilter, "createdAt" | "relationship">) => {
+		}: Omit<
+			TAppliedFilter,
+			"createdAt" | "relationship" | "_cacheVersion"
+		>) => {
 			const newFilter = {
 				id,
 				createdAt: Date.now(),
 				categoryId,
 				options,
 				values,
+				_cacheVersion: 0,
 			};
 
 			if (selectionType === SELECTION_TYPES.RADIO) {
@@ -135,9 +170,15 @@ export function FiltersProvider<T extends Row>({
 		[],
 	);
 
-	const removeFilter = useCallback((filterId: string) => {
-		setFilters((prev) => prev.filter((f) => f.id !== filterId));
-	}, []);
+	const removeFilter = useCallback(
+		(filterId: string) => {
+			if (enableCaching && filterSystemRef.current) {
+				filterSystemRef.current.clearFilterCache(filterId);
+			}
+			setFilters((prev) => prev.filter((f) => f.id !== filterId));
+		},
+		[enableCaching],
+	);
 
 	const removeAllFilters = useCallback(() => {
 		setFilters([]);
@@ -154,7 +195,10 @@ export function FiltersProvider<T extends Row>({
 							? filterValueUpdate(f.values)
 							: filterValueUpdate;
 
-					return updateFilterValueAndRelationship(f, newValues);
+					return {
+						...updateFilterValueAndRelationship(f, newValues),
+						_cacheVersion: f._cacheVersion + 1,
+					};
 				}),
 			);
 		},
@@ -183,6 +227,7 @@ export function FiltersProvider<T extends Row>({
 							...f,
 							propertyNameSingular: f.propertyNameSingular,
 							relationship: relationship as RadioOperator,
+							_cacheVersion: f._cacheVersion + 1,
 						};
 					}
 
@@ -202,6 +247,7 @@ export function FiltersProvider<T extends Row>({
 							...f,
 							propertyNamePlural: f.propertyNamePlural,
 							relationship: relationship as CheckboxOperator,
+							_cacheVersion: f._cacheVersion + 1,
 						};
 					}
 

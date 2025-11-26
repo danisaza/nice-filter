@@ -1,8 +1,12 @@
+import { useRef } from "react";
 import { useFilteredRows } from "@/App";
 import GridItem from "./GridItem";
 
 const Grid = () => {
 	const filteredRows = useFilteredRows();
+	const renders = useRef(0);
+	renders.current += 1;
+	console.log(`Grid render #${renders.current}`);
 	return (
 		<div className="w-full">
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
