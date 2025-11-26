@@ -71,13 +71,35 @@ function getFilterSignature(filter: TAppliedFilter): string {
 }
 
 /**
+ * WeakMap cache for row data signatures.
+ *
+ * Since rows come from external code, we can't add a version counter like we do
+ * for filters. Instead, we leverage object identity: when a row changes, React's
+ * immutable update patterns mean a new object is created. WeakMap lets us:
+ *
+ * 1. Cache signatures per row object reference (O(1) lookup for same object)
+ * 2. Automatically clean up when row objects are garbage collected
+ * 3. Avoid recomputing expensive signatures when the same row object is passed multiple times
+ */
+const rowSignatureCache = new WeakMap<Row, string>();
+
+/**
  * Creates a stable signature for a row based on its data.
  * This allows us to detect when a row's data has changed even if it has the same ID.
  *
  * Uses comma (,) to separate array elements and pipe (|) to separate values.
  * Escapes delimiters in user data to prevent collisions.
+ *
+ * Results are cached per row object reference via WeakMap for efficiency.
  */
 function getRowDataSignature<T extends Row>(row: T): string {
+	// Check WeakMap cache first
+	const cached = rowSignatureCache.get(row);
+	if (cached !== undefined) {
+		return cached;
+	}
+
+	// Compute signature (expensive)
 	const keys = Object.keys(row).sort();
 	const values = keys.map((key) => {
 		const value = row[key];
@@ -94,7 +116,12 @@ function getRowDataSignature<T extends Row>(row: T): string {
 			DELIMITERS.VALUE_SEPARATOR,
 		);
 	});
-	return values.join(DELIMITERS.VALUE_SEPARATOR);
+	const signature = values.join(DELIMITERS.VALUE_SEPARATOR);
+
+	// Cache for future lookups with the same object reference
+	rowSignatureCache.set(row, signature);
+
+	return signature;
 }
 
 /**
