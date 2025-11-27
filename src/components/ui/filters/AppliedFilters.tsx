@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from "react";
+import { memo, type ReactNode, useMemo } from "react";
 import { useFilters } from "@/App.tsx";
 import AppliedFilter from "./AppliedFilter";
 
@@ -30,21 +30,24 @@ const AppliedFilters = memo(
 			return true;
 		});
 
+		const sortedFilters = useMemo(
+			() => [...filtersToDisplay].sort((a, b) => a.createdAt - b.createdAt),
+			[filtersToDisplay],
+		);
+
 		return (
 			<div className="contents">
-				{filtersToDisplay
-					.sort((a, b) => a.createdAt - b.createdAt)
-					.map((filter, index) => {
-						if (index === 0 && renderPrefixElement) {
-							return (
-								<div key={filter.id} className="relative">
-									{renderPrefixElement()}
-									<AppliedFilter key={filter.id} filter={filter} />
-								</div>
-							);
-						}
-						return <AppliedFilter key={filter.id} filter={filter} />;
-					})}
+				{sortedFilters.map((filter, index) => {
+					if (index === 0 && renderPrefixElement) {
+						return (
+							<div key={filter.id} className="relative">
+								{renderPrefixElement()}
+								<AppliedFilter key={filter.id} filter={filter} />
+							</div>
+						);
+					}
+					return <AppliedFilter key={filter.id} filter={filter} />;
+				})}
 			</div>
 		);
 	},

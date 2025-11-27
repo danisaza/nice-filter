@@ -146,7 +146,6 @@ export class MemoizedFilterSystem {
 	private rowCache: RowCache = new Map();
 	// Tracks current rowDataHash for each rowId to detect changes
 	private rowDataHashes: Map<string, string> = new Map();
-	private filterSignatures: Map<string, string> = new Map();
 
 	/**
 	 * Gets a stable identifier for a row.
@@ -193,14 +192,12 @@ export class MemoizedFilterSystem {
 	}
 
 	/**
-	 * Gets the current signature for a filter, or creates a new one.
+	 * Gets the current signature for a filter.
 	 * If the filter has changed, old entries will naturally expire as they're
 	 * not accessed (since new signature is used going forward).
 	 */
 	private getFilterSignature(filter: TAppliedFilter): string {
-		const signature = getFilterSignature(filter);
-		this.filterSignatures.set(filter.id, signature);
-		return signature;
+		return getFilterSignature(filter);
 	}
 
 	/**
@@ -249,7 +246,6 @@ export class MemoizedFilterSystem {
 	clearCache(): void {
 		this.rowCache.clear();
 		this.rowDataHashes.clear();
-		this.filterSignatures.clear();
 	}
 
 	/**
@@ -268,9 +264,6 @@ export class MemoizedFilterSystem {
 				}
 			}
 		}
-
-		// Remove the filter signature tracking
-		this.filterSignatures.delete(filterId);
 	}
 
 	/**
@@ -302,7 +295,6 @@ export class MemoizedFilterSystem {
 	getCacheStats(): {
 		rowCacheEntries: number;
 		rowDataHashes: number;
-		filterSignatures: number;
 		totalFilterEntries: number;
 	} {
 		let totalFilterEntries = 0;
@@ -312,7 +304,6 @@ export class MemoizedFilterSystem {
 		return {
 			rowCacheEntries: this.rowCache.size,
 			rowDataHashes: this.rowDataHashes.size,
-			filterSignatures: this.filterSignatures.size,
 			totalFilterEntries,
 		};
 	}
