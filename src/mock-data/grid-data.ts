@@ -123,4 +123,4 @@ export type MyRow = {
 };
 
 // Generate 10,000 rows for performance profiling
-export const ROWS: MyRow[] = generateRows(100);
+export const ROWS: MyRow[] = generateRows(10_000);

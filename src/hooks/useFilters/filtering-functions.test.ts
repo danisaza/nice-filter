@@ -17,6 +17,7 @@ function createMockFilter(
 		selectionType: SELECTION_TYPES.RADIO,
 		propertyNameSingular: "status",
 		relationship: OPERATORS.IS,
+		_cacheVersion: 0,
 	};
 	return {
 		...filterDefaults,

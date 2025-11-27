@@ -13,46 +13,41 @@ import type {
 	TAppliedFilter,
 } from "./types";
 
+/**
+ * Type for a function that evaluates a single filter against a row.
+ * This allows dependency injection for memoization.
+ */
+export type FilterEvaluator<T extends Row> = (
+	row: T,
+	filter: TAppliedFilter,
+) => boolean;
+
 export function filterRowByMatchType<T extends Row>(
 	row: T,
 	filters: TAppliedFilter[],
 	matchType: MatchType,
+	evaluator: FilterEvaluator<T> = filterRow,
 ): boolean {
 	if (filters.length === 0) {
 		return true;
 	}
 	if (matchType === MATCH_TYPES.ALL) {
-		return filterRowByAll(row, filters);
+		return filters.every((filter) => evaluator(row, filter));
 	} else if (matchType === MATCH_TYPES.ANY) {
-		return filterRowByAny(row, filters);
+		return filters.some((filter) => evaluator(row, filter));
 	} else {
 		console.error(`Invalid match type: ${matchType}`);
 		return true; // default to true so that at least the user can see their data
 	}
 }
 
-function filterRowByAll<T extends Row>(
-	row: T,
-	filters: TAppliedFilter[],
-): boolean {
-	return filters.every((filter) => {
-		return filterRow(row, filter);
-	});
-}
-
-function filterRowByAny<T extends Row>(
-	row: T,
-	filters: TAppliedFilter[],
-): boolean {
-	return filters.some((filter) => {
-		return filterRow(row, filter);
-	});
-}
-
 /** Returns `true` if the row should be displayed, according to the filter.
  *
  *  If an error is encountered, it returns `true` so that the row is still displayed */
-function filterRow<T extends Row>(row: T, filter: TAppliedFilter): boolean {
+export function filterRow<T extends Row>(
+	row: T,
+	filter: TAppliedFilter,
+): boolean {
 	const selectionType: RelationshipType = filter.selectionType;
 	if (
 		selectionType !== SELECTION_TYPES.RADIO &&
@@ -85,7 +80,10 @@ function filterRow<T extends Row>(row: T, filter: TAppliedFilter): boolean {
 	}
 }
 
-function filterByRadio<T extends Row>(row: T, filter: TAppliedFilter): boolean {
+export function filterByRadio<T extends Row>(
+	row: T,
+	filter: TAppliedFilter,
+): boolean {
 	if (!filter.propertyNameSingular) {
 		console.error("propertyNameSingular is required for radio filters");
 		return true; // default to true so that at least the user can see the row
@@ -126,7 +124,7 @@ function filterByRadio<T extends Row>(row: T, filter: TAppliedFilter): boolean {
 	return true;
 }
 
-function filterByCheckbox<T extends Row>(
+export function filterByCheckbox<T extends Row>(
 	row: T,
 	filter: TAppliedFilter,
 ): boolean {
