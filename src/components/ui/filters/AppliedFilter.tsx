@@ -159,6 +159,8 @@ const Right = ({ filter }: { filter: TAppliedFilter }) => {
 				ref={buttonRef}
 				type="button"
 				onClick={() => handleOpenChange(!isOpen)}
+				aria-haspopup="menu"
+				aria-expanded={isOpen}
 				className="h-full px-2 whitespace-nowrap cursor-pointer border-r border-slate-200 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
 				aria-label={`Filter by ${propertyNameToDisplay}`}
 			>
@@ -169,6 +171,10 @@ const Right = ({ filter }: { filter: TAppliedFilter }) => {
 				<DropdownMenu.Content
 					align="start"
 					sideOffset={40}
+					onCloseAutoFocus={(event) => {
+						event.preventDefault();
+						buttonRef.current?.focus();
+					}}
 					className="border shadow-md border-gray-300 min-w-[220px] rounded-md bg-white p-[5px] will-change-[opacity,transform] data-[side=bottom]:animate-slideUpAndFade data-[side=left]:animate-slideRightAndFade data-[side=right]:animate-slideLeftAndFade data-[side=top]:animate-slideDownAndFade"
 				>
 					<FilterDropdownSubCategory
