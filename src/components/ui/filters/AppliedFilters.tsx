@@ -18,22 +18,20 @@ const AppliedFilters = memo(
 	({ after, before, renderPrefixElement }: AppliedFiltersProps) => {
 		const { filters } = useFilters();
 
-		const filtersToDisplay = filters.filter((filter) => {
-			if (before) {
-				return filter.createdAt < before;
-			}
-
-			// check against undefined in case someone uses `after={0}` to render all filters
-			if (after !== undefined) {
-				return filter.createdAt > after;
-			}
-			return true;
-		});
-
-		const sortedFilters = useMemo(
-			() => [...filtersToDisplay].sort((a, b) => a.createdAt - b.createdAt),
-			[filtersToDisplay],
-		);
+		const sortedFilters = useMemo(() => {
+			return filters
+				.filter((filter) => {
+					if (before) {
+						return filter.createdAt < before;
+					}
+					// check against undefined in case someone uses `after={0}` to render all filters
+					if (after !== undefined) {
+						return filter.createdAt > after;
+					}
+					return true;
+				})
+				.sort((a, b) => a.createdAt - b.createdAt);
+		}, [filters, before, after]);
 
 		return (
 			<div className="contents">
