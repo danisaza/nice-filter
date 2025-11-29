@@ -9,11 +9,9 @@ To show the hook in use, the repo also includes a UI. It's a rough reproduction 
 
 ## Limitations and future extensions
 
-### Better / more granular caching
+### ~Better / more granular caching~ Done! ✅
 
 Right now, if the filters don't change, I don't recompute the filtered rows. However, if ANY filter changes, I recompute EVERYTHING. That's obviously inefficient.
-
-[This PR](https://github.com/danisaza/nice-filter/pull/6) adds more granular caching. However, it needs some work because the profiling results indicate that it causes the number of commits made by React to balloon, for some reason.
 
 ### Adding more supported column types
 
@@ -25,9 +23,9 @@ With new types would come new operators like "greater than", "less than", etc.
 
 Also, the hook assumes that you'll provide it a bunch of data right now, and all the filtering is done client-side - which is not particularly useful in a real-world setting. It would be nice to have different "modes" that the caller can use: one where the hook never touches your data, one where it does all data fetching / filtering for you, etc.
 
-### Adding testing
+### Adding more testing
 
-This is relatively complex code and would definitely benefit from some tests.
+This is relatively complex code and would definitely benefit from more tests.
 
 ## Usage / setup
 
