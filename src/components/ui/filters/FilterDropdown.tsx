@@ -30,6 +30,7 @@ const FilterDropdown = ({
 }) => {
 	const { newFilterCreatedAtCutoff } = useNewFilterCreatedAtCutoff();
 	const { filters } = useFilters();
+	const buttonRef = useRef<HTMLButtonElement>(null);
 	const firstSubTriggerRef = useRef<HTMLDivElement>(null);
 	const lastSubTriggerRef = useRef<HTMLDivElement>(null);
 	const [searchText, setSearchText] = useState("");
@@ -100,7 +101,10 @@ const FilterDropdown = ({
 				renderPrefixElement={renderTrigger}
 			/>
 			<Button
+				ref={buttonRef}
 				onClick={() => setDropdownMenuOpen((prev) => !prev)}
+				aria-haspopup="menu"
+				aria-expanded={dropdownMenuOpen}
 				variant="ghost"
 				className={twMerge(
 					"group cursor-default data-[state=open]:bg-accent data-[state=open]:text-accent-foreground",
@@ -116,6 +120,10 @@ const FilterDropdown = ({
 				className="border border-gray-300 w-[260px] rounded bg-white shadow-md data-[state=open]:data-[side=bottom]:animate-slideUpAndFade data-[state=open]:data-[side=left]:animate-slideRightAndFade data-[state=open]:data-[side=right]:animate-slideLeftAndFade data-[state=open]:data-[side=top]:animate-slideDownAndFade"
 				sideOffset={25}
 				alignOffset={0}
+				onCloseAutoFocus={(event) => {
+					event.preventDefault();
+					buttonRef.current?.focus();
+				}}
 			>
 				<Input
 					id="search-input"

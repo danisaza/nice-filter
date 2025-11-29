@@ -69,6 +69,12 @@ type FiltersProviderProps<T extends Row> = {
 	context: React.Context<FiltersContextType<T> | null>;
 	filteredRowsContext: React.Context<T[] | null>;
 	enableCaching?: boolean;
+	/**
+	 * A function that returns a stable cache key for a row.
+	 * The key must change whenever the row's data changes, and remain the same
+	 * when the row's data is unchanged. This is required when caching is enabled.
+	 */
+	getRowCacheKey: (row: T) => string;
 };
 
 export function FiltersProvider<T extends Row>({
@@ -77,6 +83,7 @@ export function FiltersProvider<T extends Row>({
 	context,
 	filteredRowsContext,
 	enableCaching = true,
+	getRowCacheKey,
 }: FiltersProviderProps<T>) {
 	const [filters, setFilters] = useState<TAppliedFilter[]>([]);
 	//              ^?
@@ -86,9 +93,9 @@ export function FiltersProvider<T extends Row>({
 	);
 
 	// Memoized filter system instance (only created if caching is enabled)
-	const filterSystemRef = useRef<MemoizedFilterSystem | null>(null);
+	const filterSystemRef = useRef<MemoizedFilterSystem<T> | null>(null);
 	if (enableCaching && !filterSystemRef.current) {
-		filterSystemRef.current = new MemoizedFilterSystem();
+		filterSystemRef.current = new MemoizedFilterSystem(getRowCacheKey);
 	}
 	if (!enableCaching && filterSystemRef.current) {
 		filterSystemRef.current.clearCache();
