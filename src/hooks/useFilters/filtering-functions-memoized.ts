@@ -5,60 +5,6 @@ import {
 import type { MatchType, Row, TAppliedFilter } from "./types";
 
 /**
- * Delimiters used in cache key signatures.
- */
-const DELIMITERS = {
-	/** Used to separate array elements within a single value */
-	ARRAY_ELEMENT: ",",
-	/** Used to separate different values in a row signature */
-	VALUE_SEPARATOR: "|",
-} as const;
-
-/**
- * Escapes a specific delimiter in a string to prevent collisions.
- * Uses backslash as the escape character.
- *
- * @param str - The string to escape
- * @param delimiter - The delimiter character to escape
- * @returns The escaped string
- */
-export function escapeDelimiter(str: string, delimiter: string): string {
-	// First pass: escape backslashes
-	// Second pass: escape the delimiter
-	// We do this in two passes to ensure backslashes are escaped first,
-	// so that delimiter escaping doesn't interfere with backslash escaping.
-
-	// Note: "\\" is a single backslash character (the backslash is escaped in the string literal)
-	const BACKSLASH = "\\";
-	const ESCAPED_BACKSLASH = "\\\\";
-
-	let firstPassResult = "";
-
-	// First pass: escape backslashes
-	for (let i = 0; i < str.length; i++) {
-		const char = str[i];
-		if (char === BACKSLASH) {
-			firstPassResult += ESCAPED_BACKSLASH;
-		} else {
-			firstPassResult += char;
-		}
-	}
-
-	// Second pass: escape delimiters
-	let finalResult = "";
-	for (let i = 0; i < firstPassResult.length; i++) {
-		const char = firstPassResult[i];
-		if (char === delimiter) {
-			finalResult += `\\${delimiter}`;
-		} else {
-			finalResult += char;
-		}
-	}
-
-	return finalResult;
-}
-
-/**
  * Creates a stable signature for a filter based on its id and cache version.
  *
  * The _cacheVersion is incremented by the state management layer (useFilters)
@@ -71,62 +17,8 @@ function getFilterSignature(filter: TAppliedFilter): string {
 }
 
 /**
- * WeakMap cache for row data signatures.
- *
- * Since rows come from external code, we can't add a version counter like we do
- * for filters. Instead, we leverage object identity: when a row changes, React's
- * immutable update patterns mean a new object is created. WeakMap lets us:
- *
- * 1. Cache signatures per row object reference (O(1) lookup for same object)
- * 2. Automatically clean up when row objects are garbage collected
- * 3. Avoid recomputing expensive signatures when the same row object is passed multiple times
- */
-const rowSignatureCache = new WeakMap<Row, string>();
-
-/**
- * Creates a stable signature for a row based on its data.
- * This allows us to detect when a row's data has changed even if it has the same ID.
- *
- * Uses comma (,) to separate array elements and pipe (|) to separate values.
- * Escapes delimiters in user data to prevent collisions.
- *
- * Results are cached per row object reference via WeakMap for efficiency.
- */
-function getRowDataSignature<T extends Row>(row: T): string {
-	// Check WeakMap cache first
-	const cached = rowSignatureCache.get(row);
-	if (cached !== undefined) {
-		return cached;
-	}
-
-	// Compute signature (expensive)
-	const keys = Object.keys(row).sort();
-	const values = keys.map((key) => {
-		const value = row[key];
-		if (Array.isArray(value)) {
-			// Sort arrays for deterministic signature, escape each element, then join with comma
-			return [...value]
-				.sort()
-				.map((item) => escapeDelimiter(String(item), DELIMITERS.ARRAY_ELEMENT))
-				.join(DELIMITERS.ARRAY_ELEMENT);
-		}
-		// Escape both delimiters since this value could contain either
-		return escapeDelimiter(
-			escapeDelimiter(String(value), DELIMITERS.ARRAY_ELEMENT),
-			DELIMITERS.VALUE_SEPARATOR,
-		);
-	});
-	const signature = values.join(DELIMITERS.VALUE_SEPARATOR);
-
-	// Cache for future lookups with the same object reference
-	rowSignatureCache.set(row, signature);
-
-	return signature;
-}
-
-/**
  * Cache for storing filter evaluation results per row.
- * Outer Map key: `${rowId}:${rowDataHash}` (combines row ID and data signature)
+ * Outer Map key: stable row cache key (provided by caller)
  * Inner Map key: filterSignature (string)
  * Inner Map value: boolean (whether the row matches the filter)
  */
@@ -136,81 +28,69 @@ type RowCache = Map<string, Map<string, boolean>>;
  * Memoized filtering system that caches per-filter evaluation results.
  *
  * When a filter changes, only that filter's cache entries are invalidated.
- * When a row's data changes, old cache entries for that row are automatically removed.
+ * When a row's data changes (indicated by a change in the stable cache key),
+ * the old cache entries become orphaned and are cleaned up on next clearCache().
+ *
  * This works in conjunction with React's useMemo - useMemo handles memoizing
  * the final filteredRows array, while this handles memoizing individual
  * filter evaluations within that computation.
+ *
+ * @param getRowCacheKey - A function that returns a stable cache key for a row.
+ *   The key must change whenever the row's data changes, and remain the same
+ *   when the row's data is unchanged. This is the caller's responsibility.
  */
-export class MemoizedFilterSystem {
-	// Map keyed by `${rowId}:${rowDataHash}` - allows iteration and precise clearing
+export class MemoizedFilterSystem<T extends Row> {
 	private rowCache: RowCache = new Map();
-	// Tracks current rowDataHash for each rowId to detect changes
-	private rowDataHashes: Map<string, string> = new Map();
 	private filterSignatures: Map<string, string> = new Map();
 
-	/**
-	 * Gets a stable identifier for a row.
-	 * Assumes rows have an `id` property of type string.
-	 */
-	private getRowId<T extends Row>(row: T): string {
-		if ("id" in row && typeof row.id === "string") {
-			return row.id;
-		}
-		throw new Error(
-			"Row must have an 'id' property of type string for memoization to work",
-		);
-	}
+	constructor(private readonly getRowCacheKey: (row: T) => string) {}
 
 	/**
-	 * Gets or creates a cache for a specific row, handling row data changes.
+	 * Gets or creates a cache for a specific row.
 	 * Returns a Map keyed by filter signature.
-	 * Automatically removes old cache entries if the row's data has changed.
 	 */
-	private getRowCache<T extends Row>(row: T): Map<string, boolean> {
-		const rowId = this.getRowId(row);
-		const rowDataHash = getRowDataSignature(row);
-		const cacheKey = `${rowId}:${rowDataHash}`;
+	private getRowCache(row: T): Map<string, boolean> {
+		const cacheKey = this.getRowCacheKey(row);
 
-		// Check if row data has changed
-		const oldRowDataHash = this.rowDataHashes.get(rowId);
-		if (oldRowDataHash && oldRowDataHash !== rowDataHash) {
-			// Row data changed - remove old cache entry
-			const oldCacheKey = `${rowId}:${oldRowDataHash}`;
-			this.rowCache.delete(oldCacheKey);
-		}
-
-		// Update or set the current hash for this rowId
-		// In other words: record the last-known value for this rowId
-		this.rowDataHashes.set(rowId, rowDataHash);
-
-		// Get or create cache for this rowId:rowDataHash combination
 		let cache = this.rowCache.get(cacheKey);
 		if (!cache) {
-			cache = new Map(); // <-- should we specify a type here?
+			cache = new Map<string, boolean>();
 			this.rowCache.set(cacheKey, cache);
 		}
 		return cache;
 	}
 
 	/**
-	 * Gets the current signature for a filter, or creates a new one.
-	 * If the filter has changed, old entries will naturally expire as they're
-	 * not accessed (since new signature is used going forward).
+	 * Gets the current signature for a filter, cleaning up old entries if the version changed.
+	 * This prevents orphaned cache entries from accumulating when filters are modified.
 	 */
-	private getFilterSignature(filter: TAppliedFilter): string {
-		const signature = getFilterSignature(filter);
-		this.filterSignatures.set(filter.id, signature);
-		return signature;
+	private getFilterSignatureAndCleanup(filter: TAppliedFilter): string {
+		const newSignature = getFilterSignature(filter);
+		const oldSignature = this.filterSignatures.get(filter.id);
+
+		// If signature changed, clean up old entries to prevent memory leaks
+		if (oldSignature && oldSignature !== newSignature) {
+			this.clearFilterSignature(oldSignature);
+		}
+
+		this.filterSignatures.set(filter.id, newSignature);
+		return newSignature;
+	}
+
+	/**
+	 * Removes all cache entries for a specific filter signature.
+	 */
+	private clearFilterSignature(signature: string): void {
+		for (const cache of this.rowCache.values()) {
+			cache.delete(signature);
+		}
 	}
 
 	/**
 	 * Evaluates a single filter against a row, using cache if available.
 	 */
-	private evaluateFilter<T extends Row>(
-		row: T,
-		filter: TAppliedFilter,
-	): boolean {
-		const filterSignature = this.getFilterSignature(filter);
+	private evaluateFilter(row: T, filter: TAppliedFilter): boolean {
+		const filterSignature = this.getFilterSignatureAndCleanup(filter);
 		const cache = this.getRowCache(row);
 
 		if (cache.has(filterSignature)) {
@@ -232,14 +112,14 @@ export class MemoizedFilterSystem {
 	 *
 	 * This delegates to the base `filterRowByMatchType` function with a memoized evaluator.
 	 */
-	filterRowByMatchType<T extends Row>(
+	filterRowByMatchType(
 		row: T,
 		filters: TAppliedFilter[],
 		matchType: MatchType,
 	): boolean {
 		// Delegate to the base function with a memoized evaluator
 		return baseFilterRowByMatchType(row, filters, matchType, (row, filter) =>
-			this.evaluateFilter(row, filter),
+			this.evaluateFilter(row as T, filter),
 		);
 	}
 
@@ -248,7 +128,6 @@ export class MemoizedFilterSystem {
 	 */
 	clearCache(): void {
 		this.rowCache.clear();
-		this.rowDataHashes.clear();
 		this.filterSignatures.clear();
 	}
 
@@ -274,26 +153,11 @@ export class MemoizedFilterSystem {
 	}
 
 	/**
-	 * Clears cache for a row. Useful for when a row is no longer in use.
+	 * Clears cache for a specific row by its cache key.
+	 * Useful when a row is removed or no longer in use.
 	 */
-	clearRowCache(rowId: string): void {
-		// first, get the last known value from the rowDataHash map
-		const rowDataHash = this.rowDataHashes.get(rowId);
-		if (!rowDataHash) {
-			// no last-known value for this row, so we're all good
-			return;
-		}
-
-		// now get the rowCache entry for that rowId:rowDataHash combination
-		const cacheKey = `${rowId}:${rowDataHash}`;
-		const cache = this.rowCache.get(cacheKey);
-		if (!cache) {
-			return;
-		}
-
-		cache.clear();
-		this.rowCache.delete(cacheKey);
-		this.rowDataHashes.delete(rowId);
+	clearRowCache(rowCacheKey: string): void {
+		this.rowCache.delete(rowCacheKey);
 	}
 
 	/**
@@ -301,7 +165,6 @@ export class MemoizedFilterSystem {
 	 */
 	getCacheStats(): {
 		rowCacheEntries: number;
-		rowDataHashes: number;
 		filterSignatures: number;
 		totalFilterEntries: number;
 	} {
@@ -311,7 +174,6 @@ export class MemoizedFilterSystem {
 		}
 		return {
 			rowCacheEntries: this.rowCache.size,
-			rowDataHashes: this.rowDataHashes.size,
 			filterSignatures: this.filterSignatures.size,
 			totalFilterEntries,
 		};

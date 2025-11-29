@@ -32,6 +32,7 @@ export default function App() {
 			context={filtersContext}
 			filteredRowsContext={filteredRowsContext}
 			rows={rows}
+			getRowCacheKey={(row) => `${row.id}:${row.lastUpdated}`}
 		>
 			<NewFilterCreatedAtCutoffProvider>
 				<div className="grid grid-rows-[auto_1fr_auto] h-screen">

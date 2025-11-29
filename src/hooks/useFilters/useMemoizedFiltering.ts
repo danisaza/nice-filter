@@ -8,17 +8,25 @@ import type { MatchType, Row, TAppliedFilter } from "./types";
  * This hook maintains a MemoizedFilterSystem instance and automatically
  * manages cache invalidation when filters or rows change.
  *
+ * @param rows - The rows to filter
+ * @param getRowCacheKey - A function that returns a stable cache key for a row.
+ *   The key must change whenever the row's data changes, and remain the same
+ *   when the row's data is unchanged.
+ *
  * @example
  * ```tsx
- * const { filterRow, clearCache } = useMemoizedFiltering(rows);
+ * const { filterRow, clearCache } = useMemoizedFiltering(rows, (row) => `${row.id}:${row._version}`);
  * const filteredRows = useMemo(() => {
  *   return rows.filter((row) => filterRow(row, filters, matchType));
  * }, [rows, filters, matchType, filterRow]);
  * ```
  */
-export function useMemoizedFiltering<T extends Row>(rows: T[]) {
-	const filterSystemRef = useRef<MemoizedFilterSystem>(
-		new MemoizedFilterSystem(),
+export function useMemoizedFiltering<T extends Row>(
+	rows: T[],
+	getRowCacheKey: (row: T) => string,
+) {
+	const filterSystemRef = useRef<MemoizedFilterSystem<T>>(
+		new MemoizedFilterSystem(getRowCacheKey),
 	);
 
 	// Clear cache when rows change (rows array reference changes)
