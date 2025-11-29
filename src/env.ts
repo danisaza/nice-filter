@@ -4,7 +4,7 @@ import { z } from "zod";
 export const env = createEnv({
 	// these environment variables are only available on the server
 	server: {
-		OPEN_AI_API_KEY: z.string().min(1),
+		OPENAI_API_KEY: z.string().min(1),
 		STAGEHAND_ENV: z.enum(["LOCAL", "BROWSERBASE"]),
 	},
 
