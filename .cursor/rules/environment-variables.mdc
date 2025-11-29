@@ -1,0 +1,17 @@
+---
+description: When working with environment variables
+alwaysApply: false
+---
+
+To add environment variables, edit `src/env.ts`. They can be added either to the `server` or `client` section. Those in the `client` section will be available in all environments, **so make sure that they aren't sensitive**.
+
+Also, env vars in the project should always be referenced through `src/env.ts`, rather than directly. In other words: don't use `process.env.MY_VAR`.
+
+```tsx
+// ❌ don't do this:
+console.log("my env var is:", process.env.MY_VAR);
+
+// ✅ do this instead:
+import { env } from "@/env";
+console.log("my env var is", env.MY_VAR); // <-- has typesafety and intellisense
+```
