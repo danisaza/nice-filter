@@ -32,6 +32,9 @@ importers:
       '@radix-ui/react-slot':
         specifier: ^1.1.1
         version: 1.2.3(@types/react@18.3.23)(react@18.3.1)
+      '@t3-oss/env-core':
+        specifier: ^0.13.8
+        version: 0.13.8(typescript@5.6.3)(zod@4.1.13)
       '@tanstack/react-query':
         specifier: ^5.90.10
         version: 5.90.10(react@18.3.1)
@@ -62,6 +65,9 @@ importers:
       uuid:
         specifier: ^13.0.0
         version: 13.0.0
+      zod:
+        specifier: ^4.1.13
+        version: 4.1.13
     devDependencies:
       '@eslint/js':
         specifier: ^9.17.0
@@ -953,6 +959,23 @@ packages:
 
   '@standard-schema/spec@1.0.0':
     resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}
+
+  '@t3-oss/env-core@0.13.8':
+    resolution: {integrity: sha512-L1inmpzLQyYu4+Q1DyrXsGJYCXbtXjC4cICw1uAKv0ppYPQv656lhZPU91Qd1VS6SO/bou1/q5ufVzBGbNsUpw==}
+    peerDependencies:
+      arktype: ^2.1.0
+      typescript: '>=5.0.0'
+      valibot: ^1.0.0-beta.7 || ^1.0.0
+      zod: ^3.24.0 || ^4.0.0-beta.0
+    peerDependenciesMeta:
+      arktype:
+        optional: true
+      typescript:
+        optional: true
+      valibot:
+        optional: true
+      zod:
+        optional: true
 
   '@tanstack/query-core@5.90.10':
     resolution: {integrity: sha512-EhZVFu9rl7GfRNuJLJ3Y7wtbTnENsvzp+YpcAV7kCYiXni1v8qZh++lpw4ch4rrwC0u/EZRnBHIehzCGzwXDSQ==}
@@ -2107,6 +2130,9 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
+  zod@4.1.13:
+    resolution: {integrity: sha512-AvvthqfqrAhNH9dnfmrfKzX5upOdjUVJYFqNSlkmGf64gRaTzlPwz99IHYnVs28qYAybvAlBV+H7pn0saFY4Ig==}
+
 snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
@@ -2857,6 +2883,11 @@ snapshots:
     optional: true
 
   '@standard-schema/spec@1.0.0': {}
+
+  '@t3-oss/env-core@0.13.8(typescript@5.6.3)(zod@4.1.13)':
+    optionalDependencies:
+      typescript: 5.6.3
+      zod: 4.1.13
 
   '@tanstack/query-core@5.90.10': {}
 
@@ -3995,3 +4026,5 @@ snapshots:
   yaml@2.8.0: {}
 
   yocto-queue@0.1.0: {}
+
+  zod@4.1.13: {}
