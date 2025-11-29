@@ -101,6 +101,9 @@ export function generateRows(numRows: number): MyRow[] {
 	for (let i = 0; i < numRows; i++) {
 		data.push({
 			id: uuidv4(),
+			lastUpdated: String(
+				Date.now() - Math.floor(Math.random() * 1000 * 60 * 60 * 10),
+			), // sometime in the last 10 hours
 			text: `${randomItem(TASK_PREFIXES)} ${randomItem(TASK_SUBJECTS)} ${i + 1}`,
 			status: randomItem(STATUSES),
 			tags: randomItems(TAGS, 1, 3),
@@ -115,6 +118,7 @@ export function generateRows(numRows: number): MyRow[] {
 //       the shape of the _user's_ data.
 export type MyRow = {
 	id: string;
+	lastUpdated: string; // note that numbers are not supported as values yet
 	text: string;
 	status: Status;
 	tags: Tag[];

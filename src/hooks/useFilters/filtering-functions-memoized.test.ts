@@ -1,278 +1,305 @@
-import { describe, expect, test } from "vitest";
-import { escapeDelimiter } from "./filtering-functions-memoized";
+import { describe, expect, test, vi } from "vitest";
+import { OPERATORS, SELECTION_TYPES } from "./constants";
+import { MemoizedFilterSystem } from "./filtering-functions-memoized";
+import type { Row, TAppliedFilter } from "./types";
 
-describe("escapeDelimiter", () => {
-	describe("basic functionality", () => {
-		test("escapes pipe delimiter in simple string", () => {
-			const result = escapeDelimiter("hello|world", "|");
-			expect(result).toBe("hello\\|world");
+// Helper to create a test row
+function createRow({ id, status }: { id: string; status: string }): Row {
+	return { id, status };
+}
+
+// Helper to create a test filter
+function createFilter({
+	id,
+	values,
+	cacheVersion = 0,
+}: {
+	id: string;
+	values: string[];
+	cacheVersion?: number;
+}): TAppliedFilter {
+	return {
+		id,
+		createdAt: Date.now(),
+		categoryId: "status-category",
+		options: values.map((v) => ({ id: v, label: v, value: v })),
+		values: values.map((v) => ({ id: v, label: v, value: v })),
+		relationship: OPERATORS.IS,
+		selectionType: SELECTION_TYPES.RADIO,
+		propertyNameSingular: "status",
+		propertyNamePlural: undefined,
+		_cacheVersion: cacheVersion,
+	};
+}
+
+describe("MemoizedFilterSystem", () => {
+	describe("constructor and getRowCacheKey", () => {
+		test("uses provided getRowCacheKey function", () => {
+			const getRowCacheKey = vi.fn((row: Row) => row.id as string);
+			const system = new MemoizedFilterSystem(getRowCacheKey);
+
+			const row = createRow({ id: "row-1", status: "active" });
+			const filter = createFilter({ id: "filter-1", values: ["active"] });
+
+			system.filterRowByMatchType(row, [filter], "any");
+
+			expect(getRowCacheKey).toHaveBeenCalledWith(row);
 		});
 
-		test("escapes comma delimiter in simple string", () => {
-			const result = escapeDelimiter("hello,world", ",");
-			expect(result).toBe("hello\\,world");
-		});
+		test("getRowCacheKey is called for each row evaluation", () => {
+			const getRowCacheKey = vi.fn((row: Row) => row.id as string);
+			const system = new MemoizedFilterSystem(getRowCacheKey);
 
-		test("returns unchanged string when delimiter not present", () => {
-			const result = escapeDelimiter("hello world", "|");
-			expect(result).toBe("hello world");
-		});
+			const row1 = createRow({ id: "row-1", status: "active" });
+			const row2 = createRow({ id: "row-2", status: "inactive" });
+			const filter = createFilter({ id: "filter-1", values: ["active"] });
 
-		test("handles empty string", () => {
-			const result = escapeDelimiter("", "|");
-			expect(result).toBe("");
-		});
-	});
+			system.filterRowByMatchType(row1, [filter], "any");
+			system.filterRowByMatchType(row2, [filter], "any");
 
-	describe("multiple delimiters", () => {
-		test("escapes multiple pipe delimiters", () => {
-			const result = escapeDelimiter("a|b|c|d", "|");
-			expect(result).toBe("a\\|b\\|c\\|d");
-		});
-
-		test("escapes multiple comma delimiters", () => {
-			const result = escapeDelimiter("apple,banana,cherry,date", ",");
-			expect(result).toBe("apple\\,banana\\,cherry\\,date");
-		});
-
-		test("escapes consecutive delimiters", () => {
-			const result = escapeDelimiter("a||b", "|");
-			expect(result).toBe("a\\|\\|b");
-		});
-	});
-
-	describe("backslash handling", () => {
-		test("escapes existing backslashes", () => {
-			const result = escapeDelimiter("hello\\world", "|");
-			expect(result).toBe("hello\\\\world");
-		});
-
-		test("escapes backslashes before escaping delimiters", () => {
-			const result = escapeDelimiter("hello\\|world", "|");
-			// First backslash becomes \\, then | becomes \|
-			expect(result).toBe("hello\\\\\\|world");
-		});
-
-		test("handles multiple backslashes", () => {
-			const result = escapeDelimiter("a\\\\b", "|");
-			expect(result).toBe("a\\\\\\\\b");
-		});
-
-		test("handles backslash at end", () => {
-			const result = escapeDelimiter("hello\\", "|");
-			expect(result).toBe("hello\\\\");
-		});
-
-		test("handles backslash at start", () => {
-			const result = escapeDelimiter("\\hello", "|");
-			expect(result).toBe("\\\\hello");
+			expect(getRowCacheKey).toHaveBeenCalledTimes(2);
+			expect(getRowCacheKey).toHaveBeenCalledWith(row1);
+			expect(getRowCacheKey).toHaveBeenCalledWith(row2);
 		});
 	});
 
-	describe("special regex characters as delimiters", () => {
-		test("escapes dot delimiter", () => {
-			const result = escapeDelimiter("hello.world", ".");
-			expect(result).toBe("hello\\.world");
+	describe("caching behavior", () => {
+		test("caches filter results per row cache key", () => {
+			const getRowCacheKey = (row: Row) => row.id as string;
+			const system = new MemoizedFilterSystem(getRowCacheKey);
+
+			const row = createRow({ id: "row-1", status: "active" });
+			const filter = createFilter({ id: "filter-1", values: ["active"] });
+
+			// First call should compute and cache
+			const result1 = system.filterRowByMatchType(row, [filter], "any");
+			// Second call should use cache
+			const result2 = system.filterRowByMatchType(row, [filter], "any");
+
+			expect(result1).toBe(true);
+			expect(result2).toBe(true);
+
+			const stats = system.getCacheStats();
+			expect(stats.rowCacheEntries).toBe(1);
+			expect(stats.totalFilterEntries).toBe(1);
 		});
 
-		test("escapes asterisk delimiter", () => {
-			const result = escapeDelimiter("hello*world", "*");
-			expect(result).toBe("hello\\*world");
+		test("different cache keys create separate cache entries", () => {
+			const getRowCacheKey = (row: Row) => `${row.id}:${row.status}`;
+			const system = new MemoizedFilterSystem(getRowCacheKey);
+
+			const row1 = createRow({ id: "row-1", status: "active" });
+			const row2 = createRow({ id: "row-1", status: "inactive" }); // Same id, different status
+			const filter = createFilter({ id: "filter-1", values: ["active"] });
+
+			system.filterRowByMatchType(row1, [filter], "any");
+			system.filterRowByMatchType(row2, [filter], "any");
+
+			const stats = system.getCacheStats();
+			// Two separate cache entries because cache keys are different
+			expect(stats.rowCacheEntries).toBe(2);
 		});
 
-		test("escapes plus delimiter", () => {
-			const result = escapeDelimiter("hello+world", "+");
-			expect(result).toBe("hello\\+world");
-		});
+		test("same cache key reuses cached result", () => {
+			const getRowCacheKey = vi.fn((row: Row) => row.id as string);
+			const system = new MemoizedFilterSystem(getRowCacheKey);
 
-		test("escapes question mark delimiter", () => {
-			const result = escapeDelimiter("hello?world", "?");
-			expect(result).toBe("hello\\?world");
-		});
+			const row = createRow({ id: "row-1", status: "active" });
+			const filter = createFilter({ id: "filter-1", values: ["active"] });
 
-		test("escapes caret delimiter", () => {
-			const result = escapeDelimiter("hello^world", "^");
-			expect(result).toBe("hello\\^world");
-		});
+			// Multiple calls with same row
+			system.filterRowByMatchType(row, [filter], "any");
+			system.filterRowByMatchType(row, [filter], "any");
+			system.filterRowByMatchType(row, [filter], "any");
 
-		test("escapes dollar sign delimiter", () => {
-			const result = escapeDelimiter("hello$world", "$");
-			expect(result).toBe("hello\\$world");
-		});
-
-		test("escapes opening bracket delimiter", () => {
-			const result = escapeDelimiter("hello[world", "[");
-			expect(result).toBe("hello\\[world");
-		});
-
-		test("escapes closing bracket delimiter", () => {
-			const result = escapeDelimiter("hello]world", "]");
-			expect(result).toBe("hello\\]world");
-		});
-
-		test("escapes opening parenthesis delimiter", () => {
-			const result = escapeDelimiter("hello(world", "(");
-			expect(result).toBe("hello\\(world");
-		});
-
-		test("escapes closing parenthesis delimiter", () => {
-			const result = escapeDelimiter("hello)world", ")");
-			expect(result).toBe("hello\\)world");
-		});
-
-		test("escapes opening brace delimiter", () => {
-			const result = escapeDelimiter("hello{world", "{");
-			expect(result).toBe("hello\\{world");
-		});
-
-		test("escapes closing brace delimiter", () => {
-			const result = escapeDelimiter("hello}world", "}");
-			expect(result).toBe("hello\\}world");
+			// getRowCacheKey is called each time to get the cache key
+			expect(getRowCacheKey).toHaveBeenCalledTimes(3);
+			// But only one cache entry exists
+			const stats = system.getCacheStats();
+			expect(stats.rowCacheEntries).toBe(1);
+			expect(stats.totalFilterEntries).toBe(1);
 		});
 	});
 
-	describe("edge cases", () => {
-		test("handles string that is just the delimiter", () => {
-			const result = escapeDelimiter("|", "|");
-			expect(result).toBe("\\|");
-		});
+	describe("filter cache versioning", () => {
+		test("filter version change cleans up old cache entry", () => {
+			const getRowCacheKey = (row: Row) => row.id as string;
+			const system = new MemoizedFilterSystem(getRowCacheKey);
 
-		test("handles string with only delimiters", () => {
-			const result = escapeDelimiter("|||", "|");
-			expect(result).toBe("\\|\\|\\|");
-		});
+			const row = createRow({ id: "row-1", status: "active" });
+			const filterV0 = createFilter({
+				id: "filter-1",
+				values: ["active"],
+				cacheVersion: 0,
+			});
+			const filterV1 = createFilter({
+				id: "filter-1",
+				values: ["inactive"],
+				cacheVersion: 1,
+			});
 
-		test("handles delimiter at start", () => {
-			const result = escapeDelimiter("|hello", "|");
-			expect(result).toBe("\\|hello");
-		});
+			// First version
+			const result1 = system.filterRowByMatchType(row, [filterV0], "any");
+			expect(result1).toBe(true);
+			expect(system.getCacheStats().totalFilterEntries).toBe(1);
 
-		test("handles delimiter at end", () => {
-			const result = escapeDelimiter("hello|", "|");
-			expect(result).toBe("hello\\|");
-		});
+			// After filter update (new version) - old entry should be cleaned up
+			const result2 = system.filterRowByMatchType(row, [filterV1], "any");
+			expect(result2).toBe(false);
 
-		test("handles unicode characters", () => {
-			const result = escapeDelimiter("hello|世界", "|");
-			expect(result).toBe("hello\\|世界");
-		});
-
-		test("handles emojis", () => {
-			const result = escapeDelimiter("hello|😀|world", "|");
-			expect(result).toBe("hello\\|😀\\|world");
-		});
-
-		test("handles newlines", () => {
-			const result = escapeDelimiter("hello|world\nnext line", "|");
-			expect(result).toBe("hello\\|world\nnext line");
-		});
-
-		test("handles tabs", () => {
-			const result = escapeDelimiter("hello|\tworld", "|");
-			expect(result).toBe("hello\\|\tworld");
+			const stats = system.getCacheStats();
+			// Old filter entry was cleaned up, only new one remains
+			expect(stats.rowCacheEntries).toBe(1);
+			expect(stats.totalFilterEntries).toBe(1);
 		});
 	});
 
-	describe("complex real-world scenarios", () => {
-		test("handles CSV-like data with comma delimiter", () => {
-			const result = escapeDelimiter("John Doe,123 Main St, Apt 4,New York", ",");
-			expect(result).toBe("John Doe\\,123 Main St\\, Apt 4\\,New York");
-		});
+	describe("clearCache", () => {
+		test("clears all caches", () => {
+			const getRowCacheKey = (row: Row) => row.id as string;
+			const system = new MemoizedFilterSystem(getRowCacheKey);
 
-		test("handles path-like data with pipe delimiter", () => {
-			const result = escapeDelimiter("src|components|Button.tsx", "|");
-			expect(result).toBe("src\\|components\\|Button.tsx");
-		});
+			const row1 = createRow({ id: "row-1", status: "active" });
+			const row2 = createRow({ id: "row-2", status: "inactive" });
+			const filter = createFilter({ id: "filter-1", values: ["active"] });
 
-		test("handles mixed special characters and delimiters", () => {
-			const result = escapeDelimiter("$100.50|€200.75", "|");
-			expect(result).toBe("$100.50\\|€200.75");
-		});
+			system.filterRowByMatchType(row1, [filter], "any");
+			system.filterRowByMatchType(row2, [filter], "any");
 
-		test("handles already escaped delimiters (double escaping)", () => {
-			const result = escapeDelimiter("hello\\|world", "|");
-			// First pass: \ becomes \\
-			// Second pass: | becomes \|
-			// Result: \\ followed by \|
-			expect(result).toBe("hello\\\\\\|world");
+			expect(system.getCacheStats().rowCacheEntries).toBe(2);
+
+			system.clearCache();
+
+			const stats = system.getCacheStats();
+			expect(stats.rowCacheEntries).toBe(0);
+			expect(stats.filterSignatures).toBe(0);
+			expect(stats.totalFilterEntries).toBe(0);
 		});
 	});
 
-	describe("regression test for pipe delimiter bug", () => {
-		test("correctly escapes pipe characters (not treated as alternation)", () => {
-			// This test would fail with the old buggy code that had:
-			// new RegExp(`\\${delimiter...}`, "g")
-			// 
-			// The bug: With pipe delimiter, the old code created pattern `\\|`
-			// which in regex means "(backslash) OR (empty)" due to alternation,
-			// causing it to match every position in the string instead of
-			// actual pipe characters.
-			
-			const input = "a|b|c";
-			const result = escapeDelimiter(input, "|");
-			
-			// Should escape only the actual pipe characters
-			expect(result).toBe("a\\|b\\|c");
-			
-			// Verify the result has exactly 2 escaped pipes (not more)
-			const escapedPipes = (result.match(/\\[|]/g) || []).length;
-			expect(escapedPipes).toBe(2);
-			
-			// Verify the string length is correct (original 5 + 2 backslashes = 7)
-			expect(result.length).toBe(7);
-		});
+	describe("clearFilterCache", () => {
+		test("clears cache entries for specific filter", () => {
+			const getRowCacheKey = (row: Row) => row.id as string;
+			const system = new MemoizedFilterSystem(getRowCacheKey);
 
-		test("pipe delimiter doesn't add escapes at every position", () => {
-			// Another way to catch the bug: the old code would insert
-			// escaped pipes at every string position
-			const input = "abc";
-			const result = escapeDelimiter(input, "|");
-			
-			// Should return unchanged since there are no pipes
-			expect(result).toBe("abc");
-			
-			// Should NOT have any escaped pipes
-			expect(result).not.toContain("\\|");
-		});
+			const row = createRow({ id: "row-1", status: "active" });
+			// Both filters match the row, so with "all" both will be evaluated
+			const filter1 = createFilter({ id: "filter-1", values: ["active"] });
+			const filter2 = createFilter({ id: "filter-2", values: ["active"] });
 
-		test("only actual pipe characters are escaped", () => {
-			const input = "before|after";
-			const result = escapeDelimiter(input, "|");
-			
-			// Count backslashes - should have exactly 1 (for the one pipe)
-			const backslashCount = (result.match(/\\/g) || []).length;
-			expect(backslashCount).toBe(1);
-			
-			// Verify structure
-			expect(result).toBe("before\\|after");
+			// Use "all" match type - both filters match, so both are evaluated
+			system.filterRowByMatchType(row, [filter1, filter2], "all");
+
+			expect(system.getCacheStats().totalFilterEntries).toBe(2);
+
+			system.clearFilterCache("filter-1");
+
+			const stats = system.getCacheStats();
+			expect(stats.rowCacheEntries).toBe(1);
+			expect(stats.totalFilterEntries).toBe(1);
 		});
 	});
 
-	describe("idempotency and consistency", () => {
-		test("escaping twice with same delimiter adds more escapes", () => {
-			const first = escapeDelimiter("a|b", "|");
-			expect(first).toBe("a\\|b");
-			
-			const second = escapeDelimiter(first, "|");
-			// Backslash gets escaped, then pipe gets escaped
-			expect(second).toBe("a\\\\\\|b");
+	describe("clearRowCache", () => {
+		test("clears cache for specific row by cache key", () => {
+			const getRowCacheKey = (row: Row) => row.id as string;
+			const system = new MemoizedFilterSystem(getRowCacheKey);
+
+			const row1 = createRow({ id: "row-1", status: "active" });
+			const row2 = createRow({ id: "row-2", status: "inactive" });
+			const filter = createFilter({ id: "filter-1", values: ["active"] });
+
+			system.filterRowByMatchType(row1, [filter], "any");
+			system.filterRowByMatchType(row2, [filter], "any");
+
+			expect(system.getCacheStats().rowCacheEntries).toBe(2);
+
+			system.clearRowCache("row-1");
+
+			const stats = system.getCacheStats();
+			expect(stats.rowCacheEntries).toBe(1);
+		});
+	});
+
+	describe("getCacheStats", () => {
+		test("returns accurate statistics", () => {
+			const getRowCacheKey = (row: Row) => row.id as string;
+			const system = new MemoizedFilterSystem(getRowCacheKey);
+
+			const row1 = createRow({ id: "row-1", status: "active" });
+			const row2 = createRow({ id: "row-2", status: "inactive" });
+			const filter1 = createFilter({ id: "filter-1", values: ["active"] });
+			const filter2 = createFilter({ id: "filter-2", values: ["inactive"] });
+
+			// Evaluate each filter separately to avoid short-circuit behavior
+			system.filterRowByMatchType(row1, [filter1], "any");
+			system.filterRowByMatchType(row1, [filter2], "any");
+			system.filterRowByMatchType(row2, [filter1], "any");
+			system.filterRowByMatchType(row2, [filter2], "any");
+
+			const stats = system.getCacheStats();
+			expect(stats.rowCacheEntries).toBe(2);
+			expect(stats.filterSignatures).toBe(2);
+			expect(stats.totalFilterEntries).toBe(4); // 2 rows * 2 filters
+		});
+	});
+
+	describe("match types", () => {
+		test("works with 'any' match type", () => {
+			const getRowCacheKey = (row: Row) => row.id as string;
+			const system = new MemoizedFilterSystem(getRowCacheKey);
+
+			const row = createRow({ id: "row-1", status: "active" });
+			const filter1 = createFilter({ id: "filter-1", values: ["active"] });
+			const filter2 = createFilter({ id: "filter-2", values: ["inactive"] });
+
+			// Row matches filter1 but not filter2, should pass with "any"
+			const result = system.filterRowByMatchType(
+				row,
+				[filter1, filter2],
+				"any",
+			);
+			expect(result).toBe(true);
 		});
 
-		test("different delimiters don't interfere", () => {
-			const withPipe = escapeDelimiter("a|b,c", "|");
-			expect(withPipe).toBe("a\\|b,c");
-			
-			const withComma = escapeDelimiter("a|b,c", ",");
-			expect(withComma).toBe("a|b\\,c");
-		});
+		test("works with 'all' match type", () => {
+			const getRowCacheKey = (row: Row) => row.id as string;
+			const system = new MemoizedFilterSystem(getRowCacheKey);
 
-		test("escaping preserves string content except for added backslashes", () => {
-			const input = "hello|world";
-			const result = escapeDelimiter(input, "|");
-			
-			// Remove the backslashes to get back something close to original
-			const unescaped = result.replace(/\\/g, "");
-			expect(unescaped).toBe(input);
+			const row = createRow({ id: "row-1", status: "active" });
+			const filter1 = createFilter({ id: "filter-1", values: ["active"] });
+			const filter2 = createFilter({ id: "filter-2", values: ["inactive"] });
+
+			// Row matches filter1 but not filter2, should fail with "all"
+			const result = system.filterRowByMatchType(
+				row,
+				[filter1, filter2],
+				"all",
+			);
+			expect(result).toBe(false);
+		});
+	});
+
+	describe("caller-provided stable ID contract", () => {
+		test("changing cache key with same row object creates new cache entry", () => {
+			// Simulate a scenario where the caller's key changes for the "same" logical row
+			let version = 0;
+			const getRowCacheKey = (row: Row) => `${row.id}:v${version}`;
+			const system = new MemoizedFilterSystem(getRowCacheKey);
+
+			const row = createRow({ id: "row-1", status: "active" });
+			const filter = createFilter({ id: "filter-1", values: ["active"] });
+
+			// First call with version 0
+			system.filterRowByMatchType(row, [filter], "any");
+			expect(system.getCacheStats().rowCacheEntries).toBe(1);
+
+			// Change version (simulating row data changed)
+			version = 1;
+			system.filterRowByMatchType(row, [filter], "any");
+
+			// Now we have 2 cache entries (the old one becomes orphaned)
+			expect(system.getCacheStats().rowCacheEntries).toBe(2);
 		});
 	});
 });
