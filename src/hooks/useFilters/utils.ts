@@ -67,20 +67,21 @@ export function updateFilterValueAndRelationship(
 
 	if (newValues.length === 1) {
 		// Finds the new relationship based on the previous relationship when downsizing from N to 1 selected value
-		const downsizingMap = {
+		const downsizingMap: Partial<Record<Operator, Operator>> = {
 			[OPERATORS.INCLUDE_ALL_OF]: OPERATORS.INCLUDE,
 			[OPERATORS.INCLUDE_ANY_OF]: OPERATORS.INCLUDE,
 			[OPERATORS.EXCLUDE_IF_ANY_OF]: OPERATORS.DO_NOT_INCLUDE,
 			[OPERATORS.EXCLUDE_IF_ALL]: OPERATORS.DO_NOT_INCLUDE,
 			[OPERATORS.IS_ANY_OF]: OPERATORS.IS,
 			[OPERATORS.IS_NOT]: OPERATORS.IS_NOT,
-			// -----------------
-			// We don't expect these cases to happen, but just coding defensively here...
-			[OPERATORS.IS]: OPERATORS.IS,
-			[OPERATORS.INCLUDE]: OPERATORS.INCLUDE,
-			[OPERATORS.DO_NOT_INCLUDE]: OPERATORS.IS_NOT,
 		};
 		const newRelationship = downsizingMap[filter.relationship];
+		if (newRelationship === undefined) {
+			throw new Error(
+				`Unexpected relationship "${filter.relationship}" when downsizing filter values. ` +
+					`This relationship should not exist when filter has ${filter.values.length} value(s).`,
+			);
+		}
 		if (filter.selectionType === SELECTION_TYPES.RADIO) {
 			if (!filter.propertyNameSingular) {
 				throw new Error("propertyNameSingular is required for radio filters");

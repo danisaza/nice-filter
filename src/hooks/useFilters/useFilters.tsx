@@ -300,7 +300,7 @@ export function FiltersProvider<T extends Row>({
 
 	const getOptionsForFilterCategory = useCallback(
 		(filterCategoryId: string) => {
-			if (!Object.keys(optionsByFilterCategoryId).includes(filterCategoryId)) {
+			if (!(filterCategoryId in optionsByFilterCategoryId)) {
 				throw new Error(
 					`The provided id does not match any of the filter categories: ${filterCategoryId}`,
 				);

@@ -145,10 +145,6 @@ export function filterByCheckbox<T extends Row>(
 		return true; // default to true so that at least the user can see the row
 	}
 
-	if (filter.values.length === 0) {
-		return true; // equivalent to not having the filter applied
-	}
-
 	if (filter.values.length === 1) {
 		const rowValue = row[propertyNamePlural];
 		if (!rowValue || !Array.isArray(rowValue)) {

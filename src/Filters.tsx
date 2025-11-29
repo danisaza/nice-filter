@@ -20,6 +20,7 @@ export default function Filters() {
 	//       A future improvement to consider for the `useFilters` hook could be to take in a data-fetching function and
 	//       do the data-fetching on behalf of the user, using something like react-query under the hood. (see
 	//       `useFilters.tsx` for more notes on future improvements)
+	// biome-ignore lint/correctness/useExhaustiveDependencies: intended to only run on mount
 	useEffect(() => {
 		if (filterCategories.length > 0) return;
 		setFilterCategories(FILTER_CATEGORIES);

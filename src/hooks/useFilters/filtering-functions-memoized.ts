@@ -147,9 +147,6 @@ export class MemoizedFilterSystem<T extends Row> {
 				}
 			}
 		}
-
-		// Remove the filter signature tracking
-		this.filterSignatures.delete(filterId);
 	}
 
 	/**
