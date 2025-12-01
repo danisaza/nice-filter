@@ -71,6 +71,8 @@ const FilterDropdown = ({
 			requestAnimationFrame(() => {
 				focusSearchInput();
 			});
+		} else {
+			setSearchText("");
 		}
 	}, [dropdownMenuOpen, focusSearchInput]);
 
