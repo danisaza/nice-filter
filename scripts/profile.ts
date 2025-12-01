@@ -46,11 +46,15 @@ async function main() {
 		}
 	});
 
-	cdp.on("Tracing.tracingComplete", () => {
-		mkdirSync(outDir, { recursive: true });
-		const filepath = join(outDir, `trace-${Date.now()}.json`);
-		writeFileSync(filepath, JSON.stringify({ traceEvents }, null, 2));
-		console.log(`[profile] Trace written to ${filepath}`);
+	// Create a promise that resolves when tracing is complete and the file is written
+	const tracingComplete = new Promise<void>((resolve) => {
+		cdp.on("Tracing.tracingComplete", () => {
+			mkdirSync(outDir, { recursive: true });
+			const filepath = join(outDir, `trace-${Date.now()}.json`);
+			writeFileSync(filepath, JSON.stringify({ traceEvents }, null, 2));
+			console.log(`[profile] Trace written to ${filepath}`);
+			resolve();
+		});
 	});
 
 	// Enable performance metrics + tracing
@@ -92,8 +96,9 @@ async function main() {
 	console.log("[profile] Raw Performance.getMetrics():");
 	console.log(JSON.stringify(perfMetrics, null, 2));
 
-	// Stop tracing; Tracing.tracingComplete will write the file
+	// Stop tracing and wait for tracingComplete event before closing
 	await cdp.send("Tracing.end");
+	await tracingComplete;
 
 	await browser.close();
 	await stagehand.close();
