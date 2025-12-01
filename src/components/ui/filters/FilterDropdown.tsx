@@ -4,6 +4,7 @@ import {
 	type KeyboardEvent,
 	type ReactNode,
 	useCallback,
+	useEffect,
 	useMemo,
 	useRef,
 	useState,
@@ -62,6 +63,18 @@ const FilterDropdown = ({
 			searchInput.focus();
 		}
 	}, []);
+
+	// Focus the search input when the dropdown opens
+	useEffect(() => {
+		if (dropdownMenuOpen) {
+			// Small delay to ensure the dropdown content is rendered
+			requestAnimationFrame(() => {
+				focusSearchInput();
+			});
+		} else {
+			setSearchText("");
+		}
+	}, [dropdownMenuOpen, focusSearchInput]);
 
 	const subItemsToRender = useMemo(
 		() =>
