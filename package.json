@@ -39,6 +39,7 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "@browserbasehq/stagehand": "^3.0.5",
     "@eslint/js": "^9.17.0",
     "@types/node": "^22.19.1",
     "@types/react": "^18.3.18",
@@ -50,8 +51,10 @@
     "eslint-plugin-react-refresh": "^0.4.16",
     "globals": "^15.14.0",
     "husky": "^9.1.7",
+    "playwright-core": "^1.57.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.20.6",
     "typescript": "~5.6.2",
     "typescript-eslint": "^8.18.2",
     "vite": "^6.0.5",
