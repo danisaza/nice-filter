@@ -112,12 +112,12 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 			}
 		}
 		// Handle space key intelligently:
+		// - If dropdown is open with suggestions and input is empty, select highlighted option
 		// - If the current input + space is a valid prefix for an option, allow the space
 		// - Otherwise, try to create a chip (same behavior as Enter)
-		if (e.key === " " && inputValue.trim()) {
-			// Check if adding a space would be a valid prefix for any option
-			if (!wouldSpaceBeValidPrefix(inputValue, filterCategories)) {
-				// Space wouldn't make sense here, so select the highlighted suggestion
+		if (e.key === " ") {
+			// If input is empty but dropdown is showing, select the highlighted option
+			if (!inputValue.trim() && showAutocomplete && suggestions.length > 0) {
 				const highlightedSuggestion = suggestions[selectedSuggestionIndex];
 				if (highlightedSuggestion) {
 					e.preventDefault();
@@ -125,7 +125,20 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 					return;
 				}
 			}
-			// Otherwise, let the space be typed normally
+
+			// If input has content, check if space would be a valid prefix
+			if (inputValue.trim()) {
+				if (!wouldSpaceBeValidPrefix(inputValue, filterCategories)) {
+					// Space wouldn't make sense here, so select the highlighted suggestion
+					const highlightedSuggestion = suggestions[selectedSuggestionIndex];
+					if (highlightedSuggestion) {
+						e.preventDefault();
+						handleSuggestionSelect(highlightedSuggestion);
+						return;
+					}
+				}
+				// Otherwise, let the space be typed normally
+			}
 		}
 
 		// Create chip on Enter (for manual typing)

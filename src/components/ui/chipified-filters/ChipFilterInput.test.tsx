@@ -398,6 +398,70 @@ describe("ChipFilterInput", () => {
 	});
 
 	describe("Smart space key behavior", () => {
+		test("space selects first option when input is empty and dropdown is open", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Dropdown should be open with first option highlighted
+			const listbox = screen.getByRole("listbox");
+			const options = within(listbox).getAllByRole("option");
+			expect(options[0]).toHaveAttribute("aria-selected", "true");
+
+			// Input should be empty
+			expect(input).toHaveValue("");
+
+			// Press space - should select the first option (status:)
+			await user.keyboard(" ");
+
+			// Input should now contain the key with colon (e.g., "status:")
+			expect(input).toHaveValue("status:");
+
+			// Space should NOT have been typed into the input
+			expect(input).not.toHaveValue(" ");
+		});
+
+		test("space selects highlighted option after arrow navigation when input is empty", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// First option should be highlighted initially
+			let options = within(screen.getByRole("listbox")).getAllByRole("option");
+			expect(options[0]).toHaveAttribute("aria-selected", "true");
+
+			// Navigate down to second option
+			await user.keyboard("{ArrowDown}");
+
+			// Second option should now be highlighted
+			options = within(screen.getByRole("listbox")).getAllByRole("option");
+			expect(options[1]).toHaveAttribute("aria-selected", "true");
+
+			// Get the text of the second option for later verification
+			const secondOptionText = options[1].textContent?.replace(":", "") || "";
+
+			// Press space - should select the highlighted (second) option
+			await user.keyboard(" ");
+
+			// Input should contain the second option key with colon
+			expect(input).toHaveValue(`${secondOptionText}:`);
+
+			// Space should NOT have been typed into the input
+			expect(input).not.toHaveValue(" ");
+		});
+
 		test("space selects highlighted option after arrow key navigation (not first match)", async () => {
 			const user = userEvent.setup();
 			render(
