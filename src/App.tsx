@@ -17,6 +17,7 @@ import createFiltersContext, {
 } from "@/hooks/useFilters/useFilters";
 import { NewFilterCreatedAtCutoffProvider } from "@/hooks/useNewFilterCreatedAtCutoff";
 import { generateRows, type MyRow } from "@/mock-data/grid-data";
+import { ComponentPreview } from "./components/ui/chipified-filters/ComponentPreview";
 
 const { useFilters, useFilteredRows, filtersContext, filteredRowsContext } =
 	createFiltersContext<MyRow>();
@@ -41,6 +42,7 @@ export default function App() {
 							<Filters />
 							<RowCountControl rowCount={rowCount} setRowCount={setRowCount} />
 						</div>
+						<ComponentPreview />
 					</header>
 					<main className="overflow-auto p-4">
 						<Grid />
