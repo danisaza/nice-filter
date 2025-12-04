@@ -1,100 +1,80 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type React from "react";
-import { useState } from "react";
+import { useEffect } from "react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+
+// Create a mutable container for the test context (hoisted to run first)
+const testContextHolder = vi.hoisted(() => ({
+	useFilters: null as (() => any) | null,
+	filtersContext: null as React.Context<any> | null,
+	filteredRowsContext: null as React.Context<any> | null,
+}));
+
+// Mock @/App to use our test context's useFilters hook
+vi.mock("@/App", () => ({
+	useFilters: function useFilters() {
+		if (!testContextHolder.useFilters) {
+			throw new Error(
+				"Test context not initialized - ensure testContextHolder is populated before tests run",
+			);
+		}
+		return testContextHolder.useFilters();
+	},
+}));
+
 import { FILTER_CATEGORIES } from "@/hooks/filter-options-mock-data";
+// Import dependencies (these don't trigger mock because they don't use @/App directly)
+import createFiltersContext, {
+	FiltersProvider,
+} from "@/hooks/useFilters/useFilters";
+
+// Import the component under test (this triggers the mock via its @/App import,
+// but only defines the module - useFilters isn't called until render)
 import { ChipFilterInput } from "./ChipFilterInput";
 
-// Mock useFilters from @/App
-vi.mock("@/App", async () => {
-	const actual = await vi.importActual("@/App");
-	return {
-		...actual,
-		useFilters: vi.fn(),
-	};
-});
+// Create the real test context
+type TestRow = Record<string, string>;
+const {
+	useFilters: testUseFilters,
+	filtersContext,
+	filteredRowsContext,
+} = createFiltersContext<TestRow>();
 
-import { useFilters } from "@/App";
+// Populate the holder (this runs after imports but before tests)
+testContextHolder.useFilters = testUseFilters;
+testContextHolder.filtersContext = filtersContext;
+testContextHolder.filteredRowsContext = filteredRowsContext;
 
 const mockFilterCategories = FILTER_CATEGORIES;
 
-// Type for state setter
-type FilterStateSetter = React.Dispatch<React.SetStateAction<any[]>>;
+// Component that initializes filter categories after provider mounts
+function FilterCategoriesInitializer({
+	children,
+}: {
+	children: React.ReactNode;
+}) {
+	const { setFilterCategories } = testUseFilters();
 
-// Create mock that uses React state for proper re-renders
-const createMockUseFilters = (
-	filters: any[],
-	setFilters: FilterStateSetter,
-) => {
-	return {
-		filters,
-		filterCategories: mockFilterCategories,
-		addFilter: vi.fn((filter) => {
-			setFilters((prev) => [
-				...prev,
-				{
-					...filter,
-					createdAt: Date.now(),
-					_cacheVersion: 0,
-				},
-			]);
-		}),
-		removeFilter: vi.fn((filterId) => {
-			setFilters((prev) => prev.filter((f) => f.id !== filterId));
-		}),
-		updateFilterValues: vi.fn((filterId, updateFn) => {
-			setFilters((prev) =>
-				prev.map((f) => {
-					if (f.id === filterId) {
-						const newValues =
-							typeof updateFn === "function" ? updateFn(f.values) : updateFn;
-						return { ...f, values: newValues };
-					}
-					return f;
-				}),
-			);
-		}),
-		setFilterCategories: vi.fn(),
-		getFilter: vi.fn((filterId) => filters.find((f) => f.id === filterId)),
-		getFilterOrThrow: vi.fn((filterId) => {
-			const filter = filters.find((f) => f.id === filterId);
-			if (!filter) throw new Error(`Filter not found: ${filterId}`);
-			return filter;
-		}),
-		getOptionsForFilterCategory: vi.fn((categoryId) => {
-			const category = mockFilterCategories.find((c) => c.id === categoryId);
-			return category?.options || [];
-		}),
-		getPropertyNameToDisplay: vi.fn((filterId) => {
-			const filter = filters.find((f) => f.id === filterId);
-			if (!filter) return "";
-			return filter.selectionType === "radio"
-				? filter.propertyNameSingular
-				: filter.propertyNamePlural;
-		}),
-		removeAllFilters: vi.fn(() => {
-			setFilters([]);
-		}),
-		setMatchType: vi.fn(),
-		matchType: "any",
-		filteredRows: [],
-		hiddenRowCount: 0,
-		totalRowCount: 0,
-		updateFilterRelationship: vi.fn(),
-	};
-};
-
-// Test wrapper that manages filter state with React useState
-function TestWrapper({ children }: { children: React.ReactNode }) {
-	const [filters, setFilters] = useState<any[]>([]);
-
-	// Update the mock return value on every render with current state
-	(useFilters as any).mockReturnValue(
-		createMockUseFilters(filters, setFilters),
-	);
+	useEffect(() => {
+		setFilterCategories(FILTER_CATEGORIES as any);
+	}, [setFilterCategories]);
 
 	return <>{children}</>;
+}
+
+// Test wrapper using the real FiltersProvider for proper React context reactivity
+function TestWrapper({ children }: { children: React.ReactNode }) {
+	return (
+		<FiltersProvider
+			context={filtersContext}
+			filteredRowsContext={filteredRowsContext}
+			rows={[]}
+			getRowCacheKey={() => ""}
+		>
+			<FilterCategoriesInitializer>{children}</FilterCategoriesInitializer>
+		</FiltersProvider>
+	);
 }
 
 // Helper component that wraps ChipFilterInput
@@ -566,10 +546,7 @@ describe("ChipFilterInput", () => {
 	});
 
 	describe("Backspace key deletes chip", () => {
-		// Note: This test is skipped due to mock infrastructure limitations.
-		// The Backspace functionality works correctly with the real useFilters context,
-		// but the mock doesn't properly simulate React's context update mechanism.
-		test.skip("pressing Backspace when input is empty deletes the last chip", async () => {
+		test("pressing Backspace when input is empty deletes the last chip", async () => {
 			const user = userEvent.setup();
 			render(
 				<TestWrapper>
