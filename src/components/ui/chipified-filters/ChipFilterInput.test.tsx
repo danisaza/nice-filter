@@ -375,6 +375,41 @@ describe("ChipFilterInput", () => {
 			});
 			expect(chip).toBeInTheDocument();
 		});
+
+		test("input is focused and dropdown is visible immediately after creating a chip", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Select "status:" key
+			await user.keyboard("{Enter}");
+
+			// Select first value to create chip
+			await user.keyboard("{Enter}");
+
+			// Verify chip was created
+			const chip = screen.getByRole("button", {
+				name: /filter: status equals/i,
+			});
+			expect(chip).toBeInTheDocument();
+
+			// Input should still be focused after chip creation
+			expect(input).toHaveFocus();
+
+			// Dropdown should be visible with filter key suggestions
+			const listbox = screen.getByRole("listbox");
+			expect(listbox).toBeInTheDocument();
+
+			// Should show filter key options (the initial autocomplete suggestions)
+			const options = within(listbox).getAllByRole("option");
+			expect(options.length).toBeGreaterThan(0);
+		});
 	});
 
 	describe("Smart space key behavior", () => {

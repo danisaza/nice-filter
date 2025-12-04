@@ -347,7 +347,8 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 					}
 				}
 			}
-			setShowAutocomplete(false);
+			// Don't hide autocomplete - let the useEffect manage visibility
+			// based on isInputFocused and suggestions.length
 		}
 		inputRef.current?.focus();
 	};
