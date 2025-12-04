@@ -38,7 +38,7 @@ export default function App() {
 			<NewFilterCreatedAtCutoffProvider>
 				<div className="grid grid-rows-[auto_1fr_auto] h-screen">
 					<header className="p-4 border-b">
-						<div className="flex items-center justify-between gap-4 flex-wrap">
+						<div className="flex items-center justify-between gap-4 flex-wrap mb-4">
 							<Filters />
 							<RowCountControl rowCount={rowCount} setRowCount={setRowCount} />
 						</div>
