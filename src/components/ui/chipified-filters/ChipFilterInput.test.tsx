@@ -143,7 +143,9 @@ describe("ChipFilterInput", () => {
 			await user.click(input);
 
 			// Navigate to last option
-			const options = within(screen.getByRole("listbox")).getAllByRole("option");
+			const options = within(screen.getByRole("listbox")).getAllByRole(
+				"option",
+			);
 			const lastIndex = options.length - 1;
 
 			for (let i = 0; i < lastIndex; i++) {
@@ -154,7 +156,10 @@ describe("ChipFilterInput", () => {
 			let currentOptions = within(screen.getByRole("listbox")).getAllByRole(
 				"option",
 			);
-			expect(currentOptions[lastIndex]).toHaveAttribute("aria-selected", "true");
+			expect(currentOptions[lastIndex]).toHaveAttribute(
+				"aria-selected",
+				"true",
+			);
 
 			// Press ArrowDown - should wrap to first
 			await user.keyboard("{ArrowDown}");
@@ -248,5 +253,37 @@ describe("ChipFilterInput", () => {
 			expect(chip).toBeInTheDocument();
 		});
 	});
-});
 
+	describe("Backspace key deletes chip", () => {
+		test("pressing Backspace when input is empty deletes the last chip", async () => {
+			const user = userEvent.setup();
+			render(<ChipFilterInputWrapper />);
+
+			const input = screen.getByRole("textbox", { name: /filter input/i });
+			await user.click(input);
+
+			// Create a chip: select "status:" key, then "open" value
+			await user.keyboard("{Enter}");
+			await user.keyboard("{Enter}");
+
+			// Verify chip is created
+			const chip = screen.getByRole("button", {
+				name: /filter: status equals open/i,
+			});
+			expect(chip).toBeInTheDocument();
+
+			// Ensure input is empty (it should be after chip creation)
+			expect(input).toHaveValue("");
+
+			// Press Backspace
+			await user.keyboard("{Backspace}");
+
+			// Chip should be removed
+			expect(
+				screen.queryByRole("button", {
+					name: /filter: status equals open/i,
+				}),
+			).not.toBeInTheDocument();
+		});
+	});
+});
