@@ -633,4 +633,257 @@ describe("ChipFilterInput", () => {
 			});
 		});
 	});
+
+	describe("Dropdown position behavior", () => {
+		// Helper to get the dropdown element
+		function getDropdown() {
+			return screen.getByRole("listbox");
+		}
+
+		// Helper to extract left position from dropdown style
+		function getDropdownLeftPosition() {
+			const dropdown = getDropdown();
+			return Number.parseInt(dropdown.style.left, 10);
+		}
+
+		test("dropdown position is captured when autocomplete first shows", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Dropdown should be visible with a position
+			const dropdown = getDropdown();
+			expect(dropdown).toBeInTheDocument();
+			expect(dropdown.style.left).toBeDefined();
+			expect(dropdown.style.top).toBeDefined();
+		});
+
+		test("dropdown position updates when a filter is added", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Get initial position (before mocking)
+			const initialLeft = getDropdownLeftPosition();
+
+			// Mock getBoundingClientRect to simulate the input moving right after a chip is added
+			const container = input.closest("[data-id]") || input.parentElement?.parentElement;
+			const inputElement = input;
+			const originalContainerGetBoundingClientRect = container?.getBoundingClientRect.bind(container);
+
+			// Helper to count filters in DOM dynamically
+			const getFilterCount = () => document.querySelectorAll('fieldset[name$=" filter"]').length;
+
+			if (container) {
+				vi.spyOn(container, "getBoundingClientRect").mockImplementation(() => {
+					return (originalContainerGetBoundingClientRect?.() || {
+						top: 100,
+						left: 50,
+						bottom: 150,
+						right: 400,
+						width: 350,
+						height: 50,
+						x: 50,
+						y: 100,
+						toJSON: () => {},
+					}) as DOMRect;
+				});
+			}
+
+			vi.spyOn(inputElement, "getBoundingClientRect").mockImplementation(() => {
+				// Dynamically check filter count in DOM to simulate input position change
+				const filterCount = getFilterCount();
+				const leftOffset = filterCount * 100;
+				return {
+					top: 100,
+					bottom: 142,
+					right: 200 + leftOffset,
+					width: 100,
+					height: 42,
+					x: 50 + leftOffset,
+					y: 100,
+					left: 50 + leftOffset,
+					toJSON: () => {},
+				} as DOMRect;
+			});
+
+			// Add a filter: select "status:" key, then first value
+			await user.keyboard("{Enter}");
+			await user.keyboard("{Enter}");
+
+			// Verify filter is created
+			await waitFor(() => {
+				const appliedFilter = getAppliedFilter("status");
+				expect(appliedFilter).toBeInTheDocument();
+			});
+
+			// Get the new position - it should have updated
+			const newLeft = getDropdownLeftPosition();
+
+			// The position should have changed (increased) since the input moved right
+			expect(newLeft).toBeGreaterThan(initialLeft);
+		});
+
+		test("dropdown position updates when a filter is removed", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Store original getBoundingClientRect
+			const inputElement = input;
+			const container = input.closest("[data-id]") || input.parentElement?.parentElement;
+			const originalContainerGetBoundingClientRect = container?.getBoundingClientRect.bind(container);
+
+			// Helper to count filters in DOM dynamically
+			const getFilterCount = () => document.querySelectorAll('fieldset[name$=" filter"]').length;
+
+			if (container) {
+				vi.spyOn(container, "getBoundingClientRect").mockImplementation(() => {
+					return (originalContainerGetBoundingClientRect?.() || {
+						top: 100,
+						left: 0,
+						bottom: 150,
+						right: 400,
+						width: 400,
+						height: 50,
+						x: 0,
+						y: 100,
+						toJSON: () => {},
+					}) as DOMRect;
+				});
+			}
+
+			vi.spyOn(inputElement, "getBoundingClientRect").mockImplementation(() => {
+				// Dynamically check filter count in DOM to simulate input position change
+				const filterCount = getFilterCount();
+				const leftOffset = filterCount * 100;
+				return {
+					top: 100,
+					bottom: 142,
+					right: 150 + leftOffset,
+					width: 100,
+					height: 42,
+					x: 50 + leftOffset,
+					y: 100,
+					left: 50 + leftOffset,
+					toJSON: () => {},
+				} as DOMRect;
+			});
+
+			// Add a filter
+			await user.keyboard("{Enter}");
+			await user.keyboard("{Enter}");
+
+			// Verify filter is created
+			await waitFor(() => {
+				const appliedFilter = getAppliedFilter("status");
+				expect(appliedFilter).toBeInTheDocument();
+			});
+
+			// Get position with filter (input moved right by 100px due to chip)
+			const positionWithFilter = getDropdownLeftPosition();
+
+			// Remove the filter with backspace
+			await act(async () => {
+				await user.keyboard("{Backspace}");
+			});
+
+			// Verify filter is removed
+			await waitFor(() => {
+				expect(queryAppliedFilter("status")).not.toBeInTheDocument();
+			});
+
+			// Get position after filter removed
+			const positionAfterRemoval = getDropdownLeftPosition();
+
+			// Position should have decreased (moved back left) by 100px
+			expect(positionAfterRemoval).toBeLessThan(positionWithFilter);
+			expect(positionWithFilter - positionAfterRemoval).toBe(100);
+		});
+
+		test("dropdown position does NOT change when input loses and regains focus", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Get initial position
+			const initialLeft = getDropdownLeftPosition();
+
+			// Blur the input (dropdown should hide)
+			await user.tab();
+
+			// Wait for the blur timeout (200ms in handleInputBlur)
+			await act(async () => {
+				await new Promise((resolve) => setTimeout(resolve, 250));
+			});
+
+			// Dropdown should be hidden
+			expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+			// Focus the input again
+			await user.click(input);
+
+			// Dropdown should be visible again
+			await waitFor(() => {
+				expect(screen.getByRole("listbox")).toBeInTheDocument();
+			});
+
+			// Position should be the same as before
+			const positionAfterRefocus = getDropdownLeftPosition();
+			expect(positionAfterRefocus).toBe(initialLeft);
+		});
+
+		test("dropdown position stays stable while typing (does not shift per keystroke)", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Get initial position
+			const initialLeft = getDropdownLeftPosition();
+
+			// Type several characters
+			await user.type(input, "sta");
+
+			// Position should remain the same
+			const positionAfterTyping = getDropdownLeftPosition();
+			expect(positionAfterTyping).toBe(initialLeft);
+
+			// Type more
+			await user.type(input, "tus:");
+
+			// Position should still be the same
+			const positionAfterMoreTyping = getDropdownLeftPosition();
+			expect(positionAfterMoreTyping).toBe(initialLeft);
+		});
+	});
 });

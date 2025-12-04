@@ -45,6 +45,8 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 		useState<string | null>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
+	// Track whether position has been captured for the current typing session
+	const positionCapturedRef = useRef(false);
 
 	// Get autocomplete suggestions using filterCategories directly
 	const suggestions = getAutocompleteSuggestions(inputValue, filterCategories);
@@ -55,16 +57,27 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 		setSelectedSuggestionIndex(0);
 	}, [suggestions.length, isInputFocused]);
 
+	// Reset position capture flag when filters change (input element moves due to chip add/remove)
+	// biome-ignore lint/correctness/useExhaustiveDependencies: filters.length triggers reset when filters are added/removed
 	useEffect(() => {
-		if (containerRef.current && inputRef.current) {
-			const containerRect = containerRef.current.getBoundingClientRect();
-			const inputRect = inputRef.current.getBoundingClientRect();
-			setAutocompletePosition({
-				top: inputRect.bottom - containerRect.top,
-				left: inputRect.left - containerRect.left,
-			});
+		positionCapturedRef.current = false;
+	}, [filters.length]);
+
+	// Capture dropdown position when autocomplete shows and we haven't captured for this session
+	// biome-ignore lint/correctness/useExhaustiveDependencies: filters.length triggers recapture when input position changes
+	useEffect(() => {
+		if (showAutocomplete && !positionCapturedRef.current) {
+			if (containerRef.current && inputRef.current) {
+				const containerRect = containerRef.current.getBoundingClientRect();
+				const inputRect = inputRef.current.getBoundingClientRect();
+				setAutocompletePosition({
+					top: inputRect.bottom - containerRect.top,
+					left: inputRect.left - containerRect.left,
+				});
+			}
+			positionCapturedRef.current = true;
 		}
-	}, []);
+	}, [showAutocomplete, filters.length]);
 
 	// Clear pending selections when input changes to a different category or clears
 	useEffect(() => {
