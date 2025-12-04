@@ -1,11 +1,9 @@
-import { SELECTION_TYPES } from "@/hooks/useFilters/constants";
 import type {
 	ComboboxOption,
 	FilterOption,
 	Row,
-	TAppliedFilter,
 } from "@/hooks/useFilters/types";
-import type { TAutocompleteSuggestion, TFilterChip } from "./types";
+import type { TAutocompleteSuggestion } from "./types";
 
 /**
  * Represents a parsed filter entry from text input.
@@ -99,6 +97,7 @@ export function getAutocompleteSuggestions<T extends Row>(
 				// or make an intelligent selection based on the type of column
 				text: `${String(category.propertyNameSingular)}:`,
 				categoryId: category.id,
+				selectionType: category.selectionType,
 			});
 		}
 		return suggestions;
@@ -119,6 +118,7 @@ export function getAutocompleteSuggestions<T extends Row>(
 					type: "key",
 					text: `${singular}:`,
 					categoryId: category.id,
+					selectionType: category.selectionType,
 				});
 			}
 		}
@@ -145,20 +145,13 @@ export function getAutocompleteSuggestions<T extends Row>(
 						filterKey: key,
 						categoryId: category.id,
 						optionId: option.id,
+						selectionType: category.selectionType,
 					});
 				}
 			}
 		}
 	}
 	return suggestions;
-}
-
-export function serializeFilters(
-	chips: TFilterChip[],
-	freeText: string,
-): string {
-	const chipText = chips.map((c) => c.raw).join(" ");
-	return freeText ? `${chipText} ${freeText}`.trim() : chipText;
 }
 
 /**
@@ -235,48 +228,4 @@ export function findComboboxOptionByValue(
 			option.value.toLowerCase() === valueLower ||
 			option.label.toLowerCase() === valueLower,
 	);
-}
-
-/**
- * Converts TAppliedFilter[] to TFilterChip[] for display purposes.
- * Creates one chip per value in each filter, including IDs for direct lookup.
- */
-export function convertTAppliedFilterToChips<T extends Row>(
-	filters: TAppliedFilter[],
-	filterCategories: FilterOption<T>[],
-): TFilterChip[] {
-	const chips: TFilterChip[] = [];
-
-	for (const filter of filters) {
-		const category = filterCategories.find((c) => c.id === filter.categoryId);
-		if (!category) {
-			continue;
-		}
-
-		// Determine the key to use for the chip
-		const key =
-			filter.selectionType === SELECTION_TYPES.RADIO
-				? filter.propertyNameSingular
-				: filter.propertyNamePlural;
-
-		// Create one chip per value with full ID information
-		for (const valueOption of filter.values) {
-			// Use quotes in raw if value contains spaces
-			const rawValue = valueOption.value.includes(" ")
-				? `"${valueOption.value}"`
-				: valueOption.value;
-
-			chips.push({
-				id: `${filter.id}-${valueOption.id}`,
-				categoryId: filter.categoryId,
-				valueId: valueOption.id,
-				key,
-				value: valueOption.value,
-				label: valueOption.label,
-				raw: `${key}:${rawValue}`,
-			});
-		}
-	}
-
-	return chips;
 }

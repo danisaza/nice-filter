@@ -82,6 +82,32 @@ function ChipFilterInputWrapper() {
 	return <ChipFilterInput placeholder="Filter by typing key:value..." />;
 }
 
+/**
+ * Helper to find an AppliedFilter by its property name.
+ * AppliedFilter renders as a fieldset with name="{propertyName} filter".
+ * We query by the name attribute since fieldset's accessible name requires a legend.
+ */
+function getAppliedFilter(propertyName: string) {
+	const fieldset = document.querySelector(
+		`fieldset[name="${propertyName} filter"]`,
+	);
+	if (!fieldset) {
+		throw new Error(
+			`Unable to find AppliedFilter with name="${propertyName} filter"`,
+		);
+	}
+	return fieldset as HTMLFieldSetElement;
+}
+
+/**
+ * Helper to query for an AppliedFilter (returns null if not found).
+ */
+function queryAppliedFilter(propertyName: string) {
+	return document.querySelector(
+		`fieldset[name="${propertyName} filter"]`,
+	) as HTMLFieldSetElement | null;
+}
+
 describe("ChipFilterInput", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -291,7 +317,7 @@ describe("ChipFilterInput", () => {
 	});
 
 	describe("Enter on value creates chip", () => {
-		test("pressing Enter on a value suggestion creates a chip and clears input", async () => {
+		test("pressing Enter on a value suggestion creates a filter and clears input", async () => {
 			const user = userEvent.setup();
 			render(
 				<TestWrapper>
@@ -311,16 +337,17 @@ describe("ChipFilterInput", () => {
 			// Input should be cleared
 			expect(input).toHaveValue("");
 
-			// A chip should be created with "status: Not Started"
-			const chip = screen.getByRole("button", {
-				name: /filter: status equals/i,
-			});
-			expect(chip).toBeInTheDocument();
-			expect(chip).toHaveTextContent("status:");
-			expect(chip).toHaveTextContent("Not Started");
+			// An AppliedFilter should be created for "status"
+			const appliedFilter = getAppliedFilter("status");
+			expect(appliedFilter).toBeInTheDocument();
+			// Check it displays the property name and selected value
+			expect(within(appliedFilter).getByText("status")).toBeInTheDocument();
+			expect(
+				within(appliedFilter).getByText("Not Started"),
+			).toBeInTheDocument();
 		});
 
-		test("pressing Enter on a value with spaces (like 'Not Started') creates a chip correctly", async () => {
+		test("pressing Enter on a value with spaces (like 'Not Started') creates a filter correctly", async () => {
 			const user = userEvent.setup();
 			render(
 				<TestWrapper>
@@ -334,19 +361,19 @@ describe("ChipFilterInput", () => {
 			// Type "status:Not Started" manually
 			await user.type(input, "status:Not Started");
 
-			// Press Enter to create the chip
+			// Press Enter to create the filter
 			await user.keyboard("{Enter}");
 
 			// Input should be cleared
 			expect(input).toHaveValue("");
 
-			// A chip should be created with "status: Not Started"
-			const chip = screen.getByRole("button", {
-				name: /filter: status equals/i,
-			});
-			expect(chip).toBeInTheDocument();
-			expect(chip).toHaveTextContent("status:");
-			expect(chip).toHaveTextContent("Not Started");
+			// An AppliedFilter should be created for "status" with "Not Started"
+			const appliedFilter = getAppliedFilter("status");
+			expect(appliedFilter).toBeInTheDocument();
+			expect(within(appliedFilter).getByText("status")).toBeInTheDocument();
+			expect(
+				within(appliedFilter).getByText("Not Started"),
+			).toBeInTheDocument();
 		});
 
 		test("can navigate to different value with arrow keys before selecting", async () => {
@@ -369,14 +396,12 @@ describe("ChipFilterInput", () => {
 			// Select it
 			await user.keyboard("{Enter}");
 
-			// A chip should be created
-			const chip = screen.getByRole("button", {
-				name: /filter: status equals/i,
-			});
-			expect(chip).toBeInTheDocument();
+			// An AppliedFilter should be created
+			const appliedFilter = getAppliedFilter("status");
+			expect(appliedFilter).toBeInTheDocument();
 		});
 
-		test("input is focused and dropdown is visible immediately after creating a chip", async () => {
+		test("input is focused and dropdown is visible immediately after creating a filter", async () => {
 			const user = userEvent.setup();
 			render(
 				<TestWrapper>
@@ -390,16 +415,14 @@ describe("ChipFilterInput", () => {
 			// Select "status:" key
 			await user.keyboard("{Enter}");
 
-			// Select first value to create chip
+			// Select first value to create filter
 			await user.keyboard("{Enter}");
 
-			// Verify chip was created
-			const chip = screen.getByRole("button", {
-				name: /filter: status equals/i,
-			});
-			expect(chip).toBeInTheDocument();
+			// Verify filter was created
+			const appliedFilter = getAppliedFilter("status");
+			expect(appliedFilter).toBeInTheDocument();
 
-			// Input should still be focused after chip creation
+			// Input should still be focused after filter creation
 			expect(input).toHaveFocus();
 
 			// Dropdown should be visible with filter key suggestions
@@ -514,13 +537,11 @@ describe("ChipFilterInput", () => {
 			// Input should be cleared
 			expect(input).toHaveValue("");
 
-			// A chip should be created with "Medium", not "Low"
-			const chip = screen.getByRole("button", {
-				name: /filter: priority equals/i,
-			});
-			expect(chip).toBeInTheDocument();
-			expect(chip).toHaveTextContent("Medium");
-			expect(chip).not.toHaveTextContent("Low");
+			// An AppliedFilter should be created with "Medium", not "Low"
+			const appliedFilter = getAppliedFilter("priority");
+			expect(appliedFilter).toBeInTheDocument();
+			expect(within(appliedFilter).getByText("Medium")).toBeInTheDocument();
+			expect(within(appliedFilter).queryByText("Low")).not.toBeInTheDocument();
 		});
 
 		test("space adds to input when it would be a valid prefix (e.g. 'not' -> 'not ')", async () => {
@@ -544,13 +565,11 @@ describe("ChipFilterInput", () => {
 			// Input should have the space added
 			expect(input).toHaveValue("status:not ");
 
-			// No chip should be created yet
-			expect(
-				screen.queryByRole("button", { name: /filter: status equals/i }),
-			).not.toBeInTheDocument();
+			// No filter should be created yet
+			expect(queryAppliedFilter("status")).not.toBeInTheDocument();
 		});
 
-		test("space triggers chip creation when it would NOT be a valid prefix (e.g. 'Low')", async () => {
+		test("space triggers filter creation when it would NOT be a valid prefix (e.g. 'Low')", async () => {
 			const user = userEvent.setup();
 			render(
 				<TestWrapper>
@@ -565,23 +584,21 @@ describe("ChipFilterInput", () => {
 			await user.type(input, "priority:Low");
 			expect(input).toHaveValue("priority:Low");
 
-			// Press space - should create chip since "Low " is NOT a valid prefix
+			// Press space - should create filter since "Low " is NOT a valid prefix
 			await user.keyboard(" ");
 
 			// Input should be cleared
 			expect(input).toHaveValue("");
 
-			// A chip should be created
-			const chip = screen.getByRole("button", {
-				name: /filter: priority equals/i,
-			});
-			expect(chip).toBeInTheDocument();
-			expect(chip).toHaveTextContent("Low");
+			// An AppliedFilter should be created
+			const appliedFilter = getAppliedFilter("priority");
+			expect(appliedFilter).toBeInTheDocument();
+			expect(within(appliedFilter).getByText("Low")).toBeInTheDocument();
 		});
 	});
 
-	describe("Backspace key deletes chip", () => {
-		test("pressing Backspace when input is empty deletes the last chip", async () => {
+	describe("Backspace key deletes filter", () => {
+		test("pressing Backspace when input is empty deletes the last filter", async () => {
 			const user = userEvent.setup();
 			render(
 				<TestWrapper>
@@ -592,19 +609,17 @@ describe("ChipFilterInput", () => {
 			const input = screen.getByRole("combobox", { name: /filter input/i });
 			await user.click(input);
 
-			// Create a chip: select "status:" key, then first value
+			// Create a filter: select "status:" key, then first value
 			await user.keyboard("{Enter}");
 			await user.keyboard("{Enter}");
 
-			// Verify chip is created
+			// Verify filter is created
 			await waitFor(() => {
-				const chip = screen.getByRole("button", {
-					name: /filter: status equals/i,
-				});
-				expect(chip).toBeInTheDocument();
+				const appliedFilter = getAppliedFilter("status");
+				expect(appliedFilter).toBeInTheDocument();
 			});
 
-			// Ensure input is empty (it should be after chip creation)
+			// Ensure input is empty (it should be after filter creation)
 			expect(input).toHaveValue("");
 
 			// Press Backspace - wrap in act to ensure state updates are flushed
@@ -612,13 +627,9 @@ describe("ChipFilterInput", () => {
 				await user.keyboard("{Backspace}");
 			});
 
-			// Chip should be removed (wait for async state update)
+			// Filter should be removed (wait for async state update)
 			await waitFor(() => {
-				expect(
-					screen.queryByRole("button", {
-						name: /filter: status equals/i,
-					}),
-				).not.toBeInTheDocument();
+				expect(queryAppliedFilter("status")).not.toBeInTheDocument();
 			});
 		});
 	});

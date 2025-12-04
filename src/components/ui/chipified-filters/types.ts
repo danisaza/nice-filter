@@ -1,13 +1,3 @@
-export interface TFilterChip {
-	id: string;
-	categoryId: string; // links to FilterOption.id
-	valueId: string; // links to ComboboxOption.id
-	key: string; // display key (propertyNameSingular/Plural)
-	value: string; // display value (ComboboxOption.value)
-	label: string; // display label (ComboboxOption.label)
-	raw: string; // for edit functionality
-}
-
 export interface ChipFilterInputProps {
 	placeholder?: string;
 	freeTextAllowed?: boolean;
@@ -15,20 +5,12 @@ export interface ChipFilterInputProps {
 	"data-id"?: string;
 }
 
-export interface FilterChipProps {
-	chip: TFilterChip;
-	onRemove: () => void;
-	onEdit: () => void;
-	isEditing: boolean;
-	isFocused: boolean;
-	onFocus: () => void;
-	onKeyDown?: (e: React.KeyboardEvent) => void;
-}
-
 export interface AutocompleteDropdownProps {
 	suggestions: TAutocompleteSuggestion[];
 	selectedIndex: number;
 	onSelect: (suggestion: TAutocompleteSuggestion) => void;
+	onToggleSelection?: (suggestion: TAutocompleteSuggestion) => void;
+	pendingSelections?: Set<string>; // optionIds that are currently selected
 	position: {
 		top: number;
 		left: number;
@@ -43,4 +25,5 @@ export interface TAutocompleteSuggestion {
 	icon?: React.ReactNode;
 	categoryId?: string; // for direct lookup
 	optionId?: string; // for value suggestions
+	selectionType?: "radio" | "checkboxes"; // for multi-select behavior
 }
