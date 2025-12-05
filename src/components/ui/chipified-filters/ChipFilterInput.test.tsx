@@ -2350,6 +2350,354 @@ describe("ChipFilterInput", () => {
 		});
 	});
 
+	describe("BUG: Filter operator not set correctly for multi-select", () => {
+		/**
+		 * BUG: When creating a filter with multiple selections, the operator is
+		 * erroneously set to the single-value operator instead of the multi-value operator.
+		 *
+		 * Radio Columns:
+		 * - Expected: "is any of" when multiple values selected
+		 * - Actual (BUG): "is"
+		 *
+		 * Checkbox Columns:
+		 * - Expected: "include all of" when multiple values selected
+		 * - Actual (BUG): "include"
+		 */
+
+		describe("Radio columns - keyboard interaction", () => {
+			test("selecting multiple values with keyboard should set operator to 'is any of'", async () => {
+				/**
+				 * Repro steps:
+				 * 1. User types "status" and presses Enter/Space to select the column
+				 * 2. User selects "Not Started" with space
+				 * 3. User navigates down and selects "Completed" with space
+				 * 4. User presses Enter to apply the filter
+				 *
+				 * EXPECTED: Filter operator is "is any of"
+				 * ACTUAL (BUG): Filter operator is erroneously "is"
+				 */
+				const user = userEvent.setup();
+				render(
+					<TestWrapper>
+						<ChipFilterInputWrapper />
+					</TestWrapper>,
+				);
+
+				const input = screen.getByRole("combobox", { name: /filter input/i });
+				await user.click(input);
+
+				// Type "status" to filter to the status column and select it
+				await user.type(input, "status");
+				await user.keyboard("{Enter}");
+
+				// Input should now have "status:"
+				expect(input).toHaveValue("status:");
+
+				// Verify dropdown shows status values
+				const listbox = screen.getByRole("listbox");
+				const options = within(listbox).getAllByRole("option");
+				expect(options[0]).toHaveTextContent("Not Started");
+				expect(options[2]).toHaveTextContent("Completed");
+
+				// Select "Not Started" with space
+				await user.keyboard(" ");
+
+				// Navigate down to "Completed" (index 2)
+				await user.keyboard("{ArrowDown}"); // to "In Progress"
+				await user.keyboard("{ArrowDown}"); // to "Completed"
+
+				// Select "Completed" with space
+				await user.keyboard(" ");
+
+				// Press Enter to apply the filter
+				await user.keyboard("{Enter}");
+
+				// Verify filter is created
+				const appliedFilter = getAppliedFilter("status");
+				expect(appliedFilter).toBeInTheDocument();
+
+				// BUG: The filter should show "is any of" as the operator, not "is"
+				const operatorButton = within(appliedFilter).getByLabelText(
+					"Filter relationship",
+				);
+				expect(operatorButton).toHaveTextContent("is any of");
+			});
+		});
+
+		describe("Radio columns - mouse interaction", () => {
+			test("selecting multiple values with mouse should set operator to 'is any of'", async () => {
+				/**
+				 * Repro steps:
+				 * 1. User types "status" and clicks to select the column
+				 * 2. User clicks checkbox next to "Not Started"
+				 * 3. User clicks checkbox next to "Completed"
+				 * 4. User clicks on an option label (or presses Enter) to apply
+				 *
+				 * EXPECTED: Filter operator is "is any of"
+				 * ACTUAL (BUG): Filter operator is erroneously "is"
+				 */
+				const user = userEvent.setup();
+				render(
+					<TestWrapper>
+						<ChipFilterInputWrapper />
+					</TestWrapper>,
+				);
+
+				const input = screen.getByRole("combobox", { name: /filter input/i });
+				await user.click(input);
+
+				// Type "status" and select it
+				await user.type(input, "status");
+				await user.keyboard("{Enter}");
+
+				expect(input).toHaveValue("status:");
+
+				// Get the dropdown options
+				const listbox = screen.getByRole("listbox");
+				const options = within(listbox).getAllByRole("option");
+
+				// Find "Not Started" and "Completed" options
+				const notStartedOption = options.find((opt) =>
+					opt.textContent?.includes("Not Started"),
+				);
+				const completedOption = options.find((opt) =>
+					opt.textContent?.includes("Completed"),
+				);
+
+				expect(notStartedOption).toBeDefined();
+				expect(completedOption).toBeDefined();
+
+				// Click the checkbox for "Not Started"
+				const notStartedCheckbox = within(notStartedOption!).getByRole(
+					"checkbox",
+				);
+				await user.click(notStartedCheckbox);
+
+				// Click the checkbox for "Completed"
+				const completedCheckbox = within(completedOption!).getByRole(
+					"checkbox",
+				);
+				await user.click(completedCheckbox);
+
+				// Click on an option label to apply (clicking the option itself, not checkbox)
+				// We'll click on "In Progress" option to apply all selections
+				const inProgressOption = options.find((opt) =>
+					opt.textContent?.includes("In Progress"),
+				);
+				await user.click(inProgressOption!);
+
+				// Wait for filter to be created
+				await waitFor(() => {
+					expect(getAppliedFilter("status")).toBeInTheDocument();
+				});
+
+				const appliedFilter = getAppliedFilter("status");
+
+				// BUG: The filter should show "is any of" as the operator, not "is"
+				const operatorButton = within(appliedFilter).getByLabelText(
+					"Filter relationship",
+				);
+				expect(operatorButton).toHaveTextContent("is any of");
+			});
+		});
+
+		describe("Checkbox columns - keyboard interaction", () => {
+			test("selecting multiple values with keyboard should set operator to 'include all of'", async () => {
+				/**
+				 * Repro steps:
+				 * 1. User types "tags" and presses Enter/Space to select the column
+				 * 2. User selects "Bug" with space
+				 * 3. User navigates and selects "Documentation" with space
+				 * 4. User presses Enter to apply the filter
+				 *
+				 * EXPECTED: Filter operator is "include all of"
+				 * ACTUAL (BUG): Filter operator is erroneously "include"
+				 */
+				const user = userEvent.setup();
+				render(
+					<TestWrapper>
+						<ChipFilterInputWrapper />
+					</TestWrapper>,
+				);
+
+				const input = screen.getByRole("combobox", { name: /filter input/i });
+				await user.click(input);
+
+				// Type "tags" to filter to the tags column and select it
+				await user.type(input, "tags");
+				await user.keyboard("{Enter}");
+
+				// Input should now have "tags:"
+				expect(input).toHaveValue("tags:");
+
+				// Verify dropdown shows tag values
+				const listbox = screen.getByRole("listbox");
+				const options = within(listbox).getAllByRole("option");
+
+				// Find Bug and Documentation options
+				const bugIndex = options.findIndex((opt) =>
+					opt.textContent?.includes("Bug"),
+				);
+				const docIndex = options.findIndex((opt) =>
+					opt.textContent?.includes("Documentation"),
+				);
+				expect(bugIndex).toBeGreaterThanOrEqual(0);
+				expect(docIndex).toBeGreaterThanOrEqual(0);
+
+				// Select "Bug" with space (assuming it's first option)
+				await user.keyboard(" ");
+
+				// Navigate to "Documentation" (it's at index 2 based on TAGS array)
+				await user.keyboard("{ArrowDown}"); // to Feature
+				await user.keyboard("{ArrowDown}"); // to Documentation
+
+				// Select "Documentation" with space
+				await user.keyboard(" ");
+
+				// Press Enter to apply the filter
+				await user.keyboard("{Enter}");
+
+				// Verify filter is created
+				const appliedFilter = getAppliedFilter("tags");
+				expect(appliedFilter).toBeInTheDocument();
+
+				// BUG: The filter should show "include all of" as the operator, not "include"
+				const operatorButton = within(appliedFilter).getByLabelText(
+					"Filter relationship",
+				);
+				expect(operatorButton).toHaveTextContent("include all of");
+			});
+		});
+
+		describe("Checkbox columns - mouse interaction", () => {
+			test("selecting multiple values with mouse should set operator to 'include all of'", async () => {
+				/**
+				 * Repro steps:
+				 * 1. User types "tags" and clicks to select the column
+				 * 2. User clicks checkbox next to "Bug"
+				 * 3. User clicks checkbox next to "Documentation"
+				 * 4. User clicks on an option label to apply
+				 *
+				 * EXPECTED: Filter operator is "include all of"
+				 * ACTUAL (BUG): Filter operator is erroneously "include"
+				 */
+				const user = userEvent.setup();
+				render(
+					<TestWrapper>
+						<ChipFilterInputWrapper />
+					</TestWrapper>,
+				);
+
+				const input = screen.getByRole("combobox", { name: /filter input/i });
+				await user.click(input);
+
+				// Type "tags" and select it
+				await user.type(input, "tags");
+				await user.keyboard("{Enter}");
+
+				expect(input).toHaveValue("tags:");
+
+				// Get the dropdown options
+				const listbox = screen.getByRole("listbox");
+				const options = within(listbox).getAllByRole("option");
+
+				// Find "Bug" and "Documentation" options
+				const bugOption = options.find((opt) =>
+					opt.textContent?.includes("Bug"),
+				);
+				const documentationOption = options.find((opt) =>
+					opt.textContent?.includes("Documentation"),
+				);
+
+				expect(bugOption).toBeDefined();
+				expect(documentationOption).toBeDefined();
+
+				// Click the checkbox for "Bug"
+				const bugCheckbox = within(bugOption!).getByRole("checkbox");
+				await user.click(bugCheckbox);
+
+				// Click the checkbox for "Documentation"
+				const documentationCheckbox = within(documentationOption!).getByRole(
+					"checkbox",
+				);
+				await user.click(documentationCheckbox);
+
+				// Click on another option label to apply (e.g., "Testing")
+				const testingOption = options.find((opt) =>
+					opt.textContent?.includes("Testing"),
+				);
+				await user.click(testingOption!);
+
+				// Wait for filter to be created
+				await waitFor(() => {
+					expect(getAppliedFilter("tags")).toBeInTheDocument();
+				});
+
+				const appliedFilter = getAppliedFilter("tags");
+
+				// BUG: The filter should show "include all of" as the operator, not "include"
+				const operatorButton = within(appliedFilter).getByLabelText(
+					"Filter relationship",
+				);
+				expect(operatorButton).toHaveTextContent("include all of");
+			});
+		});
+
+		describe("Single selection should still use single-value operators", () => {
+			test("radio column with single selection should use 'is' operator", async () => {
+				const user = userEvent.setup();
+				render(
+					<TestWrapper>
+						<ChipFilterInputWrapper />
+					</TestWrapper>,
+				);
+
+				const input = screen.getByRole("combobox", { name: /filter input/i });
+				await user.click(input);
+
+				// Select status column
+				await user.type(input, "status");
+				await user.keyboard("{Enter}");
+
+				// Select only one value
+				await user.keyboard("{Enter}"); // Select first option
+
+				// Verify filter is created with "is" operator
+				const appliedFilter = getAppliedFilter("status");
+				const operatorButton = within(appliedFilter).getByLabelText(
+					"Filter relationship",
+				);
+				expect(operatorButton).toHaveTextContent("is");
+			});
+
+			test("checkbox column with single selection should use 'include' operator", async () => {
+				const user = userEvent.setup();
+				render(
+					<TestWrapper>
+						<ChipFilterInputWrapper />
+					</TestWrapper>,
+				);
+
+				const input = screen.getByRole("combobox", { name: /filter input/i });
+				await user.click(input);
+
+				// Select tags column
+				await user.type(input, "tags");
+				await user.keyboard("{Enter}");
+
+				// Select only one value
+				await user.keyboard("{Enter}"); // Select first option
+
+				// Verify filter is created with "include" operator
+				const appliedFilter = getAppliedFilter("tags");
+				const operatorButton = within(appliedFilter).getByLabelText(
+					"Filter relationship",
+				);
+				expect(operatorButton).toHaveTextContent("include");
+			});
+		});
+	});
+
 	describe("Dropdown position behavior", () => {
 		// Helper to get the dropdown element
 		function getDropdown() {

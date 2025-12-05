@@ -155,7 +155,7 @@ export function FiltersProvider<T extends Row>({
 					propertyNameSingular: propertyNameSingular,
 					propertyNamePlural: undefined,
 					selectionType: SELECTION_TYPES.RADIO,
-					relationship: OPERATORS.IS,
+					relationship: values.length > 1 ? OPERATORS.IS_ANY_OF : OPERATORS.IS,
 				};
 				setFilters((prev) => [...prev, { ...newFilter, ...radioValues }]);
 				return;
@@ -171,7 +171,8 @@ export function FiltersProvider<T extends Row>({
 					propertyNameSingular: undefined,
 					propertyNamePlural: propertyNamePlural,
 					selectionType: SELECTION_TYPES.CHECKBOXES,
-					relationship: OPERATORS.INCLUDE,
+					relationship:
+						values.length > 1 ? OPERATORS.INCLUDE_ALL_OF : OPERATORS.INCLUDE,
 				};
 				setFilters((prev) => [...prev, { ...newFilter, ...checkboxValues }]);
 				return;
