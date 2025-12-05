@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type React from "react";
 import { useEffect } from "react";
@@ -24,7 +24,6 @@ vi.mock("@/App", () => ({
 }));
 
 import { FILTER_CATEGORIES } from "@/hooks/filter-options-mock-data";
-import { MATCH_TYPES } from "@/hooks/useFilters/constants";
 // Import dependencies (these don't trigger mock because they don't use @/App directly)
 import createFiltersContext, {
 	FiltersProvider,
@@ -185,8 +184,6 @@ describe("ComponentPreview", () => {
 				name: /all filters must match/i,
 			});
 
-			// The checked option should contain an SVG (the checkmark)
-			const checkmark = within(allOption).queryByRole("img", { hidden: true });
 			// Lucide icons don't have role="img", so we check for svg element
 			const svg = allOption.querySelector("svg");
 			expect(svg).toBeInTheDocument();

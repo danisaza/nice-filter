@@ -114,15 +114,6 @@ function getAppliedFilter(propertyName: string) {
 }
 
 /**
- * Helper to query for an AppliedFilter (returns null if not found).
- */
-function queryAppliedFilter(propertyName: string) {
-	return document.querySelector(
-		`fieldset[name="${propertyName} filter"]`,
-	) as HTMLFieldSetElement | null;
-}
-
-/**
  * Helper to count total number of applied filters in the DOM
  */
 function countTotalAppliedFilters() {

@@ -1965,7 +1965,7 @@ describe("ChipFilterInput", () => {
 
 		test("left arrow key does NOT move focus when cursor is not at position 0", async () => {
 			const user = userEvent.setup();
-			const { draftInput, operatorButton } = await createDraftTextFilter(user);
+			const { draftInput } = await createDraftTextFilter(user);
 
 			// Type some text
 			await user.type(draftInput, "hello");
