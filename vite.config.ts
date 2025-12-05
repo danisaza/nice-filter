@@ -13,6 +13,8 @@ export default defineConfig({
 		},
 	},
 	test: {
-		// Vitest configuration
+		globals: true,
+		environment: "jsdom",
+		setupFiles: "./src/test/setup.ts",
 	},
 });

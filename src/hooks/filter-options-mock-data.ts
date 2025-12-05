@@ -87,4 +87,12 @@ export const FILTER_CATEGORIES: FilterOption<MyRow>[] = [
 		propertyNamePlural: "assignees",
 		options: ASSIGNEE_OPTIONS,
 	},
+	// Text column for free-form text search (maps to the "text" property in MyRow)
+	{
+		id: uuidv4(),
+		selectionType: SELECTION_TYPES.TEXT,
+		propertyNameSingular: "text",
+		propertyNamePlural: "text",
+		options: [], // Text columns have no predefined options
+	},
 ];
