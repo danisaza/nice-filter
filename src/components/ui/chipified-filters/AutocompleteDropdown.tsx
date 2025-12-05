@@ -28,19 +28,14 @@ export const AutocompleteDropdown: React.FC<AutocompleteDropdownProps> = ({
 		return null;
 	}
 
-	const handleClick = (
+	const handleCheckboxClick = (
+		e: React.MouseEvent,
 		suggestion: AutocompleteDropdownProps["suggestions"][0],
 	) => {
-		// For multi-select values, toggle selection instead of committing
-		if (
-			suggestion.type === "value" &&
-			suggestion.selectionType === "checkboxes" &&
-			onToggleSelection
-		) {
-			onToggleSelection(suggestion);
-		} else {
-			onSelect(suggestion);
-		}
+		// Stop propagation so the button's onClick doesn't fire
+		e.stopPropagation();
+		// Toggle selection without closing dropdown
+		onToggleSelection?.(suggestion);
 	};
 
 	return (
@@ -54,9 +49,8 @@ export const AutocompleteDropdown: React.FC<AutocompleteDropdownProps> = ({
 			role="listbox"
 		>
 			{suggestions.map((suggestion, index) => {
-				const isMultiSelect =
-					suggestion.type === "value" &&
-					suggestion.selectionType === "checkboxes";
+				// Multi-select is available for all value suggestions (both radio and checkbox column types)
+				const isMultiSelect = suggestion.type === "value";
 				const isChecked =
 					isMultiSelect &&
 					suggestion.optionId &&
@@ -67,20 +61,27 @@ export const AutocompleteDropdown: React.FC<AutocompleteDropdownProps> = ({
 						key={`${suggestion.type}-${suggestion.text}-${index}`}
 						type="button"
 						data-index={index}
-						onClick={() => handleClick(suggestion)}
+						onMouseDown={(e) => e.preventDefault()}
+						onClick={() => onSelect(suggestion)}
 						className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors ${index === selectedIndex ? "bg-blue-50 text-blue-900" : "text-gray-700 hover:bg-gray-50"}`}
 						role="option"
 						aria-selected={index === selectedIndex}
 					>
 						{isMultiSelect && (
+							// biome-ignore lint/a11y/useKeyWithClickEvents: keyboard interaction handled by parent button via Space key
+							// biome-ignore lint/a11y/useSemanticElements: custom styled checkbox with click handler
 							<span
-								className={`flex-shrink-0 w-4 h-4 border rounded flex items-center justify-center ${
+								role="checkbox"
+								aria-checked={!!isChecked}
+								tabIndex={-1}
+								onClick={(e) => handleCheckboxClick(e, suggestion)}
+								className={`flex-shrink-0 w-4 h-4 border rounded flex items-center justify-center cursor-pointer ${
 									isChecked
 										? "bg-blue-500 border-blue-500 text-white"
-										: "border-gray-300"
+										: "border-gray-300 hover:border-gray-400"
 								}`}
 							>
-								{isChecked && <Check className="w-3 h-3" />}
+								{isChecked ? <Check className="w-3 h-3" /> : null}
 							</span>
 						)}
 						{suggestion.icon && (

@@ -87,7 +87,7 @@ export function FiltersProvider<T extends Row>({
 }: FiltersProviderProps<T>) {
 	const [filters, setFilters] = useState<TAppliedFilter[]>([]);
 	//              ^?
-	const [matchType, setMatchType] = useState<MatchType>(MATCH_TYPES.ANY);
+	const [matchType, setMatchType] = useState<MatchType>(MATCH_TYPES.ALL);
 	const [filterCategories, setFilterCategories] = useState<FilterOption<T>[]>(
 		[],
 	);

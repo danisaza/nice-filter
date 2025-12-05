@@ -91,11 +91,14 @@ export function getAutocompleteSuggestions<T extends Row>(
 	// If input is empty, show all available filter keys
 	if (!input || input.trim() === "") {
 		for (const category of filterCategories) {
+			// Use plural for checkbox columns (multi-select), singular for radio (single-select)
+			const displayName =
+				category.selectionType === "checkboxes"
+					? category.propertyNamePlural
+					: category.propertyNameSingular;
 			suggestions.push({
 				type: "key",
-				// NOTE: in future we could have a property for "defaultDisplayText" or something,
-				// or make an intelligent selection based on the type of column
-				text: `${String(category.propertyNameSingular)}:`,
+				text: `${String(displayName)}:`,
 				categoryId: category.id,
 				selectionType: category.selectionType,
 			});
@@ -114,9 +117,12 @@ export function getAutocompleteSuggestions<T extends Row>(
 				singular.toLowerCase().startsWith(partial) ||
 				plural.toLowerCase().startsWith(partial)
 			) {
+				// Use plural for checkbox columns (multi-select), singular for radio (single-select)
+				const displayName =
+					category.selectionType === "checkboxes" ? plural : singular;
 				suggestions.push({
 					type: "key",
-					text: `${singular}:`,
+					text: `${displayName}:`,
 					categoryId: category.id,
 					selectionType: category.selectionType,
 				});

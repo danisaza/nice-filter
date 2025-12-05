@@ -1,10 +1,10 @@
+import * as Toolbar from "@radix-ui/react-toolbar";
 import { Search } from "lucide-react";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useFilters } from "@/App";
 import AppliedFilter from "@/components/ui/filters/AppliedFilter";
-import { SELECTION_TYPES } from "@/hooks/useFilters/constants";
 import { AutocompleteDropdown } from "./AutocompleteDropdown";
 import type { ChipFilterInputProps, TAutocompleteSuggestion } from "./types";
 import {
@@ -21,13 +21,7 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 	className = "",
 	"data-id": dataId,
 }) => {
-	const {
-		addFilter,
-		filterCategories,
-		filters,
-		removeFilter,
-		updateFilterValues,
-	} = useFilters();
+	const { addFilter, filterCategories, filters, removeFilter } = useFilters();
 	const [inputValue, setInputValue] = useState("");
 	const [showAutocomplete, setShowAutocomplete] = useState(false);
 	const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
@@ -47,6 +41,14 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 	const containerRef = useRef<HTMLDivElement>(null);
 	// Track whether position has been captured for the current typing session
 	const positionCapturedRef = useRef(false);
+	// Track refs to X (remove) buttons for focus management
+	const removeButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+
+	// Sort filters by createdAt for consistent ordering
+	const sortedFilters = useMemo(
+		() => [...filters].sort((a, b) => a.createdAt - b.createdAt),
+		[filters],
+	);
 
 	// Get autocomplete suggestions using filterCategories directly
 	const suggestions = getAutocompleteSuggestions(inputValue, filterCategories);
@@ -79,6 +81,13 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 		}
 	}, [showAutocomplete, filters.length]);
 
+	// Reset selected index when dropdown closes
+	useEffect(() => {
+		if (!showAutocomplete) {
+			setSelectedSuggestionIndex(0);
+		}
+	}, [showAutocomplete]);
+
 	// Clear pending selections when input changes to a different category or clears
 	useEffect(() => {
 		if (!inputValue.includes(":")) {
@@ -93,10 +102,12 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 	}, [inputValue, pendingSelections.size, currentMultiSelectCategoryId]);
 
 	/**
-	 * Adds a value to an existing filter or creates a new filter.
-	 * Used by both autocomplete selection and manual text entry.
+	 * Creates a new distinct filter with the given value.
+	 * Always creates a new filter - never merges with existing filters for the same category.
+	 * This allows users to create multiple independent filters for the same category
+	 * (e.g., status IS "Open" AND status IS NOT "Closed").
 	 */
-	const addOrUpdateFilter = useCallback(
+	const createNewFilter = useCallback(
 		(
 			categoryId: string,
 			comboboxOption: { id: string; label: string; value: string },
@@ -106,91 +117,96 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 				return;
 			}
 
-			// Check if a filter already exists for this category
-			const existingFilter = filters.find((f) => f.categoryId === categoryId);
-
-			if (existingFilter) {
-				// Add value to existing filter if not already present
-				const valueExists = existingFilter.values.some(
-					(v) => v.id === comboboxOption.id,
-				);
-				if (!valueExists) {
-					updateFilterValues(existingFilter.id, (prevValues) => [
-						...prevValues,
-						comboboxOption,
-					]);
-				}
-			} else {
-				// Create new filter
-				const newFilter = {
-					id: uuidv4(),
-					categoryId: filterOption.id,
-					selectionType: filterOption.selectionType,
-					propertyNameSingular: filterOption.propertyNameSingular,
-					propertyNamePlural: filterOption.propertyNamePlural,
-					options: filterOption.options,
-					values: [comboboxOption],
-				};
-				addFilter(newFilter);
-			}
+			// Always create a new distinct filter
+			const newFilter = {
+				id: uuidv4(),
+				categoryId: filterOption.id,
+				selectionType: filterOption.selectionType,
+				propertyNameSingular: filterOption.propertyNameSingular,
+				propertyNamePlural: filterOption.propertyNamePlural,
+				options: filterOption.options,
+				values: [comboboxOption],
+			};
+			addFilter(newFilter);
 		},
-		[filterCategories, filters, updateFilterValues, addFilter],
+		[filterCategories, addFilter],
 	);
 
 	/**
 	 * Commits all pending selections for a multi-select filter.
 	 * Creates a SINGLE new filter with all selected values.
 	 * Does NOT merge with existing filters - each multi-select session creates a distinct filter.
+	 *
+	 * @param highlightedSuggestion - Optional suggestion that was highlighted when Enter was pressed.
+	 *                                If provided and not already in pending selections, it will be included.
 	 */
-	const commitPendingSelections = useCallback(() => {
-		if (pendingSelections.size === 0 || !currentMultiSelectCategoryId) {
-			return;
-		}
-
-		const category = filterCategories.find(
-			(c) => c.id === currentMultiSelectCategoryId,
-		);
-		if (!category) {
-			return;
-		}
-
-		// Collect all selected options into a single array
-		const selectedOptions: { id: string; label: string; value: string }[] = [];
-		for (const optionId of pendingSelections) {
-			const option = category.options.find((o) => o.id === optionId);
-			if (option) {
-				selectedOptions.push(option);
+	const commitPendingSelections = useCallback(
+		(highlightedSuggestion?: TAutocompleteSuggestion) => {
+			if (pendingSelections.size === 0 || !currentMultiSelectCategoryId) {
+				return;
 			}
-		}
 
-		if (selectedOptions.length === 0) {
-			return;
-		}
+			const category = filterCategories.find(
+				(c) => c.id === currentMultiSelectCategoryId,
+			);
+			if (!category) {
+				return;
+			}
 
-		// Create a SINGLE new filter with ALL selected values
-		// This is intentionally independent of any existing filters for the same category
-		const newFilter = {
-			id: uuidv4(),
-			categoryId: category.id,
-			selectionType: category.selectionType,
-			propertyNameSingular: category.propertyNameSingular,
-			propertyNamePlural: category.propertyNamePlural,
-			options: category.options,
-			values: selectedOptions,
-		};
-		addFilter(newFilter);
+			// Collect all selected options into a single array
+			const selectedOptions: { id: string; label: string; value: string }[] =
+				[];
+			for (const optionId of pendingSelections) {
+				const option = category.options.find((o) => o.id === optionId);
+				if (option) {
+					selectedOptions.push(option);
+				}
+			}
 
-		// Clear state
-		setPendingSelections(new Set());
-		setCurrentMultiSelectCategoryId(null);
-		setInputValue("");
-		setShowAutocomplete(false);
-	}, [
-		pendingSelections,
-		currentMultiSelectCategoryId,
-		filterCategories,
-		addFilter,
-	]);
+			// Also include the highlighted suggestion if provided and not already in pending selections
+			if (
+				highlightedSuggestion?.optionId &&
+				highlightedSuggestion.categoryId === currentMultiSelectCategoryId &&
+				!pendingSelections.has(highlightedSuggestion.optionId)
+			) {
+				const option = category.options.find(
+					(o) => o.id === highlightedSuggestion.optionId,
+				);
+				if (option) {
+					selectedOptions.push(option);
+				}
+			}
+
+			if (selectedOptions.length === 0) {
+				return;
+			}
+
+			// Create a SINGLE new filter with ALL selected values
+			// This is intentionally independent of any existing filters for the same category
+			const newFilter = {
+				id: uuidv4(),
+				categoryId: category.id,
+				selectionType: category.selectionType,
+				propertyNameSingular: category.propertyNameSingular,
+				propertyNamePlural: category.propertyNamePlural,
+				options: category.options,
+				values: selectedOptions,
+			};
+			addFilter(newFilter);
+
+			// Clear state
+			setPendingSelections(new Set());
+			setCurrentMultiSelectCategoryId(null);
+			setInputValue("");
+			setShowAutocomplete(false);
+		},
+		[
+			pendingSelections,
+			currentMultiSelectCategoryId,
+			filterCategories,
+			addFilter,
+		],
+	);
 
 	/**
 	 * Toggles selection of an option for multi-select filters.
@@ -220,6 +236,56 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 		[currentMultiSelectCategoryId],
 	);
 
+	/**
+	 * Creates a ref callback for a filter's remove button.
+	 * Registers/unregisters the button ref in the map for focus management.
+	 */
+	const createRemoveButtonRef = useCallback(
+		(filterId: string) => (el: HTMLButtonElement | null) => {
+			if (el) {
+				removeButtonRefs.current.set(filterId, el);
+			} else {
+				removeButtonRefs.current.delete(filterId);
+			}
+		},
+		[],
+	);
+
+	/**
+	 * Handles filter removal with focus management.
+	 * After removing a filter, focuses the previous filter's X button or the input.
+	 */
+	const handleFilterRemove = useCallback(
+		(filterId: string) => {
+			// Find the index of the filter being removed
+			const filterIndex = sortedFilters.findIndex((f) => f.id === filterId);
+
+			// Determine what to focus after removal
+			let elementToFocus: HTMLElement | null = null;
+
+			if (filterIndex > 0) {
+				// Focus the previous filter's X button
+				const previousFilter = sortedFilters[filterIndex - 1];
+				elementToFocus =
+					removeButtonRefs.current.get(previousFilter.id) ?? null;
+			} else {
+				// No previous filter, focus the input
+				elementToFocus = inputRef.current;
+			}
+
+			// Remove the filter
+			removeFilter(filterId);
+
+			// Focus the appropriate element after removal
+			// Using setTimeout(0) to ensure React has finished its state updates
+			// This works better than requestAnimationFrame in test environments
+			setTimeout(() => {
+				elementToFocus?.focus();
+			}, 0);
+		},
+		[sortedFilters, removeFilter],
+	);
+
 	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setInputValue(e.target.value);
 	};
@@ -229,10 +295,11 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 	};
 
 	const handleInputBlur = () => {
-		// Delay to allow click events on dropdown to fire
-		setTimeout(() => {
-			setIsInputFocused(false);
-		}, 200);
+		// Commit any pending selections before closing
+		if (pendingSelections.size > 0) {
+			commitPendingSelections();
+		}
+		setIsInputFocused(false);
 	};
 
 	const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -255,8 +322,9 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 			if (e.key === "Enter" && selectedSuggestionIndex >= 0) {
 				e.preventDefault();
 				// If we have pending selections (multi-select mode), commit them
+				// Include the currently highlighted option as well
 				if (pendingSelections.size > 0) {
-					commitPendingSelections();
+					commitPendingSelections(suggestions[selectedSuggestionIndex]);
 					return;
 				}
 				handleSuggestionSelect(suggestions[selectedSuggestionIndex]);
@@ -272,43 +340,35 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 			}
 		}
 		// Handle space key intelligently:
-		// - For multi-select values, toggle selection and keep dropdown open
-		// - If dropdown is open with suggestions and input is empty, select highlighted option
-		// - If the current input + space is a valid prefix for an option, allow the space
-		// - Otherwise, try to create a chip (same behavior as Enter)
+		// - If typing a value and space would be a valid prefix, let the space be typed
+		// - Otherwise, toggle selection for multi-select (available for all column types)
+		// - For key suggestions, select them immediately
 		if (e.key === " ") {
 			const highlightedSuggestion = suggestions[selectedSuggestionIndex];
 
-			// Check if this is a multi-select value suggestion
+			// If input has content after the colon, check if space would be a valid prefix
+			// This allows typing values with spaces like "Not Started"
 			if (
-				highlightedSuggestion?.type === "value" &&
-				highlightedSuggestion.selectionType === SELECTION_TYPES.CHECKBOXES
+				inputValue.trim() &&
+				wouldSpaceBeValidPrefix(inputValue, filterCategories)
 			) {
-				e.preventDefault();
-				handleToggleSelection(highlightedSuggestion);
+				// Let the space be typed normally
 				return;
 			}
 
-			// If input is empty but dropdown is showing, select the highlighted option
-			if (!inputValue.trim() && showAutocomplete && suggestions.length > 0) {
-				if (highlightedSuggestion) {
-					e.preventDefault();
-					handleSuggestionSelect(highlightedSuggestion);
-					return;
-				}
+			// For key suggestions, select them immediately (no multi-select for keys)
+			if (highlightedSuggestion?.type === "key") {
+				e.preventDefault();
+				handleSuggestionSelect(highlightedSuggestion);
+				return;
 			}
 
-			// If input has content, check if space would be a valid prefix
-			if (inputValue.trim()) {
-				if (!wouldSpaceBeValidPrefix(inputValue, filterCategories)) {
-					// Space wouldn't make sense here, so select the highlighted suggestion
-					if (highlightedSuggestion) {
-						e.preventDefault();
-						handleSuggestionSelect(highlightedSuggestion);
-						return;
-					}
-				}
-				// Otherwise, let the space be typed normally
+			// Multi-select is available for all value suggestions (both radio and checkbox column types)
+			// Space toggles selection, Enter commits
+			if (highlightedSuggestion?.type === "value") {
+				e.preventDefault();
+				handleToggleSelection(highlightedSuggestion);
+				return;
 			}
 		}
 
@@ -329,14 +389,17 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 				return;
 			}
 		}
-		// Backspace to remove last filter
-		if (e.key === "Backspace" && inputValue === "" && filters.length > 0) {
+		// Backspace with empty input focuses the last filter's X button
+		if (
+			e.key === "Backspace" &&
+			inputValue === "" &&
+			sortedFilters.length > 0
+		) {
 			e.preventDefault();
-			// Remove the most recently created filter
-			const lastFilter = filters.reduce((latest, filter) =>
-				filter.createdAt > latest.createdAt ? filter : latest,
-			);
-			removeFilter(lastFilter.id);
+			// Focus the X button of the most recent filter
+			const lastFilter = sortedFilters[sortedFilters.length - 1];
+			const removeButton = removeButtonRefs.current.get(lastFilter.id);
+			removeButton?.focus();
 			return;
 		}
 	};
@@ -360,7 +423,7 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 				continue;
 			}
 
-			addOrUpdateFilter(filterOption.id, comboboxOption);
+			createNewFilter(filterOption.id, comboboxOption);
 		}
 	};
 
@@ -384,8 +447,41 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 					(o) => o.id === suggestion.optionId,
 				);
 
-				if (option) {
-					addOrUpdateFilter(suggestion.categoryId, option);
+				if (option && category) {
+					// For filters with pending selections, include all pending + clicked option
+					// Multi-select is available for all column types (both radio and checkbox)
+					if (pendingSelections.size > 0) {
+						// Collect all pending options plus the clicked one
+						const allOptionIds = new Set(pendingSelections);
+						allOptionIds.add(suggestion.optionId);
+
+						const allOptions: { id: string; label: string; value: string }[] =
+							[];
+						for (const optionId of allOptionIds) {
+							const opt = category.options.find((o) => o.id === optionId);
+							if (opt) {
+								allOptions.push(opt);
+							}
+						}
+
+						// Create a single filter with all values
+						const newFilter = {
+							id: uuidv4(),
+							categoryId: category.id,
+							selectionType: category.selectionType,
+							propertyNameSingular: category.propertyNameSingular,
+							propertyNamePlural: category.propertyNamePlural,
+							options: category.options,
+							values: allOptions,
+						};
+						addFilter(newFilter);
+
+						// Clear state
+						setPendingSelections(new Set());
+						setCurrentMultiSelectCategoryId(null);
+					} else {
+						createNewFilter(suggestion.categoryId, option);
+					}
 					setInputValue("");
 				}
 			} else {
@@ -424,16 +520,28 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 			className={`relative ${className}`}
 			data-id={dataId}
 		>
-			{/* biome-ignore lint/a11y/useKeyWithClickEvents: label focuses input on click, keyboard is handled by input element itself */}
-			<label
+			{/* Using div instead of label to prevent hover state bleeding to nested interactive elements */}
+			<div
 				onClick={handleContainerClick}
 				className="flex items-center flex-wrap gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-opacity-20 transition-all cursor-text min-h-[42px]"
 			>
 				<Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
 
-				{filters.map((filter) => (
-					<AppliedFilter key={filter.id} filter={filter} />
-				))}
+				{sortedFilters.length > 0 ? (
+					<Toolbar.Root
+						aria-label="Applied filters"
+						className="flex items-center flex-wrap gap-2"
+					>
+						{sortedFilters.map((filter) => (
+							<AppliedFilter
+								key={filter.id}
+								filter={filter}
+								removeButtonRef={createRemoveButtonRef(filter.id)}
+								onRemove={() => handleFilterRemove(filter.id)}
+							/>
+						))}
+					</Toolbar.Root>
+				) : null}
 
 				<input
 					ref={inputRef}
@@ -443,15 +551,15 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 					onKeyDown={handleInputKeyDown}
 					onFocus={handleInputFocus}
 					onBlur={handleInputBlur}
-					placeholder={filters.length === 0 ? placeholder : ""}
-					className="flex-1 min-w-[120px] outline-none text-sm text-gray-900 placeholder-gray-400"
+					placeholder={sortedFilters.length === 0 ? placeholder : ""}
+					className="flex-1 min-w-[120px] outline-none text-sm text-gray-900 placeholder-gray-400 bg-transparent dark:bg-transparent"
 					role="combobox"
 					aria-label="Filter input"
 					aria-autocomplete="list"
 					aria-controls="autocomplete-dropdown"
 					aria-expanded={showAutocomplete}
 				/>
-			</label>
+			</div>
 
 			<AutocompleteDropdown
 				suggestions={suggestions}
