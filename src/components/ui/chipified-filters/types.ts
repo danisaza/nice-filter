@@ -25,5 +25,5 @@ export interface TAutocompleteSuggestion {
 	icon?: React.ReactNode;
 	categoryId?: string; // for direct lookup
 	optionId?: string; // for value suggestions
-	selectionType?: "radio" | "checkboxes"; // for multi-select behavior
+	selectionType?: "radio" | "checkboxes" | "text"; // for multi-select behavior
 }

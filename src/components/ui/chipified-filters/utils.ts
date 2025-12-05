@@ -91,7 +91,7 @@ export function getAutocompleteSuggestions<T extends Row>(
 	// If input is empty, show all available filter keys
 	if (!input || input.trim() === "") {
 		for (const category of filterCategories) {
-			// Use plural for checkbox columns (multi-select), singular for radio (single-select)
+			// Use plural for checkbox columns (multi-select), singular for radio/text (single-select)
 			const displayName =
 				category.selectionType === "checkboxes"
 					? category.propertyNamePlural
@@ -117,7 +117,7 @@ export function getAutocompleteSuggestions<T extends Row>(
 				singular.toLowerCase().startsWith(partial) ||
 				plural.toLowerCase().startsWith(partial)
 			) {
-				// Use plural for checkbox columns (multi-select), singular for radio (single-select)
+				// Use plural for checkbox columns (multi-select), singular for radio/text (single-select)
 				const displayName =
 					category.selectionType === "checkboxes" ? plural : singular;
 				suggestions.push({
@@ -137,7 +137,8 @@ export function getAutocompleteSuggestions<T extends Row>(
 	if (valueMatch) {
 		const [, key, partial] = valueMatch;
 		const category = findFilterOptionByKey(filterCategories, key);
-		if (category) {
+		// Text columns have no predefined options, so don't show value suggestions
+		if (category && category.selectionType !== "text") {
 			const partialLower = partial.toLowerCase().trim();
 			for (const option of category.options) {
 				// Match against both label and value

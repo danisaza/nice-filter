@@ -5,7 +5,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useFilters } from "@/App";
 import AppliedFilter from "@/components/ui/filters/AppliedFilter";
+import { SELECTION_TYPES } from "@/hooks/useFilters/constants";
 import { AutocompleteDropdown } from "./AutocompleteDropdown";
+import { DraftTextFilter } from "./DraftTextFilter";
 import type { ChipFilterInputProps, TAutocompleteSuggestion } from "./types";
 import {
 	findComboboxOptionByValue,
@@ -15,6 +17,15 @@ import {
 	parseFilterText,
 	wouldSpaceBeValidPrefix,
 } from "./utils";
+
+/** Represents a draft text filter being created (not yet committed to context) */
+export interface DraftTextFilterState {
+	id: string;
+	categoryId: string;
+	propertyNameSingular: string;
+	textValue: string;
+	operator: "contains" | "does not contain";
+}
 
 export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 	placeholder = "Filter by typing key:value...",
@@ -37,6 +48,9 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 	// Track the current category being filtered for multi-select context
 	const [currentMultiSelectCategoryId, setCurrentMultiSelectCategoryId] =
 		useState<string | null>(null);
+	// Track draft text filter being created (not yet committed)
+	const [draftTextFilter, setDraftTextFilter] =
+		useState<DraftTextFilterState | null>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
 	// Track whether position has been captured for the current typing session
@@ -430,9 +444,15 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 	/**
 	 * Handles autocomplete suggestion selection.
 	 * For value suggestions, uses IDs directly instead of parsing.
+	 * For text columns, creates a draft filter immediately.
 	 */
 	const handleSuggestionSelect = (suggestion: TAutocompleteSuggestion) => {
 		if (suggestion.type === "key") {
+			// For text columns, create a draft filter immediately
+			if (suggestion.selectionType === "text" && suggestion.categoryId) {
+				createDraftTextFilter(suggestion.categoryId);
+				return;
+			}
 			// Key selected - update input to show key: and keep dropdown open for values
 			setInputValue(suggestion.text);
 			// Don't hide autocomplete - let useEffect show value suggestions
@@ -514,6 +534,87 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 		}
 	};
 
+	/**
+	 * Creates a draft text filter when a text column is selected.
+	 * The draft is displayed as a chip with an inline editable input.
+	 */
+	const createDraftTextFilter = useCallback(
+		(categoryId: string) => {
+			const category = filterCategories.find((c) => c.id === categoryId);
+			if (!category || category.selectionType !== SELECTION_TYPES.TEXT) {
+				return;
+			}
+
+			setDraftTextFilter({
+				id: uuidv4(),
+				categoryId: category.id,
+				propertyNameSingular: String(category.propertyNameSingular),
+				textValue: "",
+				operator: "contains",
+			});
+			setInputValue("");
+			setShowAutocomplete(false);
+		},
+		[filterCategories],
+	);
+
+	/**
+	 * Commits the draft text filter to the context.
+	 * Called when user presses Enter or blurs the draft input.
+	 */
+	const commitDraftTextFilter = useCallback(() => {
+		if (!draftTextFilter) return;
+
+		const category = filterCategories.find(
+			(c) => c.id === draftTextFilter.categoryId,
+		);
+		if (!category) return;
+
+		// Only commit if there's actual text content
+		if (draftTextFilter.textValue.trim()) {
+			addFilter({
+				id: draftTextFilter.id,
+				categoryId: category.id,
+				selectionType: SELECTION_TYPES.TEXT,
+				propertyNameSingular: draftTextFilter.propertyNameSingular,
+				propertyNamePlural: category.propertyNamePlural,
+				options: [],
+				values: [],
+				textValue: draftTextFilter.textValue.trim(),
+				relationship: draftTextFilter.operator,
+			});
+		}
+
+		setDraftTextFilter(null);
+		// Focus the main input after committing
+		inputRef.current?.focus();
+	}, [draftTextFilter, filterCategories, addFilter]);
+
+	/**
+	 * Cancels the draft text filter without committing.
+	 */
+	const cancelDraftTextFilter = useCallback(() => {
+		setDraftTextFilter(null);
+		inputRef.current?.focus();
+	}, []);
+
+	/**
+	 * Updates the text value of the draft text filter.
+	 */
+	const updateDraftTextValue = useCallback((value: string) => {
+		setDraftTextFilter((prev) => (prev ? { ...prev, textValue: value } : null));
+	}, []);
+
+	/**
+	 * Updates the operator of the draft text filter.
+	 */
+	const updateDraftOperator = useCallback(
+		(operator: "contains" | "does not contain") => {
+			setDraftTextFilter((prev) => (prev ? { ...prev, operator } : null));
+		},
+		[],
+	);
+
 	return (
 		<div
 			ref={containerRef}
@@ -527,7 +628,7 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 			>
 				<Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
 
-				{sortedFilters.length > 0 ? (
+				{sortedFilters.length > 0 || draftTextFilter ? (
 					<Toolbar.Root
 						aria-label="Applied filters"
 						className="flex items-center flex-wrap gap-2"
@@ -540,6 +641,15 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 								onRemove={() => handleFilterRemove(filter.id)}
 							/>
 						))}
+						{draftTextFilter ? (
+							<DraftTextFilter
+								draft={draftTextFilter}
+								onCommit={commitDraftTextFilter}
+								onCancel={cancelDraftTextFilter}
+								onTextChange={updateDraftTextValue}
+								onOperatorChange={updateDraftOperator}
+							/>
+						) : null}
 					</Toolbar.Root>
 				) : null}
 

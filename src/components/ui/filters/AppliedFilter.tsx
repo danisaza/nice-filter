@@ -2,13 +2,14 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import * as Toolbar from "@radix-ui/react-toolbar";
 import { X } from "lucide-react";
 import type React from "react";
-import { memo, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { useFilters } from "@/App.tsx";
 import FilterDropdownSubCategory from "@/components/ui/filters/FilterDropdownSubCategory";
 import {
 	CHECKBOX_SELECTION_OPERATORS,
 	RADIO_SELECTION_OPERATORS,
 	SELECTION_TYPES,
+	TEXT_SELECTION_OPERATORS,
 } from "@/hooks/useFilters/constants";
 import type { Operator, TAppliedFilter } from "@/hooks/useFilters/types";
 
@@ -27,6 +28,25 @@ const AppliedFilter = memo(
 	({ filter, removeButtonRef, onRemove }: AppliedFilterProps) => {
 		const { getPropertyNameToDisplay } = useFilters();
 		const propertyNameToDisplay = getPropertyNameToDisplay(filter.id);
+
+		// Text filters have a different layout with an editable text input
+		if (filter.selectionType === SELECTION_TYPES.TEXT) {
+			return (
+				<fieldset
+					name={`${propertyNameToDisplay} filter`}
+					className="border border-slate-300 text-slate-900 rounded inline-flex items-center h-9"
+				>
+					<Left propertyNameToDisplay={propertyNameToDisplay} />
+					<TextMiddle filter={filter} />
+					<TextRight filter={filter} />
+					<Remove
+						filterId={filter.id}
+						buttonRef={removeButtonRef}
+						onRemove={onRemove}
+					/>
+				</fieldset>
+			);
+		}
 
 		return (
 			<fieldset
@@ -114,6 +134,136 @@ const Middle = ({ filter }: { filter: TAppliedFilter }) => {
 				</DropdownMenu.Content>
 			</DropdownMenu.Portal>
 		</DropdownMenu.Root>
+	);
+};
+
+/**
+ * Middle section for text filters - shows relationship dropdown (contains/does not contain)
+ */
+const TextMiddle = ({ filter }: { filter: TAppliedFilter }) => {
+	const { updateFilterRelationship } = useFilters();
+
+	// Text filters always have the same set of operators
+	const relationshipOptions = TEXT_SELECTION_OPERATORS.ONE;
+
+	return (
+		<DropdownMenu.Root>
+			<Toolbar.Button asChild>
+				<DropdownMenu.Trigger asChild>
+					<button
+						type="button"
+						className="h-full px-2 whitespace-nowrap border-r border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
+						aria-label="Filter relationship"
+					>
+						{filter.relationship}
+					</button>
+				</DropdownMenu.Trigger>
+			</Toolbar.Button>
+			<DropdownMenu.Portal>
+				<DropdownMenu.Content
+					className={dropdownMenuContentClassNames}
+					sideOffset={5}
+				>
+					<DropdownMenu.RadioGroup
+						value={filter.relationship}
+						onValueChange={(option) => {
+							if (
+								!(relationshipOptions as readonly string[]).includes(option)
+							) {
+								console.error(`Invalid relationship option: ${option}`);
+								return;
+							}
+							updateFilterRelationship(filter.id, option as Operator);
+						}}
+					>
+						{relationshipOptions.map((relationshipOption) => (
+							<DropdownMenu.RadioItem
+								className="text-nowrap relative flex items-center px-2 py-1.5 outline-none transition-colors focus:bg-slate-100 focus:text-slate-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+								key={relationshipOption}
+								value={relationshipOption}
+							>
+								{relationshipOption}
+							</DropdownMenu.RadioItem>
+						))}
+					</DropdownMenu.RadioGroup>
+					<DropdownMenu.Arrow className="fill-white" />
+				</DropdownMenu.Content>
+			</DropdownMenu.Portal>
+		</DropdownMenu.Root>
+	);
+};
+
+/**
+ * Right section for text filters - shows the text value with optional editing
+ */
+const TextRight = ({ filter }: { filter: TAppliedFilter }) => {
+	const { updateTextFilterValue } = useFilters();
+	const [isEditing, setIsEditing] = useState(false);
+	const [editValue, setEditValue] = useState(
+		filter.selectionType === SELECTION_TYPES.TEXT ? filter.textValue : "",
+	);
+	const inputRef = useRef<HTMLInputElement>(null);
+
+	// Focus input when editing starts
+	useEffect(() => {
+		if (isEditing && inputRef.current) {
+			inputRef.current.focus();
+			inputRef.current.select();
+		}
+	}, [isEditing]);
+
+	const handleCommit = () => {
+		if (filter.selectionType === SELECTION_TYPES.TEXT) {
+			updateTextFilterValue(filter.id, editValue.trim());
+		}
+		setIsEditing(false);
+	};
+
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+		if (e.key === "Enter") {
+			e.preventDefault();
+			handleCommit();
+		} else if (e.key === "Escape") {
+			e.preventDefault();
+			// Reset to original value
+			if (filter.selectionType === SELECTION_TYPES.TEXT) {
+				setEditValue(filter.textValue);
+			}
+			setIsEditing(false);
+		}
+	};
+
+	const displayValue =
+		filter.selectionType === SELECTION_TYPES.TEXT
+			? filter.textValue || "..."
+			: "...";
+
+	if (isEditing) {
+		return (
+			<input
+				ref={inputRef}
+				type="text"
+				value={editValue}
+				onChange={(e) => setEditValue(e.target.value)}
+				onBlur={handleCommit}
+				onKeyDown={handleKeyDown}
+				className="h-full px-2 min-w-[100px] max-w-[200px] border-r border-slate-200 outline-none text-sm focus:ring-2 focus:ring-slate-400 focus:ring-inset"
+				aria-label="Filter text value"
+			/>
+		);
+	}
+
+	return (
+		<Toolbar.Button asChild>
+			<button
+				type="button"
+				onClick={() => setIsEditing(true)}
+				className="h-full px-2 whitespace-nowrap cursor-pointer border-r border-slate-200 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 max-w-[200px] truncate"
+				aria-label="Edit filter text value"
+			>
+				{displayValue}
+			</button>
+		</Toolbar.Button>
 	);
 };
 

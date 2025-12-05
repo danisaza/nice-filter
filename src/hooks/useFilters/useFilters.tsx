@@ -15,6 +15,7 @@ import {
 	OPERATORS,
 	RADIO_SELECTION_OPERATORS,
 	SELECTION_TYPES,
+	TEXT_SELECTION_OPERATORS,
 } from "./constants";
 import { filterRowByMatchType } from "./filtering-functions";
 import { MemoizedFilterSystem } from "./filtering-functions-memoized";
@@ -27,6 +28,7 @@ import type {
 	RadioOperator,
 	Row,
 	TAppliedFilter,
+	TextOperator,
 } from "./types";
 import { updateFilterValueAndRelationship } from "./utils";
 
@@ -39,7 +41,7 @@ type FiltersContextType<T extends Row> = {
 		filter: Omit<
 			TAppliedFilter,
 			"relationship" | "createdAt" | "_cacheVersion"
-		>,
+		> & { textValue?: string; relationship?: TextOperator },
 	) => void;
 	filters: TAppliedFilter[];
 	// TODO: Consider updating filterCategories here to include a second type parameter for the property key
@@ -61,6 +63,7 @@ type FiltersContextType<T extends Row> = {
 		filterId: string,
 		filterValueUpdate: FilterValueUpdate,
 	) => void;
+	updateTextFilterValue: (filterId: string, textValue: string) => void;
 };
 
 type FiltersProviderProps<T extends Row> = {
@@ -129,10 +132,12 @@ export function FiltersProvider<T extends Row>({
 			propertyNamePlural,
 			selectionType,
 			values,
-		}: Omit<
-			TAppliedFilter,
-			"createdAt" | "relationship" | "_cacheVersion"
-		>) => {
+			textValue,
+			relationship,
+		}: Omit<TAppliedFilter, "createdAt" | "relationship" | "_cacheVersion"> & {
+			textValue?: string;
+			relationship?: TextOperator;
+		}) => {
 			const newFilter = {
 				id,
 				createdAt: Date.now(),
@@ -172,6 +177,21 @@ export function FiltersProvider<T extends Row>({
 				return;
 			}
 
+			if (selectionType === SELECTION_TYPES.TEXT) {
+				if (!propertyNameSingular) {
+					throw new Error("propertyNameSingular is required for text filters");
+				}
+				const textValues = {
+					propertyNameSingular: propertyNameSingular,
+					propertyNamePlural: undefined,
+					selectionType: SELECTION_TYPES.TEXT,
+					relationship: relationship ?? OPERATORS.CONTAINS,
+					textValue: textValue ?? "",
+				};
+				setFilters((prev) => [...prev, { ...newFilter, ...textValues }]);
+				return;
+			}
+
 			throw new Error(`Got invalid selection type: ${selectionType}`);
 		},
 		[],
@@ -204,6 +224,27 @@ export function FiltersProvider<T extends Row>({
 
 					return {
 						...updateFilterValueAndRelationship(f, newValues),
+						_cacheVersion: f._cacheVersion + 1,
+					};
+				}),
+			);
+		},
+		[],
+	);
+
+	const updateTextFilterValue = useCallback(
+		(filterId: string, textValue: string) => {
+			setFilters((prev) =>
+				prev.map((f) => {
+					if (f.id !== filterId) return f;
+					if (f.selectionType !== SELECTION_TYPES.TEXT) {
+						throw new Error(
+							`Cannot update text value on non-text filter: ${f.selectionType}`,
+						);
+					}
+					return {
+						...f,
+						textValue,
 						_cacheVersion: f._cacheVersion + 1,
 					};
 				}),
@@ -254,6 +295,21 @@ export function FiltersProvider<T extends Row>({
 							...f,
 							propertyNamePlural: f.propertyNamePlural,
 							relationship: relationship as CheckboxOperator,
+							_cacheVersion: f._cacheVersion + 1,
+						};
+					}
+
+					if (f.selectionType === SELECTION_TYPES.TEXT) {
+						const validTextOperators = [...TEXT_SELECTION_OPERATORS.ONE];
+						if (!validTextOperators.includes(relationship as TextOperator)) {
+							throw new Error(
+								`Invalid relationship "${relationship}" for text filter. Valid relationships are: ${validTextOperators.join(", ")}`,
+							);
+						}
+						return {
+							...f,
+							propertyNameSingular: f.propertyNameSingular,
+							relationship: relationship as TextOperator,
 							_cacheVersion: f._cacheVersion + 1,
 						};
 					}
@@ -313,9 +369,10 @@ export function FiltersProvider<T extends Row>({
 	const getPropertyNameToDisplay = useCallback(
 		(filterId: string) => {
 			const filter = getFilterOrThrow(filterId);
-			return filter.selectionType === SELECTION_TYPES.RADIO
-				? filter.propertyNameSingular
-				: filter.propertyNamePlural;
+			// TEXT and RADIO filters use singular, CHECKBOXES uses plural
+			return filter.selectionType === SELECTION_TYPES.CHECKBOXES
+				? filter.propertyNamePlural
+				: filter.propertyNameSingular;
 		},
 		[getFilterOrThrow],
 	);
@@ -339,6 +396,7 @@ export function FiltersProvider<T extends Row>({
 			totalRowCount: rows.length,
 			updateFilterRelationship,
 			updateFilterValues,
+			updateTextFilterValue,
 		}),
 		[
 			addFilter,
@@ -355,6 +413,7 @@ export function FiltersProvider<T extends Row>({
 			rows.length,
 			updateFilterRelationship,
 			updateFilterValues,
+			updateTextFilterValue,
 		],
 	);
 

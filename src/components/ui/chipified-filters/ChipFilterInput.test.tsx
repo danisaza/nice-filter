@@ -1781,6 +1781,575 @@ describe("ChipFilterInput", () => {
 		});
 	});
 
+	describe("Text filter creation", () => {
+		test("selecting a text column creates a draft filter chip with inline input", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Navigate to the "text" column option and select it
+			// The text column should be the last one in the filter categories
+			await user.type(input, "text");
+			await user.keyboard("{Enter}");
+
+			// A draft filter chip should appear with an inline input
+			// The draft has a specific class/styling (border-blue-400)
+			const draftFieldset = document.querySelector(
+				'fieldset[name="text filter"]',
+			);
+			expect(draftFieldset).toBeInTheDocument();
+
+			// The draft should have an editable text input
+			const draftInput = within(draftFieldset as HTMLElement).getByRole(
+				"textbox",
+			);
+			expect(draftInput).toBeInTheDocument();
+			expect(draftInput).toHaveFocus();
+		});
+
+		test("BUG REPRO: text filter should only be created ONCE when user tabs away", async () => {
+			/**
+			 * BUG: When the user creates a text filter and tabs away, the filter is created twice.
+			 *
+			 * Repro steps:
+			 * 1. Focus the main input
+			 * 2. Select "text" as the column (which creates a draft text filter)
+			 * 3. Type "foobar" as the value
+			 * 4. Press Tab to blur the draft input
+			 *
+			 * EXPECTED: One filter chip with text value "foobar"
+			 * ACTUAL (BUG): Two filter chips are created
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Step 1-2: Select "text" column
+			await user.type(input, "text");
+			await user.keyboard("{Enter}");
+
+			// Verify the draft filter is created
+			const draftFieldset = document.querySelector(
+				'fieldset[name="text filter"]',
+			);
+			expect(draftFieldset).toBeInTheDocument();
+
+			// Step 3: Type the filter value
+			const draftInput = within(draftFieldset as HTMLElement).getByRole(
+				"textbox",
+			);
+			await user.type(draftInput, "foobar");
+
+			// Step 4: Press Tab to blur the draft input (commit the filter)
+			await user.tab();
+
+			// Wait for any async effects
+			await waitFor(() => {
+				// The draft should be gone (converted to a committed filter)
+				expect(
+					screen.queryByPlaceholderText("type to search..."),
+				).not.toBeInTheDocument();
+			});
+
+			// BUG: There should be exactly ONE filter chip, not two
+			const allTextFilters = document.querySelectorAll(
+				'fieldset[name="text filter"]',
+			);
+			expect(allTextFilters).toHaveLength(1);
+		});
+
+		test("text filter should only be created ONCE when user presses Enter", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Select "text" column
+			await user.type(input, "text");
+			await user.keyboard("{Enter}");
+
+			// Verify the draft filter is created
+			const draftFieldset = document.querySelector(
+				'fieldset[name="text filter"]',
+			);
+			expect(draftFieldset).toBeInTheDocument();
+
+			// Type the filter value
+			const draftInput = within(draftFieldset as HTMLElement).getByRole(
+				"textbox",
+			);
+			await user.type(draftInput, "foobar");
+
+			// Press Enter to commit the filter
+			await user.keyboard("{Enter}");
+
+			// Wait for any async effects
+			await waitFor(() => {
+				// The draft input should be gone
+				expect(
+					screen.queryByPlaceholderText("type to search..."),
+				).not.toBeInTheDocument();
+			});
+
+			// There should be exactly ONE filter chip, not two
+			const allTextFilters = document.querySelectorAll(
+				'fieldset[name="text filter"]',
+			);
+			expect(allTextFilters).toHaveLength(1);
+		});
+	});
+
+	describe("Draft text filter operator editing", () => {
+		/**
+		 * Helper to create a draft text filter and return relevant elements.
+		 */
+		async function createDraftTextFilter(
+			user: ReturnType<typeof userEvent.setup>,
+		) {
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Select "text" column to create a draft
+			await user.type(input, "text");
+			await user.keyboard("{Enter}");
+
+			const draftFieldset = document.querySelector(
+				'fieldset[name="text filter"]',
+			) as HTMLFieldSetElement;
+
+			const draftInput = within(draftFieldset).getByRole("textbox");
+			const operatorButton = within(draftFieldset).getByRole("button", {
+				name: /filter relationship/i,
+			});
+
+			return { draftFieldset, draftInput, operatorButton, mainInput: input };
+		}
+
+		test("left arrow key at cursor position 0 moves focus to operator button", async () => {
+			const user = userEvent.setup();
+			const { draftInput, operatorButton } = await createDraftTextFilter(user);
+
+			// Verify input has focus and cursor is at position 0 (empty input)
+			expect(draftInput).toHaveFocus();
+			expect((draftInput as HTMLInputElement).selectionStart).toBe(0);
+
+			// Press left arrow
+			await user.keyboard("{ArrowLeft}");
+
+			// Focus should move to operator button
+			expect(operatorButton).toHaveFocus();
+		});
+
+		test("left arrow key does NOT move focus when cursor is not at position 0", async () => {
+			const user = userEvent.setup();
+			const { draftInput, operatorButton } = await createDraftTextFilter(user);
+
+			// Type some text
+			await user.type(draftInput, "hello");
+
+			// Cursor is now at position 5 (end of "hello")
+			expect((draftInput as HTMLInputElement).selectionStart).toBe(5);
+
+			// Press left arrow - should just move cursor within text
+			await user.keyboard("{ArrowLeft}");
+
+			// Focus should stay on input (cursor moved to position 4)
+			expect(draftInput).toHaveFocus();
+			expect((draftInput as HTMLInputElement).selectionStart).toBe(4);
+		});
+
+		test("left arrow key moves focus to operator only when cursor reaches position 0", async () => {
+			const user = userEvent.setup();
+			const { draftInput, operatorButton } = await createDraftTextFilter(user);
+
+			// Type "hi" (2 characters)
+			await user.type(draftInput, "hi");
+			expect((draftInput as HTMLInputElement).selectionStart).toBe(2);
+
+			// Press left arrow twice to reach position 0
+			await user.keyboard("{ArrowLeft}"); // position 1
+			expect(draftInput).toHaveFocus();
+			expect((draftInput as HTMLInputElement).selectionStart).toBe(1);
+
+			await user.keyboard("{ArrowLeft}"); // position 0
+			expect(draftInput).toHaveFocus();
+			expect((draftInput as HTMLInputElement).selectionStart).toBe(0);
+
+			// Now pressing left arrow should move focus to operator
+			await user.keyboard("{ArrowLeft}");
+			expect(operatorButton).toHaveFocus();
+		});
+
+		test("right arrow key on operator button returns focus to text input", async () => {
+			const user = userEvent.setup();
+			const { draftInput, operatorButton } = await createDraftTextFilter(user);
+
+			// Move focus to operator button
+			await user.keyboard("{ArrowLeft}");
+			expect(operatorButton).toHaveFocus();
+
+			// Press right arrow
+			await user.keyboard("{ArrowRight}");
+
+			// Focus should return to text input
+			expect(draftInput).toHaveFocus();
+		});
+
+		test("clicking operator button opens dropdown with operator options", async () => {
+			const user = userEvent.setup();
+			const { operatorButton } = await createDraftTextFilter(user);
+
+			// Click the operator button
+			await user.click(operatorButton);
+
+			// Dropdown should be visible with both options
+			const menu = screen.getByRole("menu");
+			expect(menu).toBeInTheDocument();
+
+			const containsOption = within(menu).getByRole("menuitemradio", {
+				name: "contains",
+			});
+			const doesNotContainOption = within(menu).getByRole("menuitemradio", {
+				name: "does not contain",
+			});
+
+			expect(containsOption).toBeInTheDocument();
+			expect(doesNotContainOption).toBeInTheDocument();
+
+			// "contains" should be checked by default
+			expect(containsOption).toHaveAttribute("aria-checked", "true");
+			expect(doesNotContainOption).toHaveAttribute("aria-checked", "false");
+		});
+
+		test("selecting 'does not contain' updates the operator display", async () => {
+			const user = userEvent.setup();
+			const { operatorButton } = await createDraftTextFilter(user);
+
+			// Verify initial operator is "contains"
+			expect(operatorButton).toHaveTextContent("contains");
+
+			// Click to open dropdown
+			await user.click(operatorButton);
+
+			// Select "does not contain"
+			const doesNotContainOption = screen.getByRole("menuitemradio", {
+				name: "does not contain",
+			});
+			await user.click(doesNotContainOption);
+
+			// Operator button should now show "does not contain"
+			expect(operatorButton).toHaveTextContent("does not contain");
+		});
+
+		test("focus returns to text input after selecting operator from dropdown", async () => {
+			const user = userEvent.setup();
+			const { draftInput, operatorButton } = await createDraftTextFilter(user);
+
+			// Click to open dropdown
+			await user.click(operatorButton);
+
+			// Select "does not contain"
+			const doesNotContainOption = screen.getByRole("menuitemradio", {
+				name: "does not contain",
+			});
+			await user.click(doesNotContainOption);
+
+			// Focus should return to the text input
+			await waitFor(() => {
+				expect(draftInput).toHaveFocus();
+			});
+		});
+
+		test("committing filter with 'contains' operator creates filter with correct relationship", async () => {
+			const user = userEvent.setup();
+			const { draftInput } = await createDraftTextFilter(user);
+
+			// Type a value and commit
+			await user.type(draftInput, "searchterm");
+			await user.keyboard("{Enter}");
+
+			// Wait for the committed filter
+			await waitFor(() => {
+				expect(
+					screen.queryByPlaceholderText("type to search..."),
+				).not.toBeInTheDocument();
+			});
+
+			// The committed filter should show "contains"
+			const committedFilter = document.querySelector(
+				'fieldset[name="text filter"]',
+			) as HTMLFieldSetElement;
+			expect(committedFilter).toBeInTheDocument();
+
+			// Find the operator button in the committed filter
+			const operatorButton = within(committedFilter).getByRole("button", {
+				name: /filter relationship/i,
+			});
+			expect(operatorButton).toHaveTextContent("contains");
+		});
+
+		test("committing filter with 'does not contain' operator creates filter with correct relationship", async () => {
+			const user = userEvent.setup();
+			const { draftInput, operatorButton } = await createDraftTextFilter(user);
+
+			// Change operator to "does not contain"
+			await user.click(operatorButton);
+			const doesNotContainOption = screen.getByRole("menuitemradio", {
+				name: "does not contain",
+			});
+			await user.click(doesNotContainOption);
+
+			// Type a value and commit
+			await user.type(draftInput, "excludethis");
+			await user.keyboard("{Enter}");
+
+			// Wait for the committed filter
+			await waitFor(() => {
+				expect(
+					screen.queryByPlaceholderText("type to search..."),
+				).not.toBeInTheDocument();
+			});
+
+			// The committed filter should show "does not contain"
+			const committedFilter = document.querySelector(
+				'fieldset[name="text filter"]',
+			) as HTMLFieldSetElement;
+			expect(committedFilter).toBeInTheDocument();
+
+			const committedOperatorButton = within(committedFilter).getByRole(
+				"button",
+				{ name: /filter relationship/i },
+			);
+			expect(committedOperatorButton).toHaveTextContent("does not contain");
+		});
+
+		test("escape key on operator button cancels the draft filter", async () => {
+			const user = userEvent.setup();
+			const { draftFieldset, operatorButton, mainInput } =
+				await createDraftTextFilter(user);
+
+			// Verify draft exists
+			expect(draftFieldset).toBeInTheDocument();
+
+			// Navigate to operator button via left arrow key
+			await user.keyboard("{ArrowLeft}");
+			expect(operatorButton).toHaveFocus();
+
+			// Press Escape
+			await user.keyboard("{Escape}");
+
+			// Draft should be cancelled
+			await waitFor(() => {
+				expect(
+					document.querySelector('fieldset[name="text filter"]'),
+				).not.toBeInTheDocument();
+			});
+
+			// Main input should be focused
+			expect(mainInput).toHaveFocus();
+		});
+
+		test("interacting with operator dropdown does not prematurely commit the filter", async () => {
+			const user = userEvent.setup();
+			const { draftFieldset, operatorButton } =
+				await createDraftTextFilter(user);
+
+			// Open the dropdown
+			await user.click(operatorButton);
+
+			// Verify dropdown is open
+			expect(screen.getByRole("menu")).toBeInTheDocument();
+
+			// Navigate with keyboard (this causes focus changes)
+			await user.keyboard("{ArrowDown}");
+			await user.keyboard("{ArrowUp}");
+
+			// Close dropdown by pressing Escape
+			await user.keyboard("{Escape}");
+
+			// Draft should still exist (not committed)
+			expect(draftFieldset).toBeInTheDocument();
+			expect(
+				within(draftFieldset).getByPlaceholderText("type to search..."),
+			).toBeInTheDocument();
+		});
+
+		test("clicking outside the draft filter commits it if it has content", async () => {
+			const user = userEvent.setup();
+			const { draftInput, mainInput } = await createDraftTextFilter(user);
+
+			// Type some content
+			await user.type(draftInput, "myvalue");
+
+			// Click on the main input (outside the draft filter)
+			await user.click(mainInput);
+
+			// Filter should be committed
+			await waitFor(() => {
+				expect(
+					screen.queryByPlaceholderText("type to search..."),
+				).not.toBeInTheDocument();
+			});
+
+			const committedFilter = document.querySelector(
+				'fieldset[name="text filter"]',
+			);
+			expect(committedFilter).toBeInTheDocument();
+		});
+
+		test("keyboard navigation: left arrow from input -> operator -> right arrow back to input", async () => {
+			const user = userEvent.setup();
+			const { draftInput, operatorButton } = await createDraftTextFilter(user);
+
+			// Start at input (position 0)
+			expect(draftInput).toHaveFocus();
+
+			// Left arrow -> operator
+			await user.keyboard("{ArrowLeft}");
+			expect(operatorButton).toHaveFocus();
+
+			// Right arrow -> back to input
+			await user.keyboard("{ArrowRight}");
+			expect(draftInput).toHaveFocus();
+
+			// Type something
+			await user.type(draftInput, "test");
+
+			// Move cursor to start
+			await user.keyboard("{Home}");
+			expect((draftInput as HTMLInputElement).selectionStart).toBe(0);
+
+			// Left arrow -> operator again
+			await user.keyboard("{ArrowLeft}");
+			expect(operatorButton).toHaveFocus();
+		});
+
+		test("can change operator multiple times before committing", async () => {
+			const user = userEvent.setup();
+			const { operatorButton } = await createDraftTextFilter(user);
+
+			// Initial: "contains"
+			expect(operatorButton).toHaveTextContent("contains");
+
+			// Change to "does not contain"
+			await user.click(operatorButton);
+			await user.click(
+				screen.getByRole("menuitemradio", { name: "does not contain" }),
+			);
+			expect(operatorButton).toHaveTextContent("does not contain");
+
+			// Change back to "contains"
+			await user.click(operatorButton);
+			await user.click(screen.getByRole("menuitemradio", { name: "contains" }));
+			expect(operatorButton).toHaveTextContent("contains");
+
+			// Change to "does not contain" again
+			await user.click(operatorButton);
+			await user.click(
+				screen.getByRole("menuitemradio", { name: "does not contain" }),
+			);
+			expect(operatorButton).toHaveTextContent("does not contain");
+		});
+
+		test("operator selection is preserved when typing and committing", async () => {
+			const user = userEvent.setup();
+			const { draftInput, operatorButton } = await createDraftTextFilter(user);
+
+			// Change operator
+			await user.click(operatorButton);
+			await user.click(
+				screen.getByRole("menuitemradio", { name: "does not contain" }),
+			);
+
+			// Type first part
+			await user.type(draftInput, "first");
+
+			// Verify operator is still "does not contain"
+			expect(operatorButton).toHaveTextContent("does not contain");
+
+			// Type more
+			await user.type(draftInput, " second");
+
+			// Still "does not contain"
+			expect(operatorButton).toHaveTextContent("does not contain");
+
+			// Commit
+			await user.keyboard("{Enter}");
+
+			// Verify committed filter has correct operator
+			await waitFor(() => {
+				const committedFilter = document.querySelector(
+					'fieldset[name="text filter"]',
+				) as HTMLFieldSetElement;
+				const committedOp = within(committedFilter).getByRole("button", {
+					name: /filter relationship/i,
+				});
+				expect(committedOp).toHaveTextContent("does not contain");
+			});
+		});
+
+		test("Enter key on operator button opens dropdown (does not commit)", async () => {
+			const user = userEvent.setup();
+			const { draftFieldset, operatorButton } =
+				await createDraftTextFilter(user);
+
+			// Navigate to operator button via left arrow
+			await user.keyboard("{ArrowLeft}");
+			expect(operatorButton).toHaveFocus();
+
+			// Press Enter
+			await user.keyboard("{Enter}");
+
+			// Dropdown should open (not commit the filter)
+			expect(screen.getByRole("menu")).toBeInTheDocument();
+
+			// Draft should still exist
+			expect(draftFieldset).toBeInTheDocument();
+		});
+
+		test("Space key on operator button opens dropdown", async () => {
+			const user = userEvent.setup();
+			const { draftFieldset, operatorButton } =
+				await createDraftTextFilter(user);
+
+			// Navigate to operator button via left arrow
+			await user.keyboard("{ArrowLeft}");
+			expect(operatorButton).toHaveFocus();
+
+			// Press Space
+			await user.keyboard(" ");
+
+			// Dropdown should open
+			expect(screen.getByRole("menu")).toBeInTheDocument();
+
+			// Draft should still exist
+			expect(draftFieldset).toBeInTheDocument();
+		});
+	});
+
 	describe("Dropdown position behavior", () => {
 		// Helper to get the dropdown element
 		function getDropdown() {
