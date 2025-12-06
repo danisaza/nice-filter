@@ -1,11 +1,13 @@
+import { MagicWandIcon } from "@radix-ui/react-icons";
 import * as Toolbar from "@radix-ui/react-toolbar";
 import { Search } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useFilters } from "@/App";
+import { api } from "@/api-client";
 import AppliedFilter from "@/components/ui/filters/AppliedFilter";
-import { SELECTION_TYPES } from "@/hooks/useFilters/constants";
+import { OPERATORS, SELECTION_TYPES } from "@/hooks/useFilters/constants";
 import { AutocompleteDropdown } from "./AutocompleteDropdown";
 import { DraftTextFilter } from "./DraftTextFilter";
 import type { ChipFilterInputProps, TAutocompleteSuggestion } from "./types";
@@ -51,6 +53,9 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 	// Track draft text filter being created (not yet committed)
 	const [draftTextFilter, setDraftTextFilter] =
 		useState<DraftTextFilterState | null>(null);
+	// Track loading state for AI natural language parsing
+	const [isParsingNaturalLanguage, setIsParsingNaturalLanguage] =
+		useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
 	// Track whether position has been captured for the current typing session
@@ -67,11 +72,35 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 	// Get autocomplete suggestions using filterCategories directly
 	const suggestions = getAutocompleteSuggestions(inputValue, filterCategories);
 
+	/**
+	 * Detect natural language mode when input is not a valid prefix for any column name.
+	 * - "sta" → valid prefix for "status" → autocomplete mode (Search icon)
+	 * - "show me completed" → NOT a prefix for any column → NL mode (MagicWand icon)
+	 * - "status:" → valid prefix → autocomplete mode (Search icon)
+	 */
+	const isNaturalLanguageMode = useMemo(() => {
+		if (!inputValue.trim()) return false;
+		// Check if input (before any colon) is a valid prefix for any column name
+		const inputBeforeColon = inputValue.split(":")[0].toLowerCase();
+		const isValidColumnPrefix = filterCategories.some((cat) => {
+			const singular = String(cat.propertyNameSingular).toLowerCase();
+			const plural = String(cat.propertyNamePlural).toLowerCase();
+			return (
+				singular.startsWith(inputBeforeColon) ||
+				plural.startsWith(inputBeforeColon)
+			);
+		});
+
+		return !isValidColumnPrefix;
+	}, [inputValue, filterCategories]);
+
 	useEffect(() => {
-		// Show autocomplete when input is focused and has suggestions
-		setShowAutocomplete(isInputFocused && suggestions.length > 0);
+		// Show autocomplete when input is focused, has suggestions, and NOT in natural language mode
+		setShowAutocomplete(
+			isInputFocused && suggestions.length > 0 && !isNaturalLanguageMode,
+		);
 		setSelectedSuggestionIndex(0);
-	}, [suggestions.length, isInputFocused]);
+	}, [suggestions.length, isInputFocused, isNaturalLanguageMode]);
 
 	// Reset position capture flag when filters change (input element moves due to chip add/remove)
 	// biome-ignore lint/correctness/useExhaustiveDependencies: filters.length triggers reset when filters are added/removed
@@ -354,10 +383,22 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 			}
 		}
 		// Handle space key intelligently:
+		// - If dropdown is hidden, just let the space be typed
+		// - In natural language mode, just let the space be typed
 		// - If typing a value and space would be a valid prefix, let the space be typed
 		// - Otherwise, toggle selection for multi-select (available for all column types)
 		// - For key suggestions, select them immediately
 		if (e.key === " ") {
+			// If dropdown is hidden (e.g., after pressing Escape), just type the space
+			if (!showAutocomplete) {
+				return;
+			}
+
+			// In natural language mode, space should always just be typed
+			if (isNaturalLanguageMode) {
+				return;
+			}
+
 			const highlightedSuggestion = suggestions[selectedSuggestionIndex];
 
 			// If input has content after the colon, check if space would be a valid prefix
@@ -394,6 +435,14 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 				commitPendingSelections();
 				return;
 			}
+
+			// If in natural language mode, send to AI endpoint
+			if (isNaturalLanguageMode) {
+				e.preventDefault();
+				handleNaturalLanguageInput(inputValue.trim());
+				return;
+			}
+
 			const { entries } = parseFilterText(inputValue);
 			if (entries.length > 0) {
 				e.preventDefault();
@@ -606,6 +655,88 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 	}, []);
 
 	/**
+	 * Parses natural language input using the AI endpoint and applies resulting filters.
+	 */
+	const handleNaturalLanguageInput = useCallback(
+		async (query: string) => {
+			setIsParsingNaturalLanguage(true);
+
+			try {
+				const response = await api.api["parse-filters"].$post({
+					json: { query },
+				});
+
+				if (!response.ok) {
+					console.error("Failed to parse natural language filters");
+					return;
+				}
+
+				const result = await response.json();
+
+				// Apply each parsed filter
+				for (const parsedFilter of result.filters) {
+					// Find the matching category from filterCategories
+					const category = filterCategories.find(
+						(cat) =>
+							String(cat.propertyNameSingular).toLowerCase() ===
+								parsedFilter.columnName.toLowerCase() ||
+							String(cat.propertyNamePlural).toLowerCase() ===
+								parsedFilter.columnName.toLowerCase(),
+					);
+
+					if (!category) continue;
+
+					if (parsedFilter.columnType === "text") {
+						// For text filters, create a text filter with the search value
+						const textValue = parsedFilter.values.join(" ");
+						addFilter({
+							id: uuidv4(),
+							categoryId: category.id,
+							selectionType: SELECTION_TYPES.TEXT,
+							propertyNameSingular: String(category.propertyNameSingular),
+							propertyNamePlural: category.propertyNamePlural,
+							options: [],
+							values: [],
+							textValue,
+							relationship: parsedFilter.isNegation
+								? OPERATORS.DOES_NOT_CONTAIN
+								: OPERATORS.CONTAINS,
+						});
+					} else {
+						// For radio/checkbox filters, find matching options
+						const matchingOptions = category.options.filter((opt) =>
+							parsedFilter.values.some(
+								(v) => v.toLowerCase() === opt.value.toLowerCase(),
+							),
+						);
+
+						if (matchingOptions.length === 0) continue;
+
+						addFilter({
+							id: uuidv4(),
+							categoryId: category.id,
+							selectionType: category.selectionType,
+							propertyNameSingular: category.propertyNameSingular,
+							propertyNamePlural: category.propertyNamePlural,
+							options: category.options,
+							values: matchingOptions,
+						});
+					}
+				}
+
+				// Clear input after successful parsing
+				setInputValue("");
+				setShowAutocomplete(false);
+			} catch (error) {
+				console.error("Error parsing natural language:", error);
+			} finally {
+				setIsParsingNaturalLanguage(false);
+			}
+		},
+		[filterCategories, addFilter],
+	);
+
+	/**
 	 * Updates the operator of the draft text filter.
 	 */
 	const updateDraftOperator = useCallback(
@@ -626,7 +757,13 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 				onClick={handleContainerClick}
 				className="flex items-center flex-wrap gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-opacity-20 transition-all cursor-text min-h-[42px]"
 			>
-				<Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
+				{isParsingNaturalLanguage ? (
+					<div className="w-4 h-4 flex-shrink-0 animate-spin rounded-full border-2 border-purple-500 border-t-transparent" />
+				) : isNaturalLanguageMode ? (
+					<MagicWandIcon className="w-4 h-4 text-purple-500 flex-shrink-0" />
+				) : (
+					<Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
+				)}
 
 				{sortedFilters.length > 0 || draftTextFilter ? (
 					<Toolbar.Root
@@ -662,7 +799,8 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 					onFocus={handleInputFocus}
 					onBlur={handleInputBlur}
 					placeholder={sortedFilters.length === 0 ? placeholder : ""}
-					className="flex-1 min-w-[120px] outline-none text-sm text-gray-900 placeholder-gray-400 bg-transparent dark:bg-transparent"
+					disabled={isParsingNaturalLanguage}
+					className="flex-1 min-w-[120px] outline-none text-sm text-gray-900 placeholder-gray-400 bg-transparent dark:bg-transparent disabled:opacity-50"
 					role="combobox"
 					aria-label="Filter input"
 					aria-autocomplete="list"
