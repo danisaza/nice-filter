@@ -4,6 +4,9 @@ import { z } from "zod";
 export const env = createEnv({
 	// these environment variables are only available on the server
 	server: {
+		NODE_ENV: z
+			.enum(["development", "test", "production"])
+			.default("development"),
 		OPENAI_API_KEY: z.string().min(1),
 		STAGEHAND_ENV: z.enum(["LOCAL", "BROWSERBASE"]),
 	},

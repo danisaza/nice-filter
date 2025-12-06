@@ -483,6 +483,104 @@ describe("ChipFilterInput", () => {
 	});
 
 	describe("Smart space key behavior", () => {
+		test("space should NOT select a suggestion when dropdown is hidden (after Escape)", async () => {
+			/**
+			 * When the dropdown is hidden (e.g., after pressing Escape), pressing space
+			 * should add a space character, not autocomplete.
+			 *
+			 * Repro steps:
+			 * 1. Focus input - dropdown opens with suggestions
+			 * 2. Type "sta" - a valid prefix for "status", dropdown shows filtered suggestions
+			 * 3. Press Escape - dropdown closes
+			 * 4. Press spacebar
+			 *
+			 * EXPECTED: Input contains "sta " (space added)
+			 * ACTUAL (BUG): Input contains "status:" (suggestion erroneously selected)
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Dropdown should be open initially
+			expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+			// Type "sta" which is a valid prefix for "status"
+			await user.type(input, "sta");
+			expect(input).toHaveValue("sta");
+
+			// Dropdown should still be visible with "status" suggestion
+			expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+			// Press Escape to close the dropdown
+			await user.keyboard("{Escape}");
+
+			// Dropdown should be hidden
+			expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+			// Press spacebar - should add a space, NOT autocomplete to "status:"
+			await user.keyboard(" ");
+
+			// Input should contain "sta " (space added), NOT "status:" (suggestion selected)
+			expect(input).toHaveValue("sta ");
+		});
+
+		test("after adding space to 'sta', input 'sta ' should be in natural language mode", async () => {
+			/**
+			 * After escaping the dropdown and adding a space, "sta " is no longer a valid
+			 * prefix for any column name, so the input should now be in natural language mode.
+			 *
+			 * Repro steps:
+			 * 1. Type "sta" - valid prefix for "status"
+			 * 2. Press Escape - dropdown closes
+			 * 3. Press spacebar - input becomes "sta "
+			 * 4. Observe that the magic wand icon is displayed (indicating NL mode)
+			 *
+			 * EXPECTED: Magic wand icon displayed because "sta " is natural language
+			 * ACTUAL (BUG): Search icon displayed because we're not detecting NL mode correctly
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type "sta" which is a valid prefix for "status"
+			await user.type(input, "sta");
+			expect(input).toHaveValue("sta");
+
+			// Should show search icon (not in NL mode yet - "sta" is valid prefix)
+			const container = input.closest("div.flex");
+			expect(container?.querySelector(".text-gray-400")).toBeInTheDocument(); // Search icon
+			expect(
+				container?.querySelector(".text-purple-500"),
+			).not.toBeInTheDocument(); // No magic wand
+
+			// Press Escape to close the dropdown
+			await user.keyboard("{Escape}");
+
+			// Press spacebar - input becomes "sta "
+			await user.keyboard(" ");
+			expect(input).toHaveValue("sta ");
+
+			// "sta " is NOT a valid prefix for any column (no column starts with "sta ")
+			// Therefore we should be in natural language mode
+			// The magic wand icon should now be displayed
+			expect(container?.querySelector(".text-purple-500")).toBeInTheDocument(); // Magic wand icon
+			expect(
+				container?.querySelector(".text-gray-400"),
+			).not.toBeInTheDocument(); // No search icon
+		});
+
 		test("space selects first option when input is empty and dropdown is open", async () => {
 			const user = userEvent.setup();
 			render(
@@ -2695,6 +2793,190 @@ describe("ChipFilterInput", () => {
 				);
 				expect(operatorButton).toHaveTextContent("include");
 			});
+		});
+	});
+
+	describe("Natural language mode", () => {
+		test("dropdown should NOT show when in natural language mode even if last typed character matches a column prefix", async () => {
+			/**
+			 * BUG: When in natural language mode, typing a character that happens to be
+			 * a valid prefix for a column name should NOT show the autocomplete dropdown.
+			 *
+			 * Repro steps:
+			 * 1. Type "this is " - this puts us in natural language mode (no column prefix match)
+			 * 2. Type "a" - making the full input "this is a"
+			 * 3. "a" is a valid prefix for "assignee", but the FULL input "this is a" is NOT
+			 *
+			 * EXPECTED: No dropdown shown (we're in natural language mode)
+			 * ACTUAL (BUG): Dropdown shows suggestions for "assignee" because "a" matches
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Dropdown should show initially (empty input shows all columns)
+			expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+			// Type "this is " - this is natural language (no column starts with "this")
+			await user.type(input, "this is ");
+
+			// Dropdown should be hidden because we're in natural language mode
+			expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+			// Now type "a" - the input becomes "this is a"
+			// "a" matches "assignee" but "this is a" does NOT match any column
+			await user.type(input, "a");
+
+			// Verify the full input value
+			expect(input).toHaveValue("this is a");
+
+			// BUG: Dropdown should still be hidden because the FULL input "this is a"
+			// does not match any column prefix
+			expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+		});
+
+		test("natural language mode should check the entire input, not just recent characters", async () => {
+			/**
+			 * Additional test case: Typing "show me sta" should NOT show dropdown
+			 * even though "sta" is a prefix for "status"
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type a phrase that ends with a valid column prefix
+			await user.type(input, "show me sta");
+
+			expect(input).toHaveValue("show me sta");
+
+			// "sta" is a valid prefix for "status", but "show me sta" is NOT
+			// So dropdown should be hidden (natural language mode)
+			expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+		});
+
+		test("natural language mode is detected when input does not start with a column prefix", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type something that's clearly natural language
+			await user.type(input, "find all completed tasks");
+
+			expect(input).toHaveValue("find all completed tasks");
+
+			// Should be in natural language mode - no dropdown
+			expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+		});
+
+		test("typing a valid column prefix should show dropdown (not natural language mode)", async () => {
+			/**
+			 * Sanity check: When input IS a valid column prefix, dropdown should show
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type "sta" which is a valid prefix for "status"
+			await user.type(input, "sta");
+
+			expect(input).toHaveValue("sta");
+
+			// Dropdown SHOULD be visible because "sta" is a valid prefix for "status"
+			const listbox = screen.getByRole("listbox");
+			expect(listbox).toBeInTheDocument();
+
+			// Should show "status" as a suggestion
+			expect(within(listbox).getByText("status:")).toBeInTheDocument();
+		});
+
+		test("pressing space in natural language mode should add space to input, not select a suggestion", async () => {
+			/**
+			 * BUG: When in natural language mode, pressing space erroneously selects
+			 * a suggestion instead of adding a space to the input.
+			 *
+			 * Repro steps:
+			 * 1. Focus the input
+			 * 2. Type "the status" (natural language mode - "the status" doesn't start with valid column)
+			 * 3. Press spacebar
+			 *
+			 * EXPECTED: Input contains "the status " (space added)
+			 * ACTUAL (BUG): Input contains "status:" (suggestion selected)
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type "the status" - this is natural language mode
+			await user.type(input, "the status");
+
+			expect(input).toHaveValue("the status");
+
+			// Verify we're in natural language mode (no dropdown)
+			expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+			// Press space
+			await user.keyboard(" ");
+
+			// BUG: Input should have "the status " (space added)
+			// NOT "status:" (suggestion erroneously selected)
+			expect(input).toHaveValue("the status ");
+		});
+
+		test("pressing space in natural language mode should not trigger any autocomplete action", async () => {
+			/**
+			 * Additional test case: "show me " + space should become "show me  "
+			 * (two spaces at the end)
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type natural language with trailing space
+			await user.type(input, "show me ");
+
+			expect(input).toHaveValue("show me ");
+
+			// Press space again
+			await user.keyboard(" ");
+
+			// Should just add another space
+			expect(input).toHaveValue("show me  ");
 		});
 	});
 

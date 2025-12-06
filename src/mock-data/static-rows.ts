@@ -8,7 +8,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-001",
 		lastUpdated: "1733400000000",
-		text: "Implement authentication 1",
+		text: "Implement authentication",
 		status: "Not Started",
 		tags: ["Feature"],
 		assignee: "John Doe",
@@ -17,7 +17,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-002",
 		lastUpdated: "1733400060000",
-		text: "Fix database connection 2",
+		text: "Fix database connection",
 		status: "In Progress",
 		tags: ["Bug"],
 		assignee: "Jane Smith",
@@ -26,7 +26,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-003",
 		lastUpdated: "1733400120000",
-		text: "Refactor API endpoints 3",
+		text: "Refactor API endpoints",
 		status: "Completed",
 		tags: ["Refactoring"],
 		assignee: "Alice Johnson",
@@ -35,7 +35,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-004",
 		lastUpdated: "1733400180000",
-		text: "Add UI components 4",
+		text: "Add UI components",
 		status: "Cancelled",
 		tags: ["Feature", "Documentation"],
 		assignee: "Bob Brown",
@@ -44,7 +44,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-005",
 		lastUpdated: "1733400240000",
-		text: "Update dashboard layout 5",
+		text: "Update dashboard layout",
 		status: "Not Started",
 		tags: ["Feature"],
 		assignee: "John Doe",
@@ -53,7 +53,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-006",
 		lastUpdated: "1733400300000",
-		text: "Remove deprecated reports 6",
+		text: "Remove deprecated reports",
 		status: "In Progress",
 		tags: ["Refactoring"],
 		assignee: "Jane Smith",
@@ -62,7 +62,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-007",
 		lastUpdated: "1733400360000",
-		text: "Optimize notifications 7",
+		text: "Optimize notifications",
 		status: "Completed",
 		tags: ["Bug", "Testing"],
 		assignee: "Alice Johnson",
@@ -71,7 +71,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-008",
 		lastUpdated: "1733400420000",
-		text: "Debug search functionality 8",
+		text: "Debug search functionality",
 		status: "Not Started",
 		tags: ["Bug"],
 		assignee: "Bob Brown",
@@ -80,7 +80,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-009",
 		lastUpdated: "1733400480000",
-		text: "Test filters performance 9",
+		text: "Test filters performance",
 		status: "In Progress",
 		tags: ["Testing"],
 		assignee: "John Doe",
@@ -89,7 +89,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-010",
 		lastUpdated: "1733400540000",
-		text: "Review export feature 10",
+		text: "Review export feature",
 		status: "Completed",
 		tags: ["Feature", "Documentation"],
 		assignee: "Jane Smith",
@@ -98,7 +98,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-011",
 		lastUpdated: "1733400600000",
-		text: "Deploy import module 11",
+		text: "Deploy import module",
 		status: "Cancelled",
 		tags: ["Feature"],
 		assignee: "Alice Johnson",
@@ -107,7 +107,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-012",
 		lastUpdated: "1733400660000",
-		text: "Configure settings page 12",
+		text: "Configure settings page",
 		status: "Not Started",
 		tags: ["Feature"],
 		assignee: "Bob Brown",
@@ -116,7 +116,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-013",
 		lastUpdated: "1733400720000",
-		text: "Migrate permissions system 13",
+		text: "Migrate permissions system",
 		status: "In Progress",
 		tags: ["Refactoring", "Testing"],
 		assignee: "John Doe",
@@ -125,7 +125,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-014",
 		lastUpdated: "1733400780000",
-		text: "Document logging setup 14",
+		text: "Document logging setup",
 		status: "Completed",
 		tags: ["Documentation"],
 		assignee: "Jane Smith",
@@ -134,7 +134,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-015",
 		lastUpdated: "1733400840000",
-		text: "Analyze caching strategy 15",
+		text: "Analyze caching strategy",
 		status: "Not Started",
 		tags: ["Other"],
 		assignee: "Alice Johnson",
@@ -143,7 +143,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-016",
 		lastUpdated: "1733400900000",
-		text: "Design pagination UI 16",
+		text: "Design pagination UI",
 		status: "In Progress",
 		tags: ["Feature", "Documentation"],
 		assignee: "Bob Brown",
@@ -152,7 +152,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-017",
 		lastUpdated: "1733400960000",
-		text: "Build validation rules 17",
+		text: "Build validation rules",
 		status: "Completed",
 		tags: ["Feature"],
 		assignee: "John Doe",
@@ -161,7 +161,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-018",
 		lastUpdated: "1733401020000",
-		text: "Integrate error handling 18",
+		text: "Integrate error handling",
 		status: "Cancelled",
 		tags: ["Bug", "Refactoring"],
 		assignee: "Jane Smith",
@@ -170,7 +170,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-019",
 		lastUpdated: "1733401080000",
-		text: "Validate testing framework 19",
+		text: "Validate testing framework",
 		status: "Not Started",
 		tags: ["Testing"],
 		assignee: "Alice Johnson",
@@ -179,7 +179,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-020",
 		lastUpdated: "1733401140000",
-		text: "Audit documentation 20",
+		text: "Audit documentation",
 		status: "In Progress",
 		tags: ["Documentation", "Other"],
 		assignee: "Bob Brown",
@@ -188,7 +188,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-021",
 		lastUpdated: "1733401200000",
-		text: "Implement deployment pipeline 21",
+		text: "Implement deployment pipeline",
 		status: "Completed",
 		tags: ["Feature"],
 		assignee: "John Doe",
@@ -197,7 +197,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-022",
 		lastUpdated: "1733401260000",
-		text: "Fix monitoring alerts 22",
+		text: "Fix monitoring alerts",
 		status: "Not Started",
 		tags: ["Bug"],
 		assignee: "Jane Smith",
@@ -206,7 +206,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-023",
 		lastUpdated: "1733401320000",
-		text: "Refactor analytics module 23",
+		text: "Refactor analytics module",
 		status: "In Progress",
 		tags: ["Refactoring"],
 		assignee: "Alice Johnson",
@@ -215,7 +215,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-024",
 		lastUpdated: "1733401380000",
-		text: "Add performance metrics 24",
+		text: "Add performance metrics",
 		status: "Completed",
 		tags: ["Feature", "Testing"],
 		assignee: "Bob Brown",
@@ -224,7 +224,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-025",
 		lastUpdated: "1733401440000",
-		text: "Update security policies 25",
+		text: "Update security policies",
 		status: "Cancelled",
 		tags: ["Documentation"],
 		assignee: "John Doe",
@@ -233,7 +233,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-026",
 		lastUpdated: "1733401500000",
-		text: "Remove accessibility issues 26",
+		text: "Remove accessibility issues",
 		status: "Not Started",
 		tags: ["Bug", "Feature"],
 		assignee: "Jane Smith",
@@ -242,7 +242,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-027",
 		lastUpdated: "1733401560000",
-		text: "Optimize mobile view 27",
+		text: "Optimize mobile view",
 		status: "In Progress",
 		tags: ["Feature"],
 		assignee: "Alice Johnson",
@@ -251,7 +251,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-028",
 		lastUpdated: "1733401620000",
-		text: "Debug authentication flow 28",
+		text: "Debug authentication flow",
 		status: "Completed",
 		tags: ["Bug", "Testing"],
 		assignee: "Bob Brown",
@@ -260,7 +260,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-029",
 		lastUpdated: "1733401680000",
-		text: "Test database queries 29",
+		text: "Test database queries",
 		status: "Not Started",
 		tags: ["Testing"],
 		assignee: "John Doe",
@@ -269,7 +269,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-030",
 		lastUpdated: "1733401740000",
-		text: "Review API documentation 30",
+		text: "Review API documentation",
 		status: "In Progress",
 		tags: ["Documentation"],
 		assignee: "Jane Smith",
@@ -278,7 +278,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-031",
 		lastUpdated: "1733401800000",
-		text: "Deploy UI updates 31",
+		text: "Deploy UI updates",
 		status: "Completed",
 		tags: ["Feature"],
 		assignee: "Alice Johnson",
@@ -287,7 +287,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-032",
 		lastUpdated: "1733401860000",
-		text: "Configure dashboard widgets 32",
+		text: "Configure dashboard widgets",
 		status: "Cancelled",
 		tags: ["Feature", "Other"],
 		assignee: "Bob Brown",
@@ -296,7 +296,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-033",
 		lastUpdated: "1733401920000",
-		text: "Migrate reports system 33",
+		text: "Migrate reports system",
 		status: "Not Started",
 		tags: ["Refactoring"],
 		assignee: "John Doe",
@@ -305,7 +305,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-034",
 		lastUpdated: "1733401980000",
-		text: "Document notifications API 34",
+		text: "Document notifications API",
 		status: "In Progress",
 		tags: ["Documentation"],
 		assignee: "Jane Smith",
@@ -314,7 +314,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-035",
 		lastUpdated: "1733402040000",
-		text: "Analyze search performance 35",
+		text: "Analyze search performance",
 		status: "Completed",
 		tags: ["Testing", "Other"],
 		assignee: "Alice Johnson",
@@ -323,7 +323,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-036",
 		lastUpdated: "1733402100000",
-		text: "Design filters interface 36",
+		text: "Design filters interface",
 		status: "Not Started",
 		tags: ["Feature"],
 		assignee: "Bob Brown",
@@ -332,7 +332,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-037",
 		lastUpdated: "1733402160000",
-		text: "Build export functionality 37",
+		text: "Build export functionality",
 		status: "In Progress",
 		tags: ["Feature"],
 		assignee: "John Doe",
@@ -341,7 +341,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-038",
 		lastUpdated: "1733402220000",
-		text: "Integrate import system 38",
+		text: "Integrate import system",
 		status: "Completed",
 		tags: ["Feature", "Refactoring"],
 		assignee: "Jane Smith",
@@ -350,7 +350,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-039",
 		lastUpdated: "1733402280000",
-		text: "Validate settings schema 39",
+		text: "Validate settings schema",
 		status: "Cancelled",
 		tags: ["Testing"],
 		assignee: "Alice Johnson",
@@ -359,7 +359,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-040",
 		lastUpdated: "1733402340000",
-		text: "Audit permissions logic 40",
+		text: "Audit permissions logic",
 		status: "Not Started",
 		tags: ["Refactoring", "Documentation"],
 		assignee: "Bob Brown",
@@ -368,7 +368,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-041",
 		lastUpdated: "1733402400000",
-		text: "Implement logging service 41",
+		text: "Implement logging service",
 		status: "In Progress",
 		tags: ["Feature"],
 		assignee: "John Doe",
@@ -377,7 +377,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-042",
 		lastUpdated: "1733402460000",
-		text: "Fix caching issues 42",
+		text: "Fix caching issues",
 		status: "Completed",
 		tags: ["Bug"],
 		assignee: "Jane Smith",
@@ -386,7 +386,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-043",
 		lastUpdated: "1733402520000",
-		text: "Refactor pagination logic 43",
+		text: "Refactor pagination logic",
 		status: "Not Started",
 		tags: ["Refactoring"],
 		assignee: "Alice Johnson",
@@ -395,7 +395,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-044",
 		lastUpdated: "1733402580000",
-		text: "Add validation messages 44",
+		text: "Add validation messages",
 		status: "In Progress",
 		tags: ["Feature", "Bug"],
 		assignee: "Bob Brown",
@@ -404,7 +404,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-045",
 		lastUpdated: "1733402640000",
-		text: "Update error handling 45",
+		text: "Update error handling",
 		status: "Completed",
 		tags: ["Refactoring"],
 		assignee: "John Doe",
@@ -413,7 +413,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-046",
 		lastUpdated: "1733402700000",
-		text: "Remove testing utilities 46",
+		text: "Remove testing utilities",
 		status: "Cancelled",
 		tags: ["Testing", "Other"],
 		assignee: "Jane Smith",
@@ -422,7 +422,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-047",
 		lastUpdated: "1733402760000",
-		text: "Optimize documentation build 47",
+		text: "Optimize documentation build",
 		status: "Not Started",
 		tags: ["Documentation"],
 		assignee: "Alice Johnson",
@@ -431,7 +431,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-048",
 		lastUpdated: "1733402820000",
-		text: "Debug deployment script 48",
+		text: "Debug deployment script",
 		status: "In Progress",
 		tags: ["Bug"],
 		assignee: "Bob Brown",
@@ -440,7 +440,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-049",
 		lastUpdated: "1733402880000",
-		text: "Test monitoring integration 49",
+		text: "Test monitoring integration",
 		status: "Completed",
 		tags: ["Testing"],
 		assignee: "John Doe",
@@ -449,7 +449,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-050",
 		lastUpdated: "1733402940000",
-		text: "Review analytics dashboard 50",
+		text: "Review analytics dashboard",
 		status: "Not Started",
 		tags: ["Feature", "Documentation"],
 		assignee: "Jane Smith",
@@ -458,7 +458,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-051",
 		lastUpdated: "1733403000000",
-		text: "Deploy performance fixes 51",
+		text: "Deploy performance fixes",
 		status: "In Progress",
 		tags: ["Bug"],
 		assignee: "Alice Johnson",
@@ -467,7 +467,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-052",
 		lastUpdated: "1733403060000",
-		text: "Configure security headers 52",
+		text: "Configure security headers",
 		status: "Completed",
 		tags: ["Feature"],
 		assignee: "Bob Brown",
@@ -476,7 +476,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-053",
 		lastUpdated: "1733403120000",
-		text: "Migrate accessibility fixes 53",
+		text: "Migrate accessibility fixes",
 		status: "Cancelled",
 		tags: ["Bug", "Refactoring"],
 		assignee: "John Doe",
@@ -485,7 +485,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-054",
 		lastUpdated: "1733403180000",
-		text: "Document mobile view API 54",
+		text: "Document mobile view API",
 		status: "Not Started",
 		tags: ["Documentation"],
 		assignee: "Jane Smith",
@@ -494,7 +494,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-055",
 		lastUpdated: "1733403240000",
-		text: "Analyze authentication logs 55",
+		text: "Analyze authentication logs",
 		status: "In Progress",
 		tags: ["Other"],
 		assignee: "Alice Johnson",
@@ -503,7 +503,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-056",
 		lastUpdated: "1733403300000",
-		text: "Design database schema 56",
+		text: "Design database schema",
 		status: "Completed",
 		tags: ["Feature", "Documentation"],
 		assignee: "Bob Brown",
@@ -512,7 +512,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-057",
 		lastUpdated: "1733403360000",
-		text: "Build API gateway 57",
+		text: "Build API gateway",
 		status: "Not Started",
 		tags: ["Feature"],
 		assignee: "John Doe",
@@ -521,7 +521,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-058",
 		lastUpdated: "1733403420000",
-		text: "Integrate UI framework 58",
+		text: "Integrate UI framework",
 		status: "In Progress",
 		tags: ["Feature", "Refactoring"],
 		assignee: "Jane Smith",
@@ -530,7 +530,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-059",
 		lastUpdated: "1733403480000",
-		text: "Validate dashboard data 59",
+		text: "Validate dashboard data",
 		status: "Completed",
 		tags: ["Testing"],
 		assignee: "Alice Johnson",
@@ -539,7 +539,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-060",
 		lastUpdated: "1733403540000",
-		text: "Audit reports generation 60",
+		text: "Audit reports generation",
 		status: "Cancelled",
 		tags: ["Testing", "Other"],
 		assignee: "Bob Brown",
@@ -548,7 +548,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-061",
 		lastUpdated: "1733403600000",
-		text: "Implement notifications service 61",
+		text: "Implement notifications service",
 		status: "Not Started",
 		tags: ["Feature"],
 		assignee: "John Doe",
@@ -557,7 +557,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-062",
 		lastUpdated: "1733403660000",
-		text: "Fix search indexing 62",
+		text: "Fix search indexing",
 		status: "In Progress",
 		tags: ["Bug"],
 		assignee: "Jane Smith",
@@ -566,7 +566,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-063",
 		lastUpdated: "1733403720000",
-		text: "Refactor filters logic 63",
+		text: "Refactor filters logic",
 		status: "Completed",
 		tags: ["Refactoring"],
 		assignee: "Alice Johnson",
@@ -575,7 +575,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-064",
 		lastUpdated: "1733403780000",
-		text: "Add export formats 64",
+		text: "Add export formats",
 		status: "Not Started",
 		tags: ["Feature", "Documentation"],
 		assignee: "Bob Brown",
@@ -584,7 +584,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-065",
 		lastUpdated: "1733403840000",
-		text: "Update import validation 65",
+		text: "Update import validation",
 		status: "In Progress",
 		tags: ["Bug", "Feature"],
 		assignee: "John Doe",
@@ -593,7 +593,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-066",
 		lastUpdated: "1733403900000",
-		text: "Remove settings migration 66",
+		text: "Remove settings migration",
 		status: "Completed",
 		tags: ["Refactoring"],
 		assignee: "Jane Smith",
@@ -602,7 +602,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-067",
 		lastUpdated: "1733403960000",
-		text: "Optimize permissions check 67",
+		text: "Optimize permissions check",
 		status: "Cancelled",
 		tags: ["Bug"],
 		assignee: "Alice Johnson",
@@ -611,7 +611,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-068",
 		lastUpdated: "1733404020000",
-		text: "Debug logging output 68",
+		text: "Debug logging output",
 		status: "Not Started",
 		tags: ["Bug", "Testing"],
 		assignee: "Bob Brown",
@@ -620,7 +620,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-069",
 		lastUpdated: "1733404080000",
-		text: "Test caching layer 69",
+		text: "Test caching layer",
 		status: "In Progress",
 		tags: ["Testing"],
 		assignee: "John Doe",
@@ -629,7 +629,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-070",
 		lastUpdated: "1733404140000",
-		text: "Review pagination UX 70",
+		text: "Review pagination UX",
 		status: "Completed",
 		tags: ["Feature", "Other"],
 		assignee: "Jane Smith",
@@ -638,7 +638,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-071",
 		lastUpdated: "1733404200000",
-		text: "Deploy validation rules 71",
+		text: "Deploy validation rules",
 		status: "Not Started",
 		tags: ["Feature"],
 		assignee: "Alice Johnson",
@@ -647,7 +647,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-072",
 		lastUpdated: "1733404260000",
-		text: "Configure error tracking 72",
+		text: "Configure error tracking",
 		status: "In Progress",
 		tags: ["Feature"],
 		assignee: "Bob Brown",
@@ -656,7 +656,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-073",
 		lastUpdated: "1733404320000",
-		text: "Migrate testing suite 73",
+		text: "Migrate testing suite",
 		status: "Completed",
 		tags: ["Testing", "Refactoring"],
 		assignee: "John Doe",
@@ -665,7 +665,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-074",
 		lastUpdated: "1733404380000",
-		text: "Document documentation style 74",
+		text: "Document documentation style",
 		status: "Cancelled",
 		tags: ["Documentation"],
 		assignee: "Jane Smith",
@@ -674,7 +674,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-075",
 		lastUpdated: "1733404440000",
-		text: "Analyze deployment metrics 75",
+		text: "Analyze deployment metrics",
 		status: "Not Started",
 		tags: ["Other"],
 		assignee: "Alice Johnson",
@@ -683,7 +683,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-076",
 		lastUpdated: "1733404500000",
-		text: "Design monitoring dashboard 76",
+		text: "Design monitoring dashboard",
 		status: "In Progress",
 		tags: ["Feature", "Documentation"],
 		assignee: "Bob Brown",
@@ -692,7 +692,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-077",
 		lastUpdated: "1733404560000",
-		text: "Build analytics pipeline 77",
+		text: "Build analytics pipeline",
 		status: "Completed",
 		tags: ["Feature"],
 		assignee: "John Doe",
@@ -701,7 +701,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-078",
 		lastUpdated: "1733404620000",
-		text: "Integrate performance tools 78",
+		text: "Integrate performance tools",
 		status: "Not Started",
 		tags: ["Feature", "Testing"],
 		assignee: "Jane Smith",
@@ -710,7 +710,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-079",
 		lastUpdated: "1733404680000",
-		text: "Validate security audit 79",
+		text: "Validate security audit",
 		status: "In Progress",
 		tags: ["Testing"],
 		assignee: "Alice Johnson",
@@ -719,7 +719,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-080",
 		lastUpdated: "1733404740000",
-		text: "Audit accessibility compliance 80",
+		text: "Audit accessibility compliance",
 		status: "Completed",
 		tags: ["Bug", "Documentation"],
 		assignee: "Bob Brown",
@@ -728,7 +728,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-081",
 		lastUpdated: "1733404800000",
-		text: "Implement mobile responsive 81",
+		text: "Implement mobile responsive",
 		status: "Cancelled",
 		tags: ["Feature"],
 		assignee: "John Doe",
@@ -737,7 +737,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-082",
 		lastUpdated: "1733404860000",
-		text: "Fix authentication timeout 82",
+		text: "Fix authentication timeout",
 		status: "Not Started",
 		tags: ["Bug"],
 		assignee: "Jane Smith",
@@ -746,7 +746,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-083",
 		lastUpdated: "1733404920000",
-		text: "Refactor database queries 83",
+		text: "Refactor database queries",
 		status: "In Progress",
 		tags: ["Refactoring"],
 		assignee: "Alice Johnson",
@@ -755,7 +755,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-084",
 		lastUpdated: "1733404980000",
-		text: "Add API rate limiting 84",
+		text: "Add API rate limiting",
 		status: "Completed",
 		tags: ["Feature", "Bug"],
 		assignee: "Bob Brown",
@@ -764,7 +764,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-085",
 		lastUpdated: "1733405040000",
-		text: "Update UI theme 85",
+		text: "Update UI theme",
 		status: "Not Started",
 		tags: ["Feature"],
 		assignee: "John Doe",
@@ -773,7 +773,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-086",
 		lastUpdated: "1733405100000",
-		text: "Remove dashboard widgets 86",
+		text: "Remove dashboard widgets",
 		status: "In Progress",
 		tags: ["Refactoring", "Other"],
 		assignee: "Jane Smith",
@@ -782,7 +782,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-087",
 		lastUpdated: "1733405160000",
-		text: "Optimize reports query 87",
+		text: "Optimize reports query",
 		status: "Completed",
 		tags: ["Bug"],
 		assignee: "Alice Johnson",
@@ -791,7 +791,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-088",
 		lastUpdated: "1733405220000",
-		text: "Debug notifications queue 88",
+		text: "Debug notifications queue",
 		status: "Cancelled",
 		tags: ["Bug", "Testing"],
 		assignee: "Bob Brown",
@@ -800,7 +800,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-089",
 		lastUpdated: "1733405280000",
-		text: "Test search algorithms 89",
+		text: "Test search algorithms",
 		status: "Not Started",
 		tags: ["Testing"],
 		assignee: "John Doe",
@@ -809,7 +809,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-090",
 		lastUpdated: "1733405340000",
-		text: "Review filters documentation 90",
+		text: "Review filters documentation",
 		status: "In Progress",
 		tags: ["Documentation"],
 		assignee: "Jane Smith",
@@ -818,7 +818,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-091",
 		lastUpdated: "1733405400000",
-		text: "Deploy export service 91",
+		text: "Deploy export service",
 		status: "Completed",
 		tags: ["Feature"],
 		assignee: "Alice Johnson",
@@ -827,7 +827,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-092",
 		lastUpdated: "1733405460000",
-		text: "Configure import scheduler 92",
+		text: "Configure import scheduler",
 		status: "Not Started",
 		tags: ["Feature", "Documentation"],
 		assignee: "Bob Brown",
@@ -836,7 +836,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-093",
 		lastUpdated: "1733405520000",
-		text: "Migrate settings storage 93",
+		text: "Migrate settings storage",
 		status: "In Progress",
 		tags: ["Refactoring"],
 		assignee: "John Doe",
@@ -845,7 +845,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-094",
 		lastUpdated: "1733405580000",
-		text: "Document permissions matrix 94",
+		text: "Document permissions matrix",
 		status: "Completed",
 		tags: ["Documentation"],
 		assignee: "Jane Smith",
@@ -854,7 +854,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-095",
 		lastUpdated: "1733405640000",
-		text: "Analyze logging patterns 95",
+		text: "Analyze logging patterns",
 		status: "Cancelled",
 		tags: ["Other", "Testing"],
 		assignee: "Alice Johnson",
@@ -863,7 +863,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-096",
 		lastUpdated: "1733405700000",
-		text: "Design caching strategy 96",
+		text: "Design caching strategy",
 		status: "Not Started",
 		tags: ["Feature"],
 		assignee: "Bob Brown",
@@ -872,7 +872,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-097",
 		lastUpdated: "1733405760000",
-		text: "Build pagination component 97",
+		text: "Build pagination component",
 		status: "In Progress",
 		tags: ["Feature"],
 		assignee: "John Doe",
@@ -881,7 +881,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-098",
 		lastUpdated: "1733405820000",
-		text: "Integrate validation library 98",
+		text: "Integrate validation library",
 		status: "Completed",
 		tags: ["Feature", "Refactoring"],
 		assignee: "Jane Smith",
@@ -890,7 +890,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-099",
 		lastUpdated: "1733405880000",
-		text: "Validate error messages 99",
+		text: "Validate error messages",
 		status: "Not Started",
 		tags: ["Testing", "Bug"],
 		assignee: "Alice Johnson",
@@ -899,7 +899,7 @@ export const STATIC_ROWS: MyRow[] = [
 	{
 		id: "static-100",
 		lastUpdated: "1733405940000",
-		text: "Audit testing coverage 100",
+		text: "Audit testing coverage",
 		status: "In Progress",
 		tags: ["Testing", "Documentation"],
 		assignee: "Bob Brown",
