@@ -1451,8 +1451,8 @@ describe("ChipFilterInput", () => {
 				"Filter relationship",
 			);
 
-			// Find the parent container element
-			const containerElement = input.closest("div.flex");
+			// Find the parent container element by its ID
+			const containerElement = document.getElementById("chip-filter-container");
 			expect(containerElement).toBeInTheDocument();
 
 			// Track mouseenter on the operator button
@@ -1499,14 +1499,13 @@ describe("ChipFilterInput", () => {
 				expect(getAppliedFilter("tags")).toBeInTheDocument();
 			});
 
-			// Get the container that wraps both the filter chips and the input
-			// It should be a div with flex class, not a label
-			const container = input.closest("div.flex");
+			// Get the container that wraps both the filter chips and the input by its ID
+			const container = document.getElementById("chip-filter-container");
 
-			// The container should be a <div>, not a <label>
+			// The container should be a <button>, not a <label>
 			// Using a <label> would cause hover state bleeding to nested buttons
 			expect(container).toBeInTheDocument();
-			expect(container?.tagName.toLowerCase()).toBe("div");
+			expect(container?.tagName.toLowerCase()).toBe("button");
 			expect(container?.tagName.toLowerCase()).not.toBe("label");
 		});
 	});

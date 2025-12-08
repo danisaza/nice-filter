@@ -621,9 +621,9 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 			className={`relative ${className}`}
 			data-id={dataId}
 		>
-			{/* Using div instead of label to prevent hover state bleeding to nested interactive elements */}
 			<button
 				type="button"
+				id="chip-filter-container"
 				onClick={handleContainerClick}
 				className="flex items-center flex-wrap w-full gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-opacity-20 transition-all cursor-text min-h-[42px]"
 			>
