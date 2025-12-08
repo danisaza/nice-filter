@@ -11,6 +11,11 @@ const testContextHolder = vi.hoisted(() => ({
 	filteredRowsContext: null as React.Context<any> | null,
 }));
 
+// Create a mutable mock for the api client (hoisted to run first)
+const mockApiClient = vi.hoisted(() => ({
+	parseFiltersMock: vi.fn(),
+}));
+
 // Mock @/App to use our test context's useFilters hook
 vi.mock("@/App", () => ({
 	useFilters: function useFilters() {
@@ -20,6 +25,17 @@ vi.mock("@/App", () => ({
 			);
 		}
 		return testContextHolder.useFilters();
+	},
+}));
+
+// Mock @/api-client for natural language parsing tests
+vi.mock("@/api-client", () => ({
+	api: {
+		api: {
+			"parse-filters": {
+				$post: (args: any) => mockApiClient.parseFiltersMock(args),
+			},
+		},
 	},
 }));
 
@@ -3237,6 +3253,126 @@ describe("ChipFilterInput", () => {
 			// Position should still be the same
 			const positionAfterMoreTyping = getDropdownLeftPosition();
 			expect(positionAfterMoreTyping).toBe(initialLeft);
+		});
+	});
+
+	describe("Natural language filter parsing with negation", () => {
+		/**
+		 * BUG: When adding radio/checkbox filters from natural language AI parsing,
+		 * the `parsedFilter.isNegation` flag is completely ignored.
+		 *
+		 * The addFilter call only passes the values and uses default relationships
+		 * (IS/IS_ANY_OF for radio, INCLUDE/INCLUDE_ALL_OF for checkboxes).
+		 *
+		 * Queries like "tasks not assigned to John" or "exclude bugs" will incorrectly
+		 * create inclusive filters instead of exclusive ones.
+		 *
+		 * The text filter handling correctly respects `isNegation` by setting
+		 * OPERATORS.DOES_NOT_CONTAIN vs OPERATORS.CONTAINS, but this logic is
+		 * missing for other filter types.
+		 */
+		test("radio filter with isNegation=true should use IS_NOT relationship", async () => {
+			// Mock the API to return a negated radio filter
+			const mockApiResponse = {
+				filters: [
+					{
+						columnName: "status",
+						columnType: "radio" as const,
+						values: ["Completed"],
+						isNegation: true, // This is the key flag being tested
+					},
+				],
+				matchType: "all" as const,
+			};
+
+			mockApiClient.parseFiltersMock.mockResolvedValue({
+				ok: true,
+				json: () => Promise.resolve(mockApiResponse),
+			});
+
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type natural language query that triggers negation
+			await user.type(input, "tasks that are not completed");
+
+			// Press Enter to trigger natural language parsing
+			await user.keyboard("{Enter}");
+
+			// Wait for the filter to be created
+			await waitFor(() => {
+				const appliedFilter = getAppliedFilter("status");
+				expect(appliedFilter).toBeInTheDocument();
+			});
+
+			// The filter should have "is not" relationship since isNegation=true
+			// BUG: Currently it uses "is" (default) instead of "is not"
+			const appliedFilter = getAppliedFilter("status");
+			const operatorButton = within(appliedFilter).getByRole("button", {
+				name: /filter relationship/i,
+			});
+
+			// This should be "is not" but currently fails because isNegation is ignored
+			expect(operatorButton).toHaveTextContent("is not");
+		});
+
+		test("checkbox filter with isNegation=true should use DO_NOT_INCLUDE relationship", async () => {
+			// Mock the API to return a negated checkbox filter
+			const mockApiResponse = {
+				filters: [
+					{
+						columnName: "tags",
+						columnType: "checkboxes" as const,
+						values: ["Bug"],
+						isNegation: true, // This is the key flag being tested
+					},
+				],
+				matchType: "all" as const,
+			};
+
+			mockApiClient.parseFiltersMock.mockResolvedValue({
+				ok: true,
+				json: () => Promise.resolve(mockApiResponse),
+			});
+
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type natural language query that triggers negation
+			await user.type(input, "exclude all bugs");
+
+			// Press Enter to trigger natural language parsing
+			await user.keyboard("{Enter}");
+
+			// Wait for the filter to be created
+			await waitFor(() => {
+				const appliedFilter = getAppliedFilter("tags");
+				expect(appliedFilter).toBeInTheDocument();
+			});
+
+			// The filter should have "do not include" relationship since isNegation=true
+			// BUG: Currently it uses "include" (default) instead of "do not include"
+			const appliedFilter = getAppliedFilter("tags");
+			const operatorButton = within(appliedFilter).getByRole("button", {
+				name: /filter relationship/i,
+			});
+
+			// This should be "do not include" but currently fails because isNegation is ignored
+			expect(operatorButton).toHaveTextContent("do not include");
 		});
 	});
 });

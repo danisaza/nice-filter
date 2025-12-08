@@ -631,7 +631,7 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 				options: [],
 				values: [],
 				textValue: draftTextFilter.textValue.trim(),
-				relationship: draftTextFilter.operator,
+				isNegation: draftTextFilter.operator === OPERATORS.DOES_NOT_CONTAIN,
 			});
 		}
 
@@ -704,9 +704,7 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 							options: [],
 							values: [],
 							textValue,
-							relationship: parsedFilter.isNegation
-								? OPERATORS.DOES_NOT_CONTAIN
-								: OPERATORS.CONTAINS,
+							isNegation: parsedFilter.isNegation,
 						});
 					} else {
 						// For radio/checkbox filters, find matching options
@@ -726,6 +724,7 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 							propertyNamePlural: category.propertyNamePlural,
 							options: category.options,
 							values: matchingOptions,
+							isNegation: parsedFilter.isNegation,
 						});
 					}
 				}
