@@ -2,7 +2,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Check, ChevronDown } from "lucide-react";
 import { useEffect } from "react";
 import { useFilters } from "@/App";
-import { FILTER_CATEGORIES } from "@/hooks/filter-options-mock-data";
+import { FILTER_CATEGORIES } from "@/hooks/filter-categories.mock";
 import { MATCH_TYPES } from "@/hooks/useFilters/constants";
 import type { MatchType } from "@/hooks/useFilters/types";
 import { ChipFilterInput } from "./ChipFilterInput";

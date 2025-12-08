@@ -36,7 +36,7 @@ vi.mock("@/App", () => ({
 	},
 }));
 
-import { FILTER_CATEGORIES } from "@/hooks/filter-options-mock-data";
+import { FILTER_CATEGORIES } from "@/hooks/filter-categories.mock";
 import createFiltersContext, {
 	FiltersProvider,
 } from "@/hooks/useFilters/useFilters";

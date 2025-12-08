@@ -5,7 +5,13 @@
  * The backend owns filter configuration - frontend only sends natural language queries.
  */
 
-export type FilterColumnType = "radio" | "checkboxes" | "text";
+import {
+	FILTER_COLUMNS,
+	type FilterColumnType,
+} from "@/shared/filter-columns-and-values.mock";
+
+// Re-export the type for consumers
+export type { FilterColumnType };
 
 export interface FilterColumnConfig {
 	type: FilterColumnType;
@@ -13,38 +19,19 @@ export interface FilterColumnConfig {
 }
 
 /**
- * Simulates reading filter schema from database.
+ * Filter configuration derived from the shared source of truth.
  * Maps column names to their types and available options.
  */
-export const FILTER_CONFIG: Record<string, FilterColumnConfig> = {
-	status: {
-		type: "radio",
-		options: ["Not Started", "In Progress", "Completed", "Cancelled"],
-	},
-	priority: {
-		type: "radio",
-		options: ["Low", "Medium", "High"],
-	},
-	assignee: {
-		type: "radio",
-		options: ["John Doe", "Jane Smith", "Alice Johnson", "Bob Brown"],
-	},
-	tags: {
-		type: "checkboxes",
-		options: [
-			"Bug",
-			"Feature",
-			"Documentation",
-			"Refactoring",
-			"Testing",
-			"Other",
-		],
-	},
-	text: {
-		type: "text",
-		options: [], // Text fields have no predefined options
-	},
-};
+export const FILTER_CONFIG: Record<string, FilterColumnConfig> =
+	Object.fromEntries(
+		Object.entries(FILTER_COLUMNS).map(([key, column]) => [
+			key,
+			{
+				type: column.type,
+				options: [...column.options], // Spread to convert readonly array to mutable
+			},
+		]),
+	);
 
 /**
  * Mock async function to simulate DB read.
