@@ -575,7 +575,7 @@ describe("ChipFilterInput", () => {
 			expect(input).toHaveValue("sta");
 
 			// Should show search icon (not in NL mode yet - "sta" is valid prefix)
-			const container = input.closest("div.flex");
+			const container = document.getElementById("chip-filter-container");
 			expect(container?.querySelector(".text-gray-400")).toBeInTheDocument(); // Search icon
 			expect(
 				container?.querySelector(".text-purple-500"),
