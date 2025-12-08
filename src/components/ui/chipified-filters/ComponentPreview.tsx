@@ -79,7 +79,7 @@ const MatchTypeDropdown = ({
 								className="relative flex items-center justify-between gap-2 px-3 py-2 text-sm text-gray-700 rounded-md outline-none cursor-pointer transition-colors hover:bg-gray-100 focus:bg-gray-100"
 							>
 								{labels.full}
-								<DropdownMenu.ItemIndicator>
+								<DropdownMenu.ItemIndicator data-testid="checkmark-indicator">
 									<Check className="w-4 h-4 text-blue-600" />
 								</DropdownMenu.ItemIndicator>
 							</DropdownMenu.RadioItem>

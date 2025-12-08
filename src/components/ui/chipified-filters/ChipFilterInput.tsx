@@ -754,6 +754,7 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 	return (
 		<div
 			ref={containerRef}
+			id="chip-filter-input-wrapper"
 			className={`relative ${className}`}
 			data-id={dataId}
 		>
@@ -764,11 +765,20 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 				className="flex items-center flex-wrap w-full gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-opacity-20 transition-all cursor-text min-h-[42px]"
 			>
 				{isParsingNaturalLanguage ? (
-					<div className="w-4 h-4 flex-shrink-0 animate-spin rounded-full border-2 border-purple-500 border-t-transparent" />
+					<div
+						data-testid="loading-spinner"
+						className="w-4 h-4 flex-shrink-0 animate-spin rounded-full border-2 border-purple-500 border-t-transparent"
+					/>
 				) : isNaturalLanguageMode ? (
-					<MagicWandIcon className="w-4 h-4 text-purple-500 flex-shrink-0" />
+					<MagicWandIcon
+						data-testid="magic-wand-icon"
+						className="w-4 h-4 text-purple-500 flex-shrink-0"
+					/>
 				) : (
-					<Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
+					<Search
+						data-testid="search-icon"
+						className="w-4 h-4 text-gray-400 flex-shrink-0"
+					/>
 				)}
 
 				{sortedFilters.length > 0 || draftTextFilter ? (

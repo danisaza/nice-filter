@@ -575,11 +575,8 @@ describe("ChipFilterInput", () => {
 			expect(input).toHaveValue("sta");
 
 			// Should show search icon (not in NL mode yet - "sta" is valid prefix)
-			const container = document.getElementById("chip-filter-container");
-			expect(container?.querySelector(".text-gray-400")).toBeInTheDocument(); // Search icon
-			expect(
-				container?.querySelector(".text-purple-500"),
-			).not.toBeInTheDocument(); // No magic wand
+			expect(screen.getByTestId("search-icon")).toBeInTheDocument();
+			expect(screen.queryByTestId("magic-wand-icon")).not.toBeInTheDocument();
 
 			// Press Escape to close the dropdown
 			await user.keyboard("{Escape}");
@@ -591,10 +588,8 @@ describe("ChipFilterInput", () => {
 			// "sta " is NOT a valid prefix for any column (no column starts with "sta ")
 			// Therefore we should be in natural language mode
 			// The magic wand icon should now be displayed
-			expect(container?.querySelector(".text-purple-500")).toBeInTheDocument(); // Magic wand icon
-			expect(
-				container?.querySelector(".text-gray-400"),
-			).not.toBeInTheDocument(); // No search icon
+			expect(screen.getByTestId("magic-wand-icon")).toBeInTheDocument();
+			expect(screen.queryByTestId("search-icon")).not.toBeInTheDocument();
 		});
 
 		test("space selects first option when input is empty and dropdown is open", async () => {
@@ -3044,8 +3039,7 @@ describe("ChipFilterInput", () => {
 			const initialLeft = getDropdownLeftPosition();
 
 			// Mock getBoundingClientRect to simulate the input moving right after a chip is added
-			const container =
-				input.closest("[data-id]") || input.parentElement?.parentElement;
+			const container = document.getElementById("chip-filter-input-wrapper");
 			const inputElement = input;
 			const originalContainerGetBoundingClientRect =
 				container?.getBoundingClientRect.bind(container);
@@ -3117,8 +3111,7 @@ describe("ChipFilterInput", () => {
 
 			// Store original getBoundingClientRect
 			const inputElement = input;
-			const container =
-				input.closest("[data-id]") || input.parentElement?.parentElement;
+			const container = document.getElementById("chip-filter-input-wrapper");
 			const originalContainerGetBoundingClientRect =
 				container?.getBoundingClientRect.bind(container);
 

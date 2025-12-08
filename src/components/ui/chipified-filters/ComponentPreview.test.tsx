@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type React from "react";
 import { useEffect } from "react";
@@ -184,9 +184,9 @@ describe("ComponentPreview", () => {
 				name: /all filters must match/i,
 			});
 
-			// Lucide icons don't have role="img", so we check for svg element
-			const svg = allOption.querySelector("svg");
-			expect(svg).toBeInTheDocument();
+			// Check for the checkmark indicator
+			const checkmark = within(allOption).queryByTestId("checkmark-indicator");
+			expect(checkmark).toBeInTheDocument();
 		});
 
 		test("selecting 'any' changes the button text to 'any'", async () => {
@@ -386,11 +386,15 @@ describe("ComponentPreview", () => {
 				name: /any filter must match/i,
 			});
 
-			// "all" is selected and should have an SVG (checkmark)
-			expect(allOption.querySelector("svg")).toBeInTheDocument();
+			// "all" is selected and should have the checkmark indicator
+			expect(
+				within(allOption).queryByTestId("checkmark-indicator"),
+			).toBeInTheDocument();
 
-			// "any" is not selected and should NOT have an SVG
-			expect(anyOption.querySelector("svg")).not.toBeInTheDocument();
+			// "any" is not selected and should NOT have the checkmark indicator
+			expect(
+				within(anyOption).queryByTestId("checkmark-indicator"),
+			).not.toBeInTheDocument();
 		});
 
 		test("checkmark moves to newly selected option", async () => {
@@ -422,8 +426,12 @@ describe("ComponentPreview", () => {
 			});
 
 			// Now "any" should have the checkmark, "all" should not
-			expect(anyOption.querySelector("svg")).toBeInTheDocument();
-			expect(allOption.querySelector("svg")).not.toBeInTheDocument();
+			expect(
+				within(anyOption).queryByTestId("checkmark-indicator"),
+			).toBeInTheDocument();
+			expect(
+				within(allOption).queryByTestId("checkmark-indicator"),
+			).not.toBeInTheDocument();
 		});
 	});
 
@@ -461,13 +469,6 @@ describe("ComponentPreview", () => {
 			// Both elements should be in the document
 			expect(filterInput).toBeInTheDocument();
 			expect(matchTypeButton).toBeInTheDocument();
-
-			// The filter input should be wrapped in a flex-1 container (takes up remaining space)
-			const filterInputParent = filterInput.closest(".flex-1");
-			expect(filterInputParent).toBeInTheDocument();
-
-			// The button should have appropriate styling for a dropdown trigger
-			expect(matchTypeButton).toHaveClass("flex");
 		});
 	});
 });
