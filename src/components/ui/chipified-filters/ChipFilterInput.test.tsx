@@ -1741,7 +1741,7 @@ describe("ChipFilterInput", () => {
 			expect(secondRemove).toHaveFocus();
 		});
 
-		test("arrow navigation wraps around (loops)", async () => {
+		test("left arrow on first operator stays put, right arrow on last X moves to input", async () => {
 			const user = userEvent.setup();
 			render(
 				<TestWrapper>
@@ -1767,17 +1767,21 @@ describe("ChipFilterInput", () => {
 			const removeButton =
 				within(appliedFilter).getByLabelText("Remove filter");
 
-			// Focus the first button
+			// Focus the first button (operator)
 			operatorButton.focus();
 			expect(operatorButton).toHaveFocus();
 
-			// Press ArrowLeft - should wrap to last item (remove button)
+			// Press ArrowLeft - should NOT wrap, focus stays on operator button
 			await user.keyboard("{ArrowLeft}");
+			expect(operatorButton).toHaveFocus();
+
+			// Navigate to the remove button
+			removeButton.focus();
 			expect(removeButton).toHaveFocus();
 
-			// Press ArrowRight - should wrap to first item (operator button)
+			// Press ArrowRight - should move focus to input (not wrap)
 			await user.keyboard("{ArrowRight}");
-			expect(operatorButton).toHaveFocus();
+			expect(input).toHaveFocus();
 		});
 	});
 

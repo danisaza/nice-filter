@@ -22,10 +22,20 @@ interface AppliedFilterProps {
 	removeButtonRef?: (el: HTMLButtonElement | null) => void;
 	/** Custom remove handler that handles focus management */
 	onRemove?: () => void;
+	/** Callback when right arrow is pressed on the remove button (for custom navigation) */
+	onRemoveButtonRightArrow?: () => void;
+	/** If true, left arrow on the operator button won't navigate (prevents wrap) */
+	preventOperatorLeftWrap?: boolean;
 }
 
 const AppliedFilter = memo(
-	({ filter, removeButtonRef, onRemove }: AppliedFilterProps) => {
+	({
+		filter,
+		removeButtonRef,
+		onRemove,
+		onRemoveButtonRightArrow,
+		preventOperatorLeftWrap,
+	}: AppliedFilterProps) => {
 		const { getPropertyNameToDisplay } = useFilters();
 		const propertyNameToDisplay = getPropertyNameToDisplay(filter.id);
 
@@ -37,12 +47,16 @@ const AppliedFilter = memo(
 					className="border border-slate-300 text-slate-900 rounded inline-flex items-center h-9"
 				>
 					<Left propertyNameToDisplay={propertyNameToDisplay} />
-					<TextMiddle filter={filter} />
+					<TextMiddle
+						filter={filter}
+						preventLeftWrap={preventOperatorLeftWrap}
+					/>
 					<TextRight filter={filter} />
 					<Remove
 						filterId={filter.id}
 						buttonRef={removeButtonRef}
 						onRemove={onRemove}
+						onRightArrow={onRemoveButtonRightArrow}
 					/>
 				</fieldset>
 			);
@@ -54,12 +68,13 @@ const AppliedFilter = memo(
 				className="border border-slate-300 text-slate-900 rounded inline-flex items-center h-9"
 			>
 				<Left propertyNameToDisplay={propertyNameToDisplay} />
-				<Middle filter={filter} />
+				<Middle filter={filter} preventLeftWrap={preventOperatorLeftWrap} />
 				<Right filter={filter} />
 				<Remove
 					filterId={filter.id}
 					buttonRef={removeButtonRef}
 					onRemove={onRemove}
+					onRightArrow={onRemoveButtonRightArrow}
 				/>
 			</fieldset>
 		);
@@ -74,7 +89,13 @@ const Left = ({ propertyNameToDisplay }: { propertyNameToDisplay: string }) => {
 	);
 };
 
-const Middle = ({ filter }: { filter: TAppliedFilter }) => {
+interface MiddleProps {
+	filter: TAppliedFilter;
+	/** If true, left arrow won't navigate (prevents wrap) */
+	preventLeftWrap?: boolean;
+}
+
+const Middle = ({ filter, preventLeftWrap }: MiddleProps) => {
 	const { updateFilterRelationship } = useFilters();
 
 	const { selectionType, values } = filter;
@@ -90,6 +111,14 @@ const Middle = ({ filter }: { filter: TAppliedFilter }) => {
 	} else {
 		relationshipOptions = relationshipOptionsByNumValues.MANY;
 	}
+
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+		if (e.key === "ArrowLeft" && preventLeftWrap) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
+	};
+
 	return (
 		<DropdownMenu.Root>
 			<Toolbar.Button asChild>
@@ -98,6 +127,7 @@ const Middle = ({ filter }: { filter: TAppliedFilter }) => {
 						type="button"
 						className="h-full px-2 whitespace-nowrap border-r border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
 						aria-label={`Filter relationship`}
+						onKeyDown={handleKeyDown}
 					>
 						{filter.relationship}
 					</button>
@@ -137,14 +167,27 @@ const Middle = ({ filter }: { filter: TAppliedFilter }) => {
 	);
 };
 
+interface TextMiddleProps {
+	filter: TAppliedFilter;
+	/** If true, left arrow won't navigate (prevents wrap) */
+	preventLeftWrap?: boolean;
+}
+
 /**
  * Middle section for text filters - shows relationship dropdown (contains/does not contain)
  */
-const TextMiddle = ({ filter }: { filter: TAppliedFilter }) => {
+const TextMiddle = ({ filter, preventLeftWrap }: TextMiddleProps) => {
 	const { updateFilterRelationship } = useFilters();
 
 	// Text filters always have the same set of operators
 	const relationshipOptions = TEXT_SELECTION_OPERATORS.ONE;
+
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+		if (e.key === "ArrowLeft" && preventLeftWrap) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
+	};
 
 	return (
 		<DropdownMenu.Root>
@@ -154,6 +197,7 @@ const TextMiddle = ({ filter }: { filter: TAppliedFilter }) => {
 						type="button"
 						className="h-full px-2 whitespace-nowrap border-r border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
 						aria-label="Filter relationship"
+						onKeyDown={handleKeyDown}
 					>
 						{filter.relationship}
 					</button>
@@ -365,10 +409,17 @@ interface RemoveProps {
 	buttonRef?: (el: HTMLButtonElement | null) => void;
 	/** Custom remove handler that handles focus management */
 	onRemove?: () => void;
+	/** Callback when right arrow is pressed (for custom navigation out of toolbar) */
+	onRightArrow?: () => void;
 }
 
 // not memoizing this component because it's already so cheap to render
-const Remove = ({ filterId, buttonRef, onRemove }: RemoveProps) => {
+const Remove = ({
+	filterId,
+	buttonRef,
+	onRemove,
+	onRightArrow,
+}: RemoveProps) => {
 	const { removeFilter } = useFilters();
 
 	const handleRemove = () => {
@@ -384,6 +435,12 @@ const Remove = ({ filterId, buttonRef, onRemove }: RemoveProps) => {
 		if (e.key === "Backspace" || e.key === "Enter") {
 			e.preventDefault();
 			handleRemove();
+		}
+		// Custom right arrow navigation (e.g., to exit toolbar and focus input)
+		if (e.key === "ArrowRight" && onRightArrow) {
+			e.preventDefault();
+			e.stopPropagation();
+			onRightArrow();
 		}
 	};
 

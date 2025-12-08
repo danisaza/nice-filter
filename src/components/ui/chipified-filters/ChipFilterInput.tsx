@@ -622,23 +622,27 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 			data-id={dataId}
 		>
 			{/* Using div instead of label to prevent hover state bleeding to nested interactive elements */}
-			<div
+			<button
+				type="button"
 				onClick={handleContainerClick}
-				className="flex items-center flex-wrap gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-opacity-20 transition-all cursor-text min-h-[42px]"
+				className="flex items-center flex-wrap w-full gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-opacity-20 transition-all cursor-text min-h-[42px]"
 			>
 				<Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
 
 				{sortedFilters.length > 0 || draftTextFilter ? (
-					<Toolbar.Root
-						aria-label="Applied filters"
-						className="flex items-center flex-wrap gap-2"
-					>
-						{sortedFilters.map((filter) => (
+					<Toolbar.Root aria-label="Applied filters" className="contents">
+						{sortedFilters.map((filter, index) => (
 							<AppliedFilter
 								key={filter.id}
 								filter={filter}
 								removeButtonRef={createRemoveButtonRef(filter.id)}
 								onRemove={() => handleFilterRemove(filter.id)}
+								onRemoveButtonRightArrow={
+									index === sortedFilters.length - 1
+										? () => inputRef.current?.focus()
+										: undefined
+								}
+								preventOperatorLeftWrap={index === 0}
 							/>
 						))}
 						{draftTextFilter ? (
@@ -669,7 +673,7 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 					aria-controls="autocomplete-dropdown"
 					aria-expanded={showAutocomplete}
 				/>
-			</div>
+			</button>
 
 			<AutocompleteDropdown
 				suggestions={suggestions}
