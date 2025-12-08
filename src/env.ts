@@ -19,7 +19,12 @@ export const env = createEnv({
 
 	// these environment variables are available everywhere
 	client: {
-		VITE_BASE_URL: z.url(),
+		// VITE_VERCEL_URL is automatically provided by Vercel (without protocol)
+		// Falls back to localhost for local development
+		VITE_VERCEL_URL: z
+			.string()
+			.optional()
+			.transform((url) => (url ? `https://${url}` : "http://localhost:5173")),
 	},
 
 	/**

@@ -1,4 +1,3 @@
-import { serve } from "@hono/node-server";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -21,11 +20,6 @@ const app = new Hono()
 			return c.json(constructedFilters);
 		},
 	);
-
-// Only start standalone server in production
-if (import.meta.env.PROD) {
-	serve({ fetch: app.fetch, port: 3000 });
-}
 
 export type AppType = typeof app;
 export default app;
