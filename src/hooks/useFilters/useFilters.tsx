@@ -41,7 +41,7 @@ type FiltersContextType<T extends Row> = {
 		filter: Omit<
 			TAppliedFilter,
 			"relationship" | "createdAt" | "_cacheVersion"
-		> & { textValue?: string; relationship?: TextOperator },
+		> & { textValue?: string; isNegation?: boolean },
 	) => void;
 	filters: TAppliedFilter[];
 	// TODO: Consider updating filterCategories here to include a second type parameter for the property key
@@ -133,10 +133,10 @@ export function FiltersProvider<T extends Row>({
 			selectionType,
 			values,
 			textValue,
-			relationship,
+			isNegation = false,
 		}: Omit<TAppliedFilter, "createdAt" | "relationship" | "_cacheVersion"> & {
 			textValue?: string;
-			relationship?: TextOperator;
+			isNegation?: boolean;
 		}) => {
 			const newFilter = {
 				id,
@@ -151,11 +151,16 @@ export function FiltersProvider<T extends Row>({
 				if (!propertyNameSingular) {
 					throw new Error("propertyNameSingular is required for radio filters");
 				}
+				const computedRelationship = isNegation
+					? OPERATORS.IS_NOT
+					: values.length > 1
+						? OPERATORS.IS_ANY_OF
+						: OPERATORS.IS;
 				const radioValues = {
 					propertyNameSingular: propertyNameSingular,
 					propertyNamePlural: undefined,
 					selectionType: SELECTION_TYPES.RADIO,
-					relationship: values.length > 1 ? OPERATORS.IS_ANY_OF : OPERATORS.IS,
+					relationship: computedRelationship,
 				};
 				setFilters((prev) => [...prev, { ...newFilter, ...radioValues }]);
 				return;
@@ -167,12 +172,18 @@ export function FiltersProvider<T extends Row>({
 						"propertyNamePlural is required for checkbox filters",
 					);
 				}
+				const computedRelationship = isNegation
+					? values.length > 1
+						? OPERATORS.EXCLUDE_IF_ANY_OF
+						: OPERATORS.DO_NOT_INCLUDE
+					: values.length > 1
+						? OPERATORS.INCLUDE_ALL_OF
+						: OPERATORS.INCLUDE;
 				const checkboxValues = {
 					propertyNameSingular: undefined,
 					propertyNamePlural: propertyNamePlural,
 					selectionType: SELECTION_TYPES.CHECKBOXES,
-					relationship:
-						values.length > 1 ? OPERATORS.INCLUDE_ALL_OF : OPERATORS.INCLUDE,
+					relationship: computedRelationship,
 				};
 				setFilters((prev) => [...prev, { ...newFilter, ...checkboxValues }]);
 				return;
@@ -182,11 +193,14 @@ export function FiltersProvider<T extends Row>({
 				if (!propertyNameSingular) {
 					throw new Error("propertyNameSingular is required for text filters");
 				}
+				const computedRelationship = isNegation
+					? OPERATORS.DOES_NOT_CONTAIN
+					: OPERATORS.CONTAINS;
 				const textValues = {
 					propertyNameSingular: propertyNameSingular,
 					propertyNamePlural: undefined,
 					selectionType: SELECTION_TYPES.TEXT,
-					relationship: relationship ?? OPERATORS.CONTAINS,
+					relationship: computedRelationship,
 					textValue: textValue ?? "",
 				};
 				setFilters((prev) => [...prev, { ...newFilter, ...textValues }]);
