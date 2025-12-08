@@ -34,7 +34,8 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 	className = "",
 	"data-id": dataId,
 }) => {
-	const { addFilter, filterCategories, filters, removeFilter } = useFilters();
+	const { addFilter, filterCategories, filters, removeFilter, setMatchType } =
+		useFilters();
 	const [inputValue, setInputValue] = useState("");
 	const [showAutocomplete, setShowAutocomplete] = useState(false);
 	const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
@@ -673,6 +674,11 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 
 				const result = await response.json();
 
+				// Apply match type from AI (if specified)
+				if (result.matchType) {
+					setMatchType(result.matchType);
+				}
+
 				// Apply each parsed filter
 				for (const parsedFilter of result.filters) {
 					// Find the matching category from filterCategories
@@ -733,7 +739,7 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 				setIsParsingNaturalLanguage(false);
 			}
 		},
-		[filterCategories, addFilter],
+		[filterCategories, addFilter, setMatchType],
 	);
 
 	/**
