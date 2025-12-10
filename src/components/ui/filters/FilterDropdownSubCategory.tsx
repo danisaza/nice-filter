@@ -29,7 +29,7 @@ function getNewFilterByCategoryId(
 	filters: TAppliedFilter[],
 ) {
 	return filters.find(
-		(f) => f.createdAt > after && f.categoryId === categoryId,
+		(f) => f.createdAt >= after && f.categoryId === categoryId,
 	);
 }
 
