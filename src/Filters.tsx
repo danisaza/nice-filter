@@ -1,6 +1,6 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import * as Toolbar from "@radix-ui/react-toolbar";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFilters } from "@/App.tsx";
 import useNewFilterCreatedAtCutoff from "@/hooks/useNewFilterCreatedAtCutoff";
 import AppliedFilters from "./components/ui/filters/AppliedFilters";
@@ -10,10 +10,18 @@ import { FILTER_CATEGORIES } from "./hooks/filter-options-mock-data";
 
 export default function Filters() {
 	const [open, setOpen] = useState(false);
-	const { filterCategories, setFilterCategories } = useFilters();
+	const { filters, filterCategories, setFilterCategories } = useFilters();
 	const { newFilterCreatedAtCutoff, setNewFilterCreatedAtCutoff } =
 		useNewFilterCreatedAtCutoff();
 	const filterButtonRef = useRef<HTMLButtonElement>(null);
+
+	// Check if there are any filters before the cutoff (in the "before" bucket)
+	// This is used to ensure only one element has tabIndex=0 in the roving tabindex toolbar
+	const hasFiltersBefore = useMemo(() => {
+		return filters.some(
+			(filter) => filter.createdAt < newFilterCreatedAtCutoff,
+		);
+	}, [filters, newFilterCreatedAtCutoff]);
 
 	// NOTE: This `useEffect` is populating the filter categories, which usually would involve fetching data from the
 	//       server.
@@ -54,6 +62,7 @@ export default function Filters() {
 				<AppliedFilters
 					after={newFilterCreatedAtCutoff}
 					renderPrefixElement={renderTrigger}
+					hasFiltersBeforeThis={hasFiltersBefore}
 				/>
 				<FilterDropdown
 					filterButtonRef={filterButtonRef}

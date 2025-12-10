@@ -245,6 +245,68 @@ describe("Keyboard navigation between applied filters and filter button", () => 
 	});
 });
 
+describe("Roving tabindex - only one element should have tabIndex=0", () => {
+	beforeEach(() => {
+		// Reset mock state before each test
+		mockFilters = [];
+		mockFilterCategories = [...MOCK_FILTER_CATEGORIES];
+	});
+
+	afterEach(() => {
+		cleanup();
+		vi.clearAllMocks();
+	});
+
+	it("only one toolbar button should have tabIndex=0 when filters exist in both before and after buckets", async () => {
+		// This test verifies the roving tabindex pattern is correctly implemented.
+		// When filters exist in both "before" and "after" AppliedFilters components,
+		// only ONE element across the entire toolbar should have tabIndex={0}.
+		//
+		// The bug: Both AppliedFilters components independently calculate isFirst={index === 0}
+		// for their first element, causing multiple tabIndex={0} buttons.
+
+		// Set up cutoff time - filters created before this go to "before" bucket,
+		// filters created after go to "after" bucket
+		const cutoffTime = Date.now();
+
+		// Create a filter BEFORE the cutoff (will be in "before" AppliedFilters)
+		const filterBeforeCutoff = createMockAppliedFilter({
+			id: "filter-before",
+			createdAt: cutoffTime - 10000, // 10 seconds before cutoff
+		});
+
+		// Create a filter AFTER the cutoff (will be in "after" AppliedFilters)
+		const filterAfterCutoff = createMockAppliedFilter({
+			id: "filter-after",
+			createdAt: cutoffTime + 10000, // 10 seconds after cutoff
+		});
+
+		mockFilters = [filterBeforeCutoff, filterAfterCutoff];
+
+		render(
+			<TestWrapper>
+				<Filters />
+			</TestWrapper>,
+		);
+
+		// The toolbar should be present
+		const toolbar = screen.getByRole("toolbar", { name: /applied filters/i });
+		expect(toolbar).toBeInTheDocument();
+
+		// Get all buttons within the toolbar
+		const toolbarButtons = toolbar.querySelectorAll("button");
+
+		// Count how many buttons have tabIndex={0}
+		const buttonsWithTabIndexZero = Array.from(toolbarButtons).filter(
+			(button) => button.getAttribute("tabindex") === "0",
+		);
+
+		// In a roving tabindex toolbar, exactly ONE element should have tabIndex=0
+		// This is the element that receives focus when tabbing into the toolbar
+		expect(buttonsWithTabIndexZero.length).toBe(1);
+	});
+});
+
 describe("Keyboard navigation between filter button and match type switcher", () => {
 	beforeEach(() => {
 		// Reset mock state before each test
