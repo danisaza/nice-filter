@@ -758,12 +758,15 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 			className={`relative ${className}`}
 			data-id={dataId}
 		>
-			<button
-				type="button"
+			{/* Using fieldset to group filter controls. The onClick is a mouse-only UX convenience
+			    to focus the input when clicking whitespace. Keyboard users tab directly to controls. */}
+			{/* biome-ignore lint/a11y/useKeyWithClickEvents: onClick focuses input on whitespace click, keyboard users tab to controls */}
+			<fieldset
 				id="chip-filter-container"
 				onClick={handleContainerClick}
 				className="flex items-center flex-wrap w-full gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-opacity-20 transition-all cursor-text min-h-[42px]"
 			>
+				<legend className="sr-only">Filter controls</legend>
 				{isParsingNaturalLanguage ? (
 					<div
 						data-testid="loading-spinner"
@@ -826,7 +829,7 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 					aria-controls="autocomplete-dropdown"
 					aria-expanded={showAutocomplete}
 				/>
-			</button>
+			</fieldset>
 
 			<AutocompleteDropdown
 				suggestions={suggestions}

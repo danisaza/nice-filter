@@ -1588,8 +1588,10 @@ describe("ChipFilterInput", () => {
 			 * focuses/clicks its associated form control. This can cause unexpected
 			 * hover interactions when the label wraps interactive elements like buttons.
 			 *
-			 * The fix was to change the container from <label> to <div>, which prevents
-			 * hover state bleeding between nested interactive elements.
+			 * The fix was to change the container from <label> to <fieldset>, which:
+			 * 1. Prevents hover state bleeding between nested interactive elements
+			 * 2. Is semantically correct for grouping form controls
+			 * 3. Can contain interactive elements
 			 */
 			const user = userEvent.setup();
 			render(
@@ -1611,10 +1613,11 @@ describe("ChipFilterInput", () => {
 			// Get the container that wraps both the filter chips and the input by its ID
 			const container = document.getElementById("chip-filter-container");
 
-			// The container should be a <button>, not a <label>
+			// The container should be a <fieldset>, not a <label>
 			// Using a <label> would cause hover state bleeding to nested buttons
+			// Using <fieldset> is semantically correct for grouping form controls
 			expect(container).toBeInTheDocument();
-			expect(container?.tagName.toLowerCase()).toBe("button");
+			expect(container?.tagName.toLowerCase()).toBe("fieldset");
 			expect(container?.tagName.toLowerCase()).not.toBe("label");
 		});
 	});
