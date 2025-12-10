@@ -1,4 +1,5 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import * as Toolbar from "@radix-ui/react-toolbar";
 import { X } from "lucide-react";
 import { memo, useRef, useState } from "react";
 import { useFilters } from "@/App.tsx";
@@ -13,22 +14,30 @@ import type { Operator, TAppliedFilter } from "@/hooks/useFilters/types";
 const dropdownMenuContentClassNames =
 	"border border-slate-300 min-w-[220px] bg-white rounded-md p-1 shadow-lg animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2";
 
-const AppliedFilter = memo(({ filter }: { filter: TAppliedFilter }) => {
-	const { getPropertyNameToDisplay } = useFilters();
-	const propertyNameToDisplay = getPropertyNameToDisplay(filter.id);
+const AppliedFilter = memo(
+	({
+		filter,
+		isFirst = false,
+	}: {
+		filter: TAppliedFilter;
+		isFirst?: boolean;
+	}) => {
+		const { getPropertyNameToDisplay } = useFilters();
+		const propertyNameToDisplay = getPropertyNameToDisplay(filter.id);
 
-	return (
-		<fieldset
-			name={`${propertyNameToDisplay} filter`}
-			className="border border-slate-300 text-slate-900 rounded inline-flex items-center h-9"
-		>
-			<Left propertyNameToDisplay={propertyNameToDisplay} />
-			<Middle filter={filter} />
-			<Right filter={filter} />
-			<Remove filterId={filter.id} />
-		</fieldset>
-	);
-});
+		return (
+			<fieldset
+				name={`${propertyNameToDisplay} filter`}
+				className="border border-slate-300 text-slate-900 rounded inline-flex items-center h-9"
+			>
+				<Left propertyNameToDisplay={propertyNameToDisplay} />
+				<Middle filter={filter} isFirst={isFirst} />
+				<Right filter={filter} />
+				<Remove filterId={filter.id} />
+			</fieldset>
+		);
+	},
+);
 
 const Left = ({ propertyNameToDisplay }: { propertyNameToDisplay: string }) => {
 	return (
@@ -38,7 +47,13 @@ const Left = ({ propertyNameToDisplay }: { propertyNameToDisplay: string }) => {
 	);
 };
 
-const Middle = ({ filter }: { filter: TAppliedFilter }) => {
+const Middle = ({
+	filter,
+	isFirst = false,
+}: {
+	filter: TAppliedFilter;
+	isFirst?: boolean;
+}) => {
 	const { updateFilterRelationship } = useFilters();
 
 	const { selectionType, values } = filter;
@@ -56,15 +71,14 @@ const Middle = ({ filter }: { filter: TAppliedFilter }) => {
 	}
 	return (
 		<DropdownMenu.Root>
-			<DropdownMenu.Trigger asChild>
-				<button
-					type="button"
+			<Toolbar.Button asChild tabIndex={isFirst ? 0 : -1}>
+				<DropdownMenu.Trigger
 					className="h-full px-2 whitespace-nowrap border-r border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
 					aria-label={`Filter relationship`}
 				>
 					{filter.relationship}
-				</button>
-			</DropdownMenu.Trigger>
+				</DropdownMenu.Trigger>
+			</Toolbar.Button>
 			<DropdownMenu.Portal>
 				<DropdownMenu.Content
 					className={dropdownMenuContentClassNames}
@@ -155,9 +169,8 @@ const Right = ({ filter }: { filter: TAppliedFilter }) => {
 			) : null}
 
 			{/* Visible button that acts as the interactive element */}
-			<button
+			<Toolbar.Button
 				ref={buttonRef}
-				type="button"
 				onClick={() => handleOpenChange(!isOpen)}
 				aria-haspopup="menu"
 				aria-expanded={isOpen}
@@ -165,7 +178,7 @@ const Right = ({ filter }: { filter: TAppliedFilter }) => {
 				aria-label={`Filter by ${propertyNameToDisplay}`}
 			>
 				{selectedOptionsLabel}
-			</button>
+			</Toolbar.Button>
 
 			<DropdownMenu.Portal>
 				<DropdownMenu.Content
@@ -193,14 +206,13 @@ const Right = ({ filter }: { filter: TAppliedFilter }) => {
 const Remove = ({ filterId }: { filterId: string }) => {
 	const { removeFilter } = useFilters();
 	return (
-		<button
-			type="button"
+		<Toolbar.Button
 			className="h-full px-2 rounded-tr rounded-br text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
 			onClick={() => removeFilter(filterId)}
 			aria-label={`Remove filter`}
 		>
 			<X className="w-4 h-4" aria-hidden="true" />
-		</button>
+		</Toolbar.Button>
 	);
 };
 

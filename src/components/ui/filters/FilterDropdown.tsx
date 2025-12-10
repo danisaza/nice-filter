@@ -3,6 +3,7 @@ import { ListFilter } from "lucide-react";
 import {
 	type KeyboardEvent,
 	type ReactNode,
+	type RefObject,
 	useCallback,
 	useEffect,
 	useMemo,
@@ -24,16 +25,25 @@ const FilterDropdown = ({
 	dropdownMenuOpen,
 	setDropdownMenuOpen,
 	renderTrigger,
+	filterButtonRef: externalButtonRef,
+	appliedFiltersToolbarRef: externalToolbarRef,
+	matchTypeSwitcherRef,
 }: {
 	dropdownMenuOpen: boolean;
 	setDropdownMenuOpen: UseStateSetter<boolean>;
 	renderTrigger: () => ReactNode;
+	filterButtonRef?: RefObject<HTMLButtonElement | null>;
+	appliedFiltersToolbarRef?: RefObject<HTMLDivElement | null>;
+	matchTypeSwitcherRef?: RefObject<HTMLButtonElement | null>;
 }) => {
 	const { newFilterCreatedAtCutoff } = useNewFilterCreatedAtCutoff();
 	const { filters } = useFilters();
-	const buttonRef = useRef<HTMLButtonElement>(null);
+	const internalButtonRef = useRef<HTMLButtonElement>(null);
+	const buttonRef = externalButtonRef ?? internalButtonRef;
 	const firstSubTriggerRef = useRef<HTMLDivElement>(null);
 	const lastSubTriggerRef = useRef<HTMLDivElement>(null);
+	const internalToolbarRef = useRef<HTMLDivElement>(null);
+	const appliedFiltersToolbarRef = externalToolbarRef ?? internalToolbarRef;
 	const [searchText, setSearchText] = useState("");
 
 	const { filterCategories } = useFilters();
@@ -107,15 +117,48 @@ const FilterDropdown = ({
 		[focusSearchInput],
 	);
 
+	const filterButtonOnKeyDown = useCallback(
+		(e: KeyboardEvent<HTMLButtonElement>) => {
+			if (e.key === "ArrowLeft") {
+				// First check the internal toolbar (filters created after cutoff)
+				// Then check the external toolbar (filters created before cutoff)
+				const toolbarsToCheck = [
+					internalToolbarRef.current,
+					externalToolbarRef?.current,
+				].filter(Boolean);
+
+				for (const toolbar of toolbarsToCheck) {
+					const items = toolbar?.querySelectorAll(
+						"[data-radix-collection-item]",
+					);
+					if (items && items.length > 0) {
+						const lastItem = items[items.length - 1];
+						if (lastItem instanceof HTMLElement) {
+							lastItem.focus();
+							return;
+						}
+					}
+				}
+			} else if (e.key === "ArrowRight") {
+				// Move focus to the match type switcher if it exists
+				matchTypeSwitcherRef?.current?.focus();
+			}
+		},
+		[externalToolbarRef, matchTypeSwitcherRef],
+	);
+
 	return (
 		<div className="contents">
 			<AppliedFilters
 				after={newFilterCreatedAtCutoff}
 				renderPrefixElement={renderTrigger}
+				nextFocusRef={buttonRef}
+				toolbarRef={appliedFiltersToolbarRef}
 			/>
 			<Button
-				ref={buttonRef}
+				ref={buttonRef as React.RefObject<HTMLButtonElement>}
 				onClick={() => setDropdownMenuOpen((prev) => !prev)}
+				onKeyDown={filterButtonOnKeyDown}
 				aria-haspopup="menu"
 				aria-expanded={dropdownMenuOpen}
 				variant="ghost"
