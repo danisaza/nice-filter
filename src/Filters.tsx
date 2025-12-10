@@ -1,6 +1,6 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import * as Toolbar from "@radix-ui/react-toolbar";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { twMerge } from "tailwind-merge";
 import { useFilters } from "@/App.tsx";
 import useNewFilterCreatedAtCutoff from "@/hooks/useNewFilterCreatedAtCutoff";
 import AppliedFilters from "./components/ui/filters/AppliedFilters";
@@ -14,8 +14,6 @@ export default function Filters() {
 	const { newFilterCreatedAtCutoff, setNewFilterCreatedAtCutoff } =
 		useNewFilterCreatedAtCutoff();
 	const filterButtonRef = useRef<HTMLButtonElement>(null);
-	const appliedFiltersToolbarRef = useRef<HTMLDivElement>(null);
-	const matchTypeSwitcherRef = useRef<HTMLButtonElement>(null);
 
 	// NOTE: This `useEffect` is populating the filter categories, which usually would involve fetching data from the
 	//       server.
@@ -46,27 +44,25 @@ export default function Filters() {
 				setOpen(open);
 			}}
 		>
-			<div
-				className={twMerge("flex gap-2 items-center flex-wrap mr-2 relative")}
+			<Toolbar.Root
+				className="flex gap-2 items-center flex-wrap mr-2 relative"
+				aria-label="Applied filters"
+				orientation="horizontal"
+				loop={false}
 			>
+				<AppliedFilters before={newFilterCreatedAtCutoff} />
 				<AppliedFilters
-					before={newFilterCreatedAtCutoff}
-					nextFocusRef={filterButtonRef}
-					toolbarRef={appliedFiltersToolbarRef}
+					after={newFilterCreatedAtCutoff}
+					renderPrefixElement={renderTrigger}
 				/>
 				<FilterDropdown
 					filterButtonRef={filterButtonRef}
-					appliedFiltersToolbarRef={appliedFiltersToolbarRef}
-					matchTypeSwitcherRef={matchTypeSwitcherRef}
 					renderTrigger={renderTrigger}
 					dropdownMenuOpen={open}
 					setDropdownMenuOpen={setOpen}
 				/>
-				<MatchTypeSwitcher
-					ref={matchTypeSwitcherRef}
-					prevFocusRef={filterButtonRef}
-				/>
-			</div>
+				<MatchTypeSwitcher />
+			</Toolbar.Root>
 		</DropdownMenu.Root>
 	);
 }

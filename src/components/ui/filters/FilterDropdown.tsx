@@ -1,4 +1,5 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import * as Toolbar from "@radix-ui/react-toolbar";
 import { ListFilter } from "lucide-react";
 import {
 	type KeyboardEvent,
@@ -19,22 +20,17 @@ import { SELECTION_TYPES } from "@/hooks/useFilters/constants";
 import type { ComboboxOption } from "@/hooks/useFilters/types";
 import useNewFilterCreatedAtCutoff from "@/hooks/useNewFilterCreatedAtCutoff";
 import type { UseStateSetter } from "@/utils";
-import AppliedFilters from "./AppliedFilters";
 
 const FilterDropdown = ({
 	dropdownMenuOpen,
 	setDropdownMenuOpen,
 	renderTrigger,
 	filterButtonRef: externalButtonRef,
-	appliedFiltersToolbarRef: externalToolbarRef,
-	matchTypeSwitcherRef,
 }: {
 	dropdownMenuOpen: boolean;
 	setDropdownMenuOpen: UseStateSetter<boolean>;
 	renderTrigger: () => ReactNode;
 	filterButtonRef?: RefObject<HTMLButtonElement | null>;
-	appliedFiltersToolbarRef?: RefObject<HTMLDivElement | null>;
-	matchTypeSwitcherRef?: RefObject<HTMLButtonElement | null>;
 }) => {
 	const { newFilterCreatedAtCutoff } = useNewFilterCreatedAtCutoff();
 	const { filters } = useFilters();
@@ -42,8 +38,6 @@ const FilterDropdown = ({
 	const buttonRef = externalButtonRef ?? internalButtonRef;
 	const firstSubTriggerRef = useRef<HTMLDivElement>(null);
 	const lastSubTriggerRef = useRef<HTMLDivElement>(null);
-	const internalToolbarRef = useRef<HTMLDivElement>(null);
-	const appliedFiltersToolbarRef = externalToolbarRef ?? internalToolbarRef;
 	const [searchText, setSearchText] = useState("");
 
 	const { filterCategories } = useFilters();
@@ -117,60 +111,25 @@ const FilterDropdown = ({
 		[focusSearchInput],
 	);
 
-	const filterButtonOnKeyDown = useCallback(
-		(e: KeyboardEvent<HTMLButtonElement>) => {
-			if (e.key === "ArrowLeft") {
-				// First check the internal toolbar (filters created after cutoff)
-				// Then check the external toolbar (filters created before cutoff)
-				const toolbarsToCheck = [
-					internalToolbarRef.current,
-					externalToolbarRef?.current,
-				].filter(Boolean);
-
-				for (const toolbar of toolbarsToCheck) {
-					const items = toolbar?.querySelectorAll(
-						"[data-radix-collection-item]",
-					);
-					if (items && items.length > 0) {
-						const lastItem = items[items.length - 1];
-						if (lastItem instanceof HTMLElement) {
-							lastItem.focus();
-							return;
-						}
-					}
-				}
-			} else if (e.key === "ArrowRight") {
-				// Move focus to the match type switcher if it exists
-				matchTypeSwitcherRef?.current?.focus();
-			}
-		},
-		[externalToolbarRef, matchTypeSwitcherRef],
-	);
-
 	return (
-		<div className="contents">
-			<AppliedFilters
-				after={newFilterCreatedAtCutoff}
-				renderPrefixElement={renderTrigger}
-				nextFocusRef={buttonRef}
-				toolbarRef={appliedFiltersToolbarRef}
-			/>
-			<Button
-				ref={buttonRef as React.RefObject<HTMLButtonElement>}
-				onClick={() => setDropdownMenuOpen((prev) => !prev)}
-				onKeyDown={filterButtonOnKeyDown}
-				aria-haspopup="menu"
-				aria-expanded={dropdownMenuOpen}
-				variant="ghost"
-				className={twMerge(
-					"group cursor-default data-[state=open]:bg-accent data-[state=open]:text-accent-foreground",
-					dropdownMenuOpen ? "relative bg-accent text-accent-foreground" : "",
-				)}
-			>
-				{shouldRenderTrigger ? renderTrigger() : null}
-				<ListFilter className="w-4 h-4 group-hover:text-accent-foreground text-muted-foreground group-data-[state=open]:text-accent-foreground" />{" "}
-				Filter
-			</Button>
+		<>
+			<Toolbar.Button asChild>
+				<Button
+					ref={buttonRef as React.RefObject<HTMLButtonElement>}
+					onClick={() => setDropdownMenuOpen((prev) => !prev)}
+					aria-haspopup="menu"
+					aria-expanded={dropdownMenuOpen}
+					variant="ghost"
+					className={twMerge(
+						"group cursor-default data-[state=open]:bg-accent data-[state=open]:text-accent-foreground",
+						dropdownMenuOpen ? "relative bg-accent text-accent-foreground" : "",
+					)}
+				>
+					{shouldRenderTrigger ? renderTrigger() : null}
+					<ListFilter className="w-4 h-4 group-hover:text-accent-foreground text-muted-foreground group-data-[state=open]:text-accent-foreground" />{" "}
+					Filter
+				</Button>
+			</Toolbar.Button>
 			<DropdownMenu.Content
 				align="start"
 				className="border border-gray-300 w-[260px] rounded bg-white shadow-md data-[state=open]:data-[side=bottom]:animate-slideUpAndFade data-[state=open]:data-[side=left]:animate-slideRightAndFade data-[state=open]:data-[side=right]:animate-slideLeftAndFade data-[state=open]:data-[side=top]:animate-slideDownAndFade"
@@ -226,7 +185,7 @@ const FilterDropdown = ({
 					</div>
 				) : null}
 			</DropdownMenu.Content>
-		</div>
+		</>
 	);
 };
 
