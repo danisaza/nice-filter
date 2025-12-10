@@ -35,7 +35,7 @@ const AppliedFilters = memo((props: AppliedFiltersProps) => {
 				}
 				// check against undefined, rather than 0, in case someone uses `after={0}` to render all filters
 				if (after !== undefined) {
-					return filter.createdAt > after;
+					return filter.createdAt >= after;
 				}
 				return true;
 			})
