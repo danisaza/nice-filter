@@ -11,19 +11,34 @@ const MATCH_TYPE_LABELS: Record<MatchType, { short: string; full: string }> = {
 interface MatchTypeDropdownProps {
 	matchType: MatchType;
 	setMatchType: (matchType: MatchType) => void;
+	/** Called when left arrow is pressed - to move focus to the input */
+	onLeftArrow?: () => void;
+	/** Ref to the trigger button for external focus control */
+	triggerRef?: React.RefObject<HTMLButtonElement>;
 }
 
 export const MatchTypeDropdown = ({
 	matchType,
 	setMatchType,
+	onLeftArrow,
+	triggerRef,
 }: MatchTypeDropdownProps) => {
+	const handleKeyDown = (e: React.KeyboardEvent) => {
+		if (e.key === "ArrowLeft" && onLeftArrow) {
+			e.preventDefault();
+			onLeftArrow();
+		}
+	};
+
 	return (
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger asChild>
 				<button
+					ref={triggerRef}
 					type="button"
 					className="h-full flex items-center justify-center gap-1 px-4 text-sm font-medium text-gray-600 bg-transparent hover:text-gray-900 hover:bg-gray-200 focus:outline-none focus:bg-gray-200 focus:text-gray-900 focus:ring-2 focus:ring-inset focus:ring-blue-500 rounded-r-lg transition-colors"
 					aria-label="Filter match mode"
+					onKeyDown={handleKeyDown}
 				>
 					{MATCH_TYPE_LABELS[matchType].short}
 					<ChevronDown className="w-4 h-4" />

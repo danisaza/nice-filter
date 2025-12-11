@@ -31,6 +31,8 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 	placeholder = "Filter by typing key:value...",
 	className = "",
 	"data-id": dataId,
+	onRightArrowAtEnd,
+	inputRef: externalInputRef,
 }) => {
 	const { addFilter, filterCategories, filters, removeFilter, setMatchType } =
 		useFilters();
@@ -55,7 +57,8 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 	// Track loading state for AI natural language parsing
 	const [isParsingNaturalLanguage, setIsParsingNaturalLanguage] =
 		useState(false);
-	const inputRef = useRef<HTMLInputElement>(null);
+	const internalInputRef = useRef<HTMLInputElement>(null);
+	const inputRef = externalInputRef || internalInputRef;
 	const containerRef = useRef<HTMLDivElement>(null);
 	// Track whether position has been captured for the current typing session
 	const positionCapturedRef = useRef(false);
@@ -463,6 +466,30 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 			const removeButton = removeButtonRefs.current.get(lastFilter.id);
 			removeButton?.focus();
 			return;
+		}
+
+		// Left arrow at cursor position 0 focuses the last filter's remove button
+		if (e.key === "ArrowLeft" && sortedFilters.length > 0) {
+			const input = e.currentTarget;
+			if (input.selectionStart === 0 && input.selectionEnd === 0) {
+				e.preventDefault();
+				const lastFilter = sortedFilters[sortedFilters.length - 1];
+				const removeButton = removeButtonRefs.current.get(lastFilter.id);
+				removeButton?.focus();
+				return;
+			}
+		}
+
+		// Right arrow at end of input moves focus to match type dropdown
+		if (e.key === "ArrowRight" && onRightArrowAtEnd) {
+			const input = e.currentTarget;
+			const atEnd = input.selectionStart === inputValue.length &&
+			              input.selectionEnd === inputValue.length;
+			if (atEnd) {
+				e.preventDefault();
+				onRightArrowAtEnd();
+				return;
+			}
 		}
 	};
 

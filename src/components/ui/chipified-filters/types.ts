@@ -3,6 +3,10 @@ export interface ChipFilterInputProps {
 	freeTextAllowed?: boolean;
 	className?: string;
 	"data-id"?: string;
+	/** Called when right arrow is pressed at the end of the input */
+	onRightArrowAtEnd?: () => void;
+	/** Ref to the input element for external focus control */
+	inputRef?: React.RefObject<HTMLInputElement>;
 }
 
 export interface AutocompleteDropdownProps {
