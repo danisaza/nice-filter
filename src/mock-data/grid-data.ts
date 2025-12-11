@@ -1,37 +1,17 @@
 import { v4 as uuidv4 } from "uuid";
+import {
+	ASSIGNEES,
+	type Assignee,
+	PRIORITIES,
+	type Priority,
+	STATUSES,
+	type Status,
+	TAGS,
+	type Tag,
+} from "@/shared/filter-columns-and-values.mock";
 
-export type Status = "Not Started" | "In Progress" | "Completed" | "Cancelled";
-export type Priority = "Low" | "Medium" | "High";
-export type Tag =
-	| "Bug"
-	| "Feature"
-	| "Documentation"
-	| "Refactoring"
-	| "Testing"
-	| "Other";
-type Assignee = "John Doe" | "Jane Smith" | "Alice Johnson" | "Bob Brown";
-
-const STATUSES: Status[] = [
-	"Not Started",
-	"In Progress",
-	"Completed",
-	"Cancelled",
-];
-const PRIORITIES: Priority[] = ["Low", "Medium", "High"];
-const TAGS: Tag[] = [
-	"Bug",
-	"Feature",
-	"Documentation",
-	"Refactoring",
-	"Testing",
-	"Other",
-];
-const ASSIGNEES: Assignee[] = [
-	"John Doe",
-	"Jane Smith",
-	"Alice Johnson",
-	"Bob Brown",
-];
+// Re-export types for consumers that import from this file
+export type { Status, Priority, Tag, Assignee };
 
 const TASK_PREFIXES = [
 	"Implement",
@@ -105,10 +85,10 @@ export function generateRows(numRows: number): MyRow[] {
 				Date.now() - Math.floor(Math.random() * 1000 * 60 * 60 * 10),
 			), // sometime in the last 10 hours
 			text: `${randomItem(TASK_PREFIXES)} ${randomItem(TASK_SUBJECTS)} ${i + 1}`,
-			status: randomItem(STATUSES),
-			tags: randomItems(TAGS, 1, 3),
-			assignee: randomItem(ASSIGNEES),
-			priority: randomItem(PRIORITIES),
+			status: randomItem([...STATUSES]),
+			tags: randomItems([...TAGS], 1, 3),
+			assignee: randomItem([...ASSIGNEES]),
+			priority: randomItem([...PRIORITIES]),
 		});
 	}
 	return data;
