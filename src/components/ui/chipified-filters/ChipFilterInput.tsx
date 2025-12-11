@@ -788,7 +788,7 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 					)}
 
 					{sortedFilters.length > 0 || draftTextFilter ? (
-						<Toolbar.Root aria-label="Applied filters" className="contents">
+						<Toolbar.Root aria-label="Applied filters" className="contents" loop={false}>
 							{sortedFilters.map((filter, index) => (
 								<AppliedFilter
 									key={filter.id}
@@ -800,7 +800,6 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 											? () => inputRef.current?.focus()
 											: undefined
 									}
-									preventOperatorLeftWrap={index === 0}
 									chipHeight="sm"
 								/>
 							))}

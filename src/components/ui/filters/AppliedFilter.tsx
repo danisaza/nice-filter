@@ -39,8 +39,6 @@ interface AppliedFilterProps {
 	onRemove?: () => void;
 	/** Callback when right arrow is pressed on the remove button (for custom navigation) */
 	onRemoveButtonRightArrow?: () => void;
-	/** If true, left arrow on the operator button won't navigate (prevents wrap) */
-	preventOperatorLeftWrap?: boolean;
 	/** Height variant for the chip. Defaults to "md" (36px). */
 	chipHeight?: ChipHeight;
 }
@@ -51,7 +49,6 @@ const AppliedFilter = memo(
 		removeButtonRef,
 		onRemove,
 		onRemoveButtonRightArrow,
-		preventOperatorLeftWrap,
 		chipHeight = "md",
 	}: AppliedFilterProps) => {
 		const { getPropertyNameToDisplay } = useFilters();
@@ -72,11 +69,7 @@ const AppliedFilter = memo(
 						propertyNameToDisplay={propertyNameToDisplay}
 						chipHeight={chipHeight}
 					/>
-					<TextMiddle
-						filter={filter}
-						preventLeftWrap={preventOperatorLeftWrap}
-						chipHeight={chipHeight}
-					/>
+					<TextMiddle filter={filter} chipHeight={chipHeight} />
 					<TextRight filter={filter} chipHeight={chipHeight} />
 					<Remove
 						filterId={filter.id}
@@ -101,11 +94,7 @@ const AppliedFilter = memo(
 					propertyNameToDisplay={propertyNameToDisplay}
 					chipHeight={chipHeight}
 				/>
-				<Middle
-					filter={filter}
-					preventLeftWrap={preventOperatorLeftWrap}
-					chipHeight={chipHeight}
-				/>
+				<Middle filter={filter} chipHeight={chipHeight} />
 				<Right filter={filter} chipHeight={chipHeight} />
 				<Remove
 					filterId={filter.id}
@@ -140,12 +129,10 @@ const Left = ({
 
 interface MiddleProps {
 	filter: TAppliedFilter;
-	/** If true, left arrow won't navigate (prevents wrap) */
-	preventLeftWrap?: boolean;
 	chipHeight: ChipHeight;
 }
 
-const Middle = ({ filter, preventLeftWrap, chipHeight }: MiddleProps) => {
+const Middle = ({ filter, chipHeight }: MiddleProps) => {
 	const { updateFilterRelationship } = useFilters();
 
 	const { selectionType, values } = filter;
@@ -162,13 +149,6 @@ const Middle = ({ filter, preventLeftWrap, chipHeight }: MiddleProps) => {
 		relationshipOptions = relationshipOptionsByNumValues.MANY;
 	}
 
-	const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
-		if (e.key === "ArrowLeft" && preventLeftWrap) {
-			e.preventDefault();
-			e.stopPropagation();
-		}
-	};
-
 	return (
 		<DropdownMenu.Root>
 			<Toolbar.Button asChild>
@@ -180,7 +160,6 @@ const Middle = ({ filter, preventLeftWrap, chipHeight }: MiddleProps) => {
 							CHIP_TEXT_SIZE_VARIANTS[chipHeight],
 						)}
 						aria-label={`Filter relationship`}
-						onKeyDown={handleKeyDown}
 					>
 						{filter.relationship}
 					</button>
@@ -222,30 +201,17 @@ const Middle = ({ filter, preventLeftWrap, chipHeight }: MiddleProps) => {
 
 interface TextMiddleProps {
 	filter: TAppliedFilter;
-	/** If true, left arrow won't navigate (prevents wrap) */
-	preventLeftWrap?: boolean;
 	chipHeight: ChipHeight;
 }
 
 /**
  * Middle section for text filters - shows relationship dropdown (contains/does not contain)
  */
-const TextMiddle = ({
-	filter,
-	preventLeftWrap,
-	chipHeight,
-}: TextMiddleProps) => {
+const TextMiddle = ({ filter, chipHeight }: TextMiddleProps) => {
 	const { updateFilterRelationship } = useFilters();
 
 	// Text filters always have the same set of operators
 	const relationshipOptions = TEXT_SELECTION_OPERATORS.ONE;
-
-	const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
-		if (e.key === "ArrowLeft" && preventLeftWrap) {
-			e.preventDefault();
-			e.stopPropagation();
-		}
-	};
 
 	return (
 		<DropdownMenu.Root>
@@ -258,7 +224,6 @@ const TextMiddle = ({
 							CHIP_TEXT_SIZE_VARIANTS[chipHeight],
 						)}
 						aria-label="Filter relationship"
-						onKeyDown={handleKeyDown}
 					>
 						{filter.relationship}
 					</button>
