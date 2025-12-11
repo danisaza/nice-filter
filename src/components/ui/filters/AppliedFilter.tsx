@@ -142,21 +142,18 @@ const Root = forwardRef<HTMLFieldSetElement, RootProps>(
 
 		return (
 			<AppliedFilterContext.Provider value={contextValue}>
-				<Toolbar.Root asChild>
-					<fieldset
-						ref={ref}
-						name={`${propertyNameToDisplay} filter`}
-						data-testid="applied-filter"
-						className={twMerge(
-							"border border-slate-300 text-slate-900 rounded inline-flex items-center",
-							heightClass,
-							className,
-						)}
-						{...props}
-					>
-						{children}
-					</fieldset>
-				</Toolbar.Root>
+				<fieldset
+					ref={ref}
+					name={`${propertyNameToDisplay} filter`}
+					className={twMerge(
+						"border border-slate-300 text-slate-900 rounded inline-flex items-center",
+						heightClass,
+						className,
+					)}
+					{...props}
+				>
+					{children}
+				</fieldset>
 			</AppliedFilterContext.Provider>
 		);
 	},
@@ -654,7 +651,6 @@ const RemoveButton = forwardRef<HTMLButtonElement, RemoveButtonProps>(
 					onClick={handleRemove}
 					onKeyDown={handleKeyDown}
 					aria-label="Remove filter"
-					data-testid="remove-filter"
 					{...props}
 				>
 					{children ?? <X className={iconSize} aria-hidden="true" />}
