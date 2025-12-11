@@ -60,6 +60,7 @@ export const AutocompleteDropdown: React.FC<AutocompleteDropdownProps> = ({
 					<button
 						key={`${suggestion.type}-${suggestion.text}-${index}`}
 						type="button"
+						tabIndex={-1}
 						data-index={index}
 						onMouseDown={(e) => e.preventDefault()}
 						onClick={() => onSelect(suggestion)}

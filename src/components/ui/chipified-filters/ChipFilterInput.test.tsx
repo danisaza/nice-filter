@@ -555,10 +555,7 @@ describe("ChipFilterInput", () => {
 			 * 1. Type "sta" - valid prefix for "status"
 			 * 2. Press Escape - dropdown closes
 			 * 3. Press spacebar - input becomes "sta "
-			 * 4. Observe that the magic wand icon is displayed (indicating NL mode)
-			 *
-			 * EXPECTED: Magic wand icon displayed because "sta " is natural language
-			 * ACTUAL (BUG): Search icon displayed because we're not detecting NL mode correctly
+			 * 4. Observe that the data-ai-mode attribute is set (indicating NL mode)
 			 */
 			const user = userEvent.setup();
 			render(
@@ -574,9 +571,9 @@ describe("ChipFilterInput", () => {
 			await user.type(input, "sta");
 			expect(input).toHaveValue("sta");
 
-			// Should show search icon (not in NL mode yet - "sta" is valid prefix)
-			expect(screen.getByTestId("search-icon")).toBeInTheDocument();
-			expect(screen.queryByTestId("magic-wand-icon")).not.toBeInTheDocument();
+			// Should NOT be in AI mode yet - "sta" is valid prefix
+			const wrapper = document.getElementById("chip-filter-input-wrapper");
+			expect(wrapper).not.toHaveAttribute("data-ai-mode");
 
 			// Press Escape to close the dropdown
 			await user.keyboard("{Escape}");
@@ -586,10 +583,8 @@ describe("ChipFilterInput", () => {
 			expect(input).toHaveValue("sta ");
 
 			// "sta " is NOT a valid prefix for any column (no column starts with "sta ")
-			// Therefore we should be in natural language mode
-			// The magic wand icon should now be displayed
-			expect(screen.getByTestId("magic-wand-icon")).toBeInTheDocument();
-			expect(screen.queryByTestId("search-icon")).not.toBeInTheDocument();
+			// Therefore we should be in natural language mode (data-ai-mode attribute set)
+			expect(wrapper).toHaveAttribute("data-ai-mode");
 		});
 
 		test("space selects first option when input is empty and dropdown is open", async () => {
