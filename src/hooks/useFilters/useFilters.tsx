@@ -90,7 +90,7 @@ export function FiltersProvider<T extends Row>({
 }: FiltersProviderProps<T>) {
 	const [filters, setFilters] = useState<TAppliedFilter[]>([]);
 	//              ^?
-	const [matchType, setMatchType] = useState<MatchType>(MATCH_TYPES.ANY);
+	const [matchType, setMatchType] = useState<MatchType>(MATCH_TYPES.ALL);
 	const [filterCategories, setFilterCategories] = useState<FilterOption<T>[]>(
 		[],
 	);
@@ -134,10 +134,10 @@ export function FiltersProvider<T extends Row>({
 			values,
 			textValue,
 			isNegation = false,
-		}: Omit<
-			TAppliedFilter,
-			"createdAt" | "relationship" | "_cacheVersion"
-		> & { textValue?: string; isNegation?: boolean }) => {
+		}: Omit<TAppliedFilter, "createdAt" | "relationship" | "_cacheVersion"> & {
+			textValue?: string;
+			isNegation?: boolean;
+		}) => {
 			const newFilter = {
 				id,
 				createdAt: Date.now(),

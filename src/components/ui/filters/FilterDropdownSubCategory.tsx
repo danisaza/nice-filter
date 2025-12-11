@@ -1,17 +1,14 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { forwardRef, useEffect, useRef, useState } from "react";
+import { forwardRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useFilters } from "@/App.tsx";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { SELECTION_TYPES } from "@/hooks/useFilters/constants";
 import type { ComboboxOption, TAppliedFilter } from "@/hooks/useFilters/types";
 
 // NOTE: standalone indicates that the subcategory is NOT being displayed in the filter-builder
 //       (i.e. the user is updating an existing filter from an AppliedFilter dropdown)
 type FilterDropdownSubCategoryProps = {
 	categoryId: string;
-	onFilterCreated?: () => void;
 } & (
 	| { standalone: true; after?: undefined; filterId: string }
 	| { standalone?: false; after: number; filterId?: undefined }
@@ -100,72 +97,6 @@ const FilterDropdownSubCategory = forwardRef<
 		addFilter(newFilter);
 	};
 	const options = getOptionsForFilterCategory(categoryId);
-	const filterOption = filterCategories.find((c) => c.id === categoryId);
-	const isTextFilter = filterOption?.selectionType === SELECTION_TYPES.TEXT;
-
-	// For TEXT filters, we need local state for the input
-	const [textInputValue, setTextInputValue] = useState("");
-	const textInputRef = useRef<HTMLInputElement>(null);
-
-	// Focus the text input when it mounts (for keyboard navigation)
-	// Use requestAnimationFrame to ensure focus happens after Radix's focus management
-	useEffect(() => {
-		if (isTextFilter && textInputRef.current) {
-			requestAnimationFrame(() => {
-				textInputRef.current?.focus();
-			});
-		}
-	}, [isTextFilter]);
-
-	const handleTextFilterSubmit = () => {
-		if (!textInputValue.trim()) return;
-		if (!filterOption) return;
-
-		const newFilter = {
-			id: uuidv4(),
-			categoryId,
-			selectionType: filterOption.selectionType,
-			propertyNameSingular: filterOption.propertyNameSingular,
-			propertyNamePlural: filterOption.propertyNamePlural,
-			options: filterOption.options,
-			values: [],
-			textValue: textInputValue.trim(),
-		};
-		addFilter(newFilter);
-		setTextInputValue("");
-		props.onFilterCreated?.();
-	};
-
-	// Render text input for TEXT filters
-	if (isTextFilter) {
-		return (
-			<div ref={forwardedRef} className="p-2">
-				<form
-					onSubmit={(e) => {
-						e.preventDefault();
-						handleTextFilterSubmit();
-					}}
-				>
-					<Input
-						ref={textInputRef}
-						placeholder="Enter search text..."
-						value={textInputValue}
-						onChange={(e) => setTextInputValue(e.target.value)}
-						onKeyDown={(e) => e.stopPropagation()}
-						className="mb-2"
-					/>
-					<button
-						type="submit"
-						disabled={!textInputValue.trim()}
-						className="w-full px-3 py-1.5 text-sm bg-accent text-accent-foreground rounded hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed"
-					>
-						Add filter
-					</button>
-				</form>
-			</div>
-		);
-	}
-
 	return (
 		<div ref={forwardedRef}>
 			{options.map((option) => {
@@ -176,14 +107,13 @@ const FilterDropdownSubCategory = forwardRef<
 						key={option.id}
 						checked={isSelected}
 						textValue={option.label}
-						data-testid="filter-option"
 						onSelect={(e) => {
 							e.preventDefault();
 						}}
 						onCheckedChange={() => {
 							handleValueSelected(option);
 						}}
-						className="relative flex flex-col bg-white cursor-default gap-2 select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled=true]:pointer-events-none data-[highlighted]:bg-accent data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50 data-[highlighted]:text-accent-foreground data-[state=open]:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+						className="relative flex flex-col bg-white cursor-default gap-2 select-none items-center px-3 py-2 text-sm outline-none transition-colors text-gray-700 hover:bg-gray-50 data-[highlighted]:bg-blue-50 data-[highlighted]:text-blue-900 data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
 					>
 						<div className="flex items-center gap-2 px-2 py-1 w-full">
 							<Checkbox
