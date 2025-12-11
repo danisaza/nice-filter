@@ -176,6 +176,7 @@ const FilterDropdownSubCategory = forwardRef<
 						key={option.id}
 						checked={isSelected}
 						textValue={option.label}
+						data-testid="filter-option"
 						onSelect={(e) => {
 							e.preventDefault();
 						}}

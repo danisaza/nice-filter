@@ -23,6 +23,7 @@ const FilterDropdownCategory = memo(
 					<DropdownMenu.SubTrigger
 						ref={forwardedRef}
 						onKeyDown={props.onKeyDown}
+						data-testid="filter-category"
 						className="h-10 relative flex cursor-default gap-2 select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[disabled=true]:pointer-events-none data-[highlighted]:bg-accent data-highlighted:data-[state=open]:bg-accent data-[state=open]:bg-accent/70 data-[selected=true]:text-accent-foreground data-[disabled=true]:opacity-50 data-[highlighted]:text-accent-foreground data-[state=open]:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
 					>
 						{props.triggerText}
