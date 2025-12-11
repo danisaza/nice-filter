@@ -61,6 +61,13 @@ const ASSIGNEE_OPTIONS: ComboboxOption[] = [
 export const FILTER_CATEGORIES: FilterOption<MyRow>[] = [
 	{
 		id: uuidv4(),
+		selectionType: SELECTION_TYPES.TEXT,
+		propertyNameSingular: "text",
+		propertyNamePlural: "text",
+		options: [], // TEXT filters don't have predefined options
+	},
+	{
+		id: uuidv4(),
 		selectionType: SELECTION_TYPES.RADIO,
 		propertyNameSingular: "status",
 		propertyNamePlural: "statuses",

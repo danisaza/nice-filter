@@ -141,6 +141,9 @@ export function updateFilterValueAndRelationship(
 			[OPERATORS.INCLUDE_ALL_OF]: OPERATORS.INCLUDE_ALL_OF,
 			[OPERATORS.INCLUDE_ANY_OF]: OPERATORS.INCLUDE_ANY_OF,
 			[OPERATORS.EXCLUDE_IF_ALL]: OPERATORS.EXCLUDE_IF_ALL,
+			// Text operators (text filters don't upsize but include for completeness)
+			[OPERATORS.CONTAINS]: OPERATORS.CONTAINS,
+			[OPERATORS.DOES_NOT_CONTAIN]: OPERATORS.DOES_NOT_CONTAIN,
 		};
 		const newRelationship = upsizingMap[filter.relationship];
 		if (filter.selectionType === SELECTION_TYPES.RADIO) {

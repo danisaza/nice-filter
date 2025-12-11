@@ -4,6 +4,7 @@ import {
 	OPERATORS,
 	RADIO_SELECTION_OPERATORS,
 	SELECTION_TYPES,
+	TEXT_SELECTION_OPERATORS,
 } from "./constants";
 import type {
 	MatchType,
@@ -51,7 +52,8 @@ export function filterRow<T extends Row>(
 	const selectionType: RelationshipType = filter.selectionType;
 	if (
 		selectionType !== SELECTION_TYPES.RADIO &&
-		selectionType !== SELECTION_TYPES.CHECKBOXES
+		selectionType !== SELECTION_TYPES.CHECKBOXES &&
+		selectionType !== SELECTION_TYPES.TEXT
 	) {
 		// NOTE: It's arguably not necessary to have these runtime checks, since typescript gives us guarantees.
 		//       But if there ARE things that are slipping past the type-checker, these error logs will make it
@@ -63,6 +65,11 @@ export function filterRow<T extends Row>(
 		//       things are stable.
 		console.error(`Invalid selection type: ${selectionType}`);
 		return true;
+	}
+
+	// TEXT filters use textValue instead of values array
+	if (selectionType === SELECTION_TYPES.TEXT) {
+		return filterByText(row, filter);
 	}
 
 	// if there are zero values selected, it's equivalent to not having the filter applied
@@ -190,4 +197,56 @@ export function filterByCheckbox<T extends Row>(
 
 	console.error(`Invalid relationship: ${filter.relationship}`);
 	return true;
+}
+
+export function filterByText<T extends Row>(
+	row: T,
+	filter: TAppliedFilter,
+): boolean {
+	if (!filter.propertyNameSingular) {
+		console.error("propertyNameSingular is required for text filters");
+		return true;
+	}
+	if (filter.selectionType !== SELECTION_TYPES.TEXT) {
+		console.error("filterByText called with non-text filter");
+		return true;
+	}
+
+	const textValue = filter.textValue;
+	// If no text value, don't filter
+	if (!textValue || textValue.trim() === "") {
+		return true;
+	}
+
+	const propertyNameSingular = filter.propertyNameSingular;
+	const rowValue = row[propertyNameSingular];
+	if (typeof rowValue !== "string") {
+		console.error(
+			`Expected a string value for property ${propertyNameSingular}, but got ${typeof rowValue}`,
+		);
+		return true; // default to true so that at least the user can see the row
+	}
+
+	const relationshipOptions = TEXT_SELECTION_OPERATORS.ONE;
+	const isRelationshipValid = relationshipOptions.includes(filter.relationship);
+	if (!isRelationshipValid) {
+		console.error(
+			`Invalid relationship for text filter: ${filter.relationship}`,
+		);
+		return true; // default to true so that at least the user can see the row
+	}
+
+	const normalizedRowValue = rowValue.toLowerCase();
+	const normalizedSearchValue = textValue.toLowerCase();
+
+	if (filter.relationship === OPERATORS.CONTAINS) {
+		return normalizedRowValue.includes(normalizedSearchValue);
+	}
+
+	if (filter.relationship === OPERATORS.DOES_NOT_CONTAIN) {
+		return !normalizedRowValue.includes(normalizedSearchValue);
+	}
+
+	console.error(`Invalid relationship: ${filter.relationship}`);
+	return true; // default to true so that at least the user can see the row
 }
