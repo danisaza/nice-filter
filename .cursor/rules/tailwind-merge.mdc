@@ -1,0 +1,103 @@
+---
+description: when merging/joining tailwind classes or applying tailwind classes conditionally
+alwaysApply: false
+---
+
+# Tailwind Merge Best Practices
+
+## When to Use tailwind-merge
+
+Use `twMerge` as an **escape hatch**, not the primary tool for handling style variants.
+
+**Good use cases:**
+
+- Composing components through multiple levels (design systems, UI libraries)
+- Enabling fast iteration without defining every style variant upfront
+- Deferring abstractions until you're sure you need them
+- Merging a `className` prop with component defaults
+
+**Avoid when:**
+
+- Bundle size is critical (~7 kB minified + gzipped)
+- You need full control over component styling
+- Components are highly reusable and frequently refactored
+- You're not using Tailwind CSS or component composition
+
+## Prefer `twJoin` for Internal Classes
+
+When merging classes defined entirely within a component, use `twJoin` instead of `twMerge`:
+
+```tsx
+import { twJoin } from "tailwind-merge";
+
+function MyComponent({ forceHover, disabled, isMuted }) {
+  return (
+    <div
+      className={twJoin(
+        "grid w-max gap-2",
+        forceHover
+          ? "bg-gray-200"
+          : ["bg-white", !disabled && "hover:bg-gray-200"],
+        isMuted && "text-gray-600"
+      )}
+    />
+  );
+}
+```
+
+**Why:**
+
+- Same performance as `clsx` (no conflict resolution)
+- Forces explicit handling of conflicting classes
+- Easier to reason about which classes apply
+
+## Use `twMerge` for className Props
+
+Reserve `twMerge` for merging external `className` props with internal defaults:
+
+```tsx
+import { twMerge } from "tailwind-merge";
+
+function MyComponent({ className }) {
+  return (
+    <div
+      className={twMerge(
+        "grid w-max gap-2 bg-white",
+        className // Always last
+      )}
+    />
+  );
+}
+```
+
+## Alternatives to Consider
+
+**Props for style variants** - Default approach for known variations:
+
+```tsx
+function Button({ variant = "primary", isFullWidth }) {
+  return (
+    <button className={twJoin(VARIANTS[variant], isFullWidth && "w-full")} />
+  );
+}
+```
+
+**Important modifier** - For one-off overrides (single level only):
+
+```tsx
+<Button className="bg-red-500!">Danger</Button>
+```
+
+**Custom variant with `:where()`** - Lower specificity base classes:
+
+```css
+@custom-variant component (:where(&));
+```
+
+```tsx
+<button className="component:bg-blue-500 component:text-white" />
+```
+
+## Configuration Reminder
+
+If using a custom Tailwind config, configure tailwind-merge to match.
