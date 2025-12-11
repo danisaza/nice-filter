@@ -4,11 +4,11 @@ import {
 	type FilterColumnConfig,
 	formatFilterConfigForPrompt,
 	getFilterConfig,
-} from "./db/filter-columns-and-values.mock";
+} from "./db/filter-columns-and-values.mock.js";
 import {
 	type AISearchTerms,
 	AISearchTermsSchema,
-} from "./schemas/ai-search-schema";
+} from "./schemas/ai-search-schema.js";
 
 /**
  * Response format for the parse-filters endpoint.

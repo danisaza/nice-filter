@@ -8,7 +8,7 @@
 import {
 	FILTER_COLUMNS,
 	type FilterColumnType,
-} from "@/shared/filter-columns-and-values.mock";
+} from "../../shared/filter-columns-and-values.mock.js";
 
 // Re-export the type for consumers
 export type { FilterColumnType };
