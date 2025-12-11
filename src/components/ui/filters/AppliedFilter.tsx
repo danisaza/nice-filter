@@ -15,7 +15,7 @@ import {
 import type { Operator, TAppliedFilter } from "@/hooks/useFilters/types";
 
 const dropdownMenuContentClassNames =
-	"border border-slate-300 min-w-[220px] bg-white rounded-md p-1 shadow-lg animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2";
+	"border border-gray-200 min-w-[220px] bg-white rounded-lg shadow-lg animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2";
 
 export type ChipHeight = "sm" | "md" | "lg";
 
@@ -204,7 +204,7 @@ const Middle = ({ filter, preventLeftWrap, chipHeight }: MiddleProps) => {
 					>
 						{relationshipOptions.map((relationshipOption) => (
 							<DropdownMenu.RadioItem
-								className="text-nowrap relative flex items-center px-2 py-1.5 outline-none transition-colors focus:bg-slate-100 focus:text-slate-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+								className="text-nowrap relative flex items-center px-3 py-2 text-sm outline-none transition-colors text-gray-700 hover:bg-gray-50 focus:bg-blue-50 focus:text-blue-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
 								key={relationshipOption}
 								value={relationshipOption}
 							>
@@ -283,7 +283,7 @@ const TextMiddle = ({
 					>
 						{relationshipOptions.map((relationshipOption) => (
 							<DropdownMenu.RadioItem
-								className="text-nowrap relative flex items-center px-2 py-1.5 outline-none transition-colors focus:bg-slate-100 focus:text-slate-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+								className="text-nowrap relative flex items-center px-3 py-2 text-sm outline-none transition-colors text-gray-700 hover:bg-gray-50 focus:bg-blue-50 focus:text-blue-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
 								key={relationshipOption}
 								value={relationshipOption}
 							>
@@ -471,7 +471,7 @@ const Right = ({
 						event.preventDefault();
 						buttonRef.current?.focus();
 					}}
-					className="border shadow-md border-gray-300 min-w-[220px] rounded-md bg-white p-[5px] will-change-[opacity,transform] data-[side=bottom]:animate-slideUpAndFade data-[side=left]:animate-slideRightAndFade data-[side=right]:animate-slideLeftAndFade data-[side=top]:animate-slideDownAndFade"
+					className="border border-gray-200 min-w-[220px] rounded-lg bg-white shadow-lg will-change-[opacity,transform] data-[side=bottom]:animate-slideUpAndFade data-[side=left]:animate-slideRightAndFade data-[side=right]:animate-slideLeftAndFade data-[side=top]:animate-slideDownAndFade"
 				>
 					<FilterDropdownSubCategory
 						standalone
