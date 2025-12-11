@@ -4,9 +4,6 @@ import { z } from "zod";
 export const env = createEnv({
 	// these environment variables are only available on the server
 	server: {
-		NODE_ENV: z
-			.enum(["development", "test", "production"])
-			.default("development"),
 		OPENAI_API_KEY: z.string().min(1),
 		STAGEHAND_ENV: z.enum(["LOCAL", "BROWSERBASE"]),
 	},
@@ -19,12 +16,7 @@ export const env = createEnv({
 
 	// these environment variables are available everywhere
 	client: {
-		// VITE_VERCEL_URL is automatically provided by Vercel (without protocol)
-		// Falls back to localhost for local development
-		VITE_VERCEL_URL: z
-			.string()
-			.optional()
-			.transform((url) => (url ? `https://${url}` : "http://localhost:5173")),
+		VITE_BASE_URL: z.url(),
 	},
 
 	/**
