@@ -4,7 +4,6 @@ import {
 	OPERATORS,
 	type RADIO_SELECTION_OPERATORS,
 	type SELECTION_TYPES,
-	type TEXT_SELECTION_OPERATORS,
 } from "./constants";
 
 // NOTE: The set of supported types can expand over time
@@ -52,9 +51,6 @@ export type RadioOperator =
 export type CheckboxOperator =
 	(typeof CHECKBOX_SELECTION_OPERATORS)[keyof typeof CHECKBOX_SELECTION_OPERATORS][number];
 
-export type TextOperator =
-	(typeof TEXT_SELECTION_OPERATORS)[keyof typeof TEXT_SELECTION_OPERATORS][number];
-
 export type RadioSelectionOperators =
 	(typeof RADIO_SELECTION_RELATIONSHIPS)[keyof typeof RADIO_SELECTION_RELATIONSHIPS][number];
 
@@ -77,13 +73,6 @@ export type FilterDiscriminatedUnionVariant =
 			propertyNameSingular?: string | undefined;
 			propertyNamePlural: string;
 			relationship: CheckboxOperator;
-	  }
-	| {
-			selectionType: typeof SELECTION_TYPES.TEXT;
-			propertyNameSingular: string;
-			propertyNamePlural?: string | undefined;
-			relationship: TextOperator;
-			textValue: string; // the user-entered search text
 	  };
 
 export type TAppliedFilter = {
