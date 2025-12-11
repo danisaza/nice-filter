@@ -10,6 +10,7 @@ export default function MatchTypeSwitcher() {
 			{numAppliedFilters > 1 ? (
 				<Button
 					variant="outline"
+					data-testid="match-type-switcher"
 					onClick={() => {
 						setMatchType((currMatchType) =>
 							currMatchType === MATCH_TYPES.ANY
