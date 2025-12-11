@@ -1,0 +1,785 @@
+---
+description: when considering whether to refactor complex components with various parts to use the compound component pattern
+alwaysApply: false
+---
+
+## Identifying Candidates for Compound Components
+
+Not every component should become a compound component. Here's how to identify good candidates.
+
+### Signs a Component Should Be Refactored
+
+**1. Prop Explosion**
+
+When a component accumulates many props that control rendering of distinct sections:
+
+```tsx
+// Red flag: too many rendering concerns in one component
+<Card
+  title="Hello"
+  titleClassName="text-xl"
+  subtitle="World"
+  showSubtitle={true}
+  headerAction={<Button>Edit</Button>}
+  headerActionPosition="right"
+  footer={<span>Footer content</span>}
+  footerClassName="border-t"
+  children={content}
+/>
+```
+
+**2. Render Props Proliferation**
+
+When you're passing multiple render functions:
+
+```tsx
+<DataTable
+  data={rows}
+  renderHeader={(column) => ...}
+  renderCell={(cell, row) => ...}
+  renderFooter={() => ...}
+  renderEmpty={() => ...}
+  renderLoading={() => ...}
+/>
+```
+
+**3. Conditional Rendering Logic Leaking Out**
+
+When consumers write complex conditionals to control what shows:
+
+```tsx
+<Modal
+  showHeader={hasTitle}
+  showFooter={hasActions}
+  showCloseButton={isCloseable && !isRequired}
+  footerContent={isConfirm ? confirmButtons : defaultButtons}
+/>
+```
+
+**4. Repeated Wrapper Patterns**
+
+When consumers always wrap or extend your component the same way:
+
+```tsx
+// If people keep doing this...
+<div className="filter-wrapper">
+  <Filter {...props} />
+  <button onClick={onClear}>Clear</button>
+</div>
+
+// ...the clear button probably belongs in the component API
+```
+
+**5. Accessibility Requires Tight Coupling**
+
+When multiple elements need coordinated ARIA attributes, roles, or keyboard handling:
+
+- Tabs and tab panels
+- Accordions
+- Menus and menu items
+- Dialogs with trigger buttons
+- Comboboxes and listboxes
+
+### Questions to Ask
+
+| Question                                                 | If Yes → Compound |
+| -------------------------------------------------------- | ----------------- |
+| Does this component have 3+ distinct visual regions?     | ✓                 |
+| Do consumers frequently need to customize the structure? | ✓                 |
+| Are there accessibility relationships between parts?     | ✓                 |
+| Do I keep adding `render*` or `*Content` props?          | ✓                 |
+| Is the component used in wildly different contexts?      | ✓                 |
+| Do I find myself adding `show*` boolean props?           | ✓                 |
+
+---
+
+## When NOT to Use Compound Components
+
+The pattern adds complexity. Avoid it when:
+
+**1. The Component Is Truly Simple**
+
+A button with variants doesn't need to be compound:
+
+```tsx
+// This is fine. Don't over-engineer it.
+<Button variant="primary" size="lg" onClick={handleClick}>
+  Submit
+</Button>
+```
+
+**2. Structure Is Fixed**
+
+If the internal structure never varies, compound components add ceremony without benefit:
+
+```tsx
+// If the avatar is always just an image in a circle,
+// there's nothing to compose
+<Avatar src={user.photo} alt={user.name} size="md" />
+```
+
+**3. Consumers Don't Need Control**
+
+If your component is only used internally and always looks the same, a simpler API is easier to maintain.
+
+**4. Performance Is Critical**
+
+Context providers add overhead. For components rendered thousands of times (like table cells), the cost may matter.
+
+**5. The Team Prefers Simplicity**
+
+Compound components have a learning curve. If your team is small or the codebase is simple, the pattern may be overkill.
+
+### The Spectrum of Control
+
+```
+Less flexible                                    More flexible
+     │                                                │
+     ▼                                                ▼
+Single prop ──► Config object ──► Render props ──► Compound
+  component        prop                            components
+
+<Badge color="red" />
+          │
+          ▼
+<Badge config={{ color: 'red', icon: Star }} />
+          │
+          ▼
+<Badge renderIcon={(props) => <Star {...props} />} />
+          │
+          ▼
+<Badge.Root>
+  <Badge.Icon><Star /></Badge.Icon>
+  <Badge.Text>New</Badge.Text>
+</Badge.Root>
+```
+
+Choose the simplest option that meets your flexibility needs.
+
+---
+
+## Implementation Best Practices
+
+### 1. Use a Clear Naming Convention
+
+Adopt a consistent pattern. The `Component.SubComponent` convention (using object property assignment) is most common:
+
+```tsx
+// Defining
+export const Select = {
+  Root: SelectRoot,
+  Trigger: SelectTrigger,
+  Content: SelectContent,
+  Item: SelectItem,
+  Value: SelectValue,
+};
+
+// Or attach to a function component
+Select.Root = SelectRoot;
+Select.Trigger = SelectTrigger;
+// ...
+
+// Usage
+<Select.Root>
+  <Select.Trigger />
+</Select.Root>;
+```
+
+Alternative: named exports (less common but works):
+
+```tsx
+import { SelectRoot, SelectTrigger, SelectItem } from "./select";
+```
+
+### 2. Provide Sensible Defaults
+
+Compound components should work with minimal configuration:
+
+```tsx
+// This should just work
+<Dialog.Root>
+  <Dialog.Trigger>Open</Dialog.Trigger>
+  <Dialog.Content>
+    <Dialog.Title>Hello</Dialog.Title>
+    <Dialog.Description>Content here</Dialog.Description>
+  </Dialog.Content>
+</Dialog.Root>
+```
+
+### 3. Make Sub-Components Optional Where Possible
+
+Don't require every sub-component:
+
+```tsx
+// Should work without explicit trigger if controlled
+<Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
+  <Dialog.Content>...</Dialog.Content>
+</Dialog.Root>
+```
+
+### 4. Forward Refs and Spread Props
+
+Every sub-component should accept standard HTML attributes and forward refs:
+
+```tsx
+const SelectTrigger = forwardRef<HTMLButtonElement, SelectTriggerProps>(
+  ({ className, children, ...props }, ref) => {
+    const context = useSelectContext();
+
+    return (
+      <button
+        ref={ref}
+        className={cn("select-trigger", className)}
+        aria-expanded={context.isOpen}
+        {...props}
+      >
+        {children}
+      </button>
+    );
+  }
+);
+```
+
+### 5. Throw Helpful Errors
+
+When sub-components are used outside their parent, fail clearly:
+
+```tsx
+function useSelectContext() {
+  const context = useContext(SelectContext);
+
+  if (!context) {
+    throw new Error(
+      "Select compound components must be used within <Select.Root>. " +
+        "Make sure you're not using <Select.Item> outside of its parent."
+    );
+  }
+
+  return context;
+}
+```
+
+### 6. Support the `asChild` Pattern
+
+Allow consumers to replace the underlying element entirely (popularized by Radix):
+
+```tsx
+<Dialog.Trigger asChild>
+  <MyCustomButton>Open Dialog</MyCustomButton>
+</Dialog.Trigger>
+```
+
+Implementation uses `Slot` from `@radix-ui/react-slot` or a similar utility:
+
+```tsx
+import { Slot } from "@radix-ui/react-slot";
+
+const DialogTrigger = forwardRef<HTMLButtonElement, DialogTriggerProps>(
+  ({ asChild, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button";
+    return <Comp ref={ref} {...props} />;
+  }
+);
+```
+
+### 7. Co-locate Types
+
+Export types alongside components so consumers can extend them:
+
+```tsx
+export interface SelectRootProps {
+  value?: string;
+  defaultValue?: string;
+  onValueChange?: (value: string) => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+}
+
+export interface SelectItemProps {
+  value: string;
+  disabled?: boolean;
+  children: React.ReactNode;
+}
+```
+
+### 8. Document the Composition Contract
+
+Be explicit about which combinations are valid:
+
+````tsx
+/**
+ * Select compound component for building accessible select menus.
+ *
+ * @example
+ * ```tsx
+ * <Select.Root>
+ *   <Select.Trigger>
+ *     <Select.Value placeholder="Select..." />
+ *   </Select.Trigger>
+ *   <Select.Content>
+ *     <Select.Item value="1">Option 1</Select.Item>
+ *     <Select.Item value="2">Option 2</Select.Item>
+ *   </Select.Content>
+ * </Select.Root>
+ * ```
+ *
+ * Required structure:
+ * - Root must contain Trigger and Content
+ * - Trigger should contain Value
+ * - Content must contain at least one Item
+ */
+````
+
+---
+
+## Style Composition with `tailwind-merge`
+
+When building compound components with Tailwind CSS, you need a strategy for merging the component's default styles with styles passed via `className` props. The `tailwind-merge` library solves the class conflict problem that arises when consumers override your defaults.
+
+### The Problem
+
+Without intelligent merging, Tailwind classes accumulate rather than override:
+
+```tsx
+// Simple string concatenation doesn't work
+function Button({ className, children }) {
+  return (
+    <button className={`bg-blue-500 px-4 py-2 ${className}`}>{children}</button>
+  );
+}
+
+// Consumer tries to override the background
+<Button className="bg-red-500">Delete</Button>;
+
+// Result: "bg-blue-500 px-4 py-2 bg-red-500"
+// Both bg-blue-500 AND bg-red-500 are in the class string!
+// Which one wins depends on CSS source order, not intent.
+```
+
+### The Solution: `cn` Utility
+
+The pattern popularized by shadcn/ui combines `clsx` (for conditional classes) with `twMerge` (for conflict resolution):
+
+```tsx
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+```
+
+Now later classes properly override earlier ones:
+
+```tsx
+cn("bg-blue-500 px-4 py-2", "bg-red-500");
+// → 'px-4 py-2 bg-red-500'
+// bg-blue-500 is removed because bg-red-500 conflicts with it
+```
+
+### Using `cn` in Compound Components
+
+Apply `cn` in every sub-component that accepts a `className` prop:
+
+```tsx
+const Root = forwardRef<HTMLDivElement, RootProps>(
+  ({ children, className, ...props }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          // Base styles (can be overridden)
+          "flex items-center gap-2 rounded-md border px-3 py-1.5",
+          "bg-gray-100 text-sm",
+          // Consumer's className comes last to win conflicts
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </div>
+    );
+  }
+);
+```
+
+### `twMerge` vs `twJoin`
+
+The `tailwind-merge` package exports two functions:
+
+| Function  | Use Case                                                  | Performance                   |
+| --------- | --------------------------------------------------------- | ----------------------------- |
+| `twMerge` | Merging external `className` props with internal defaults | Slower (conflict resolution)  |
+| `twJoin`  | Joining internal classes only (no external input)         | Fast (no conflict resolution) |
+
+**Rule of thumb:** Use `twJoin` for internal-only classes, `twMerge` when accepting external `className` props.
+
+```tsx
+import { twJoin, twMerge } from "tailwind-merge";
+
+// Internal classes only → twJoin (faster)
+function InternalComponent({ isActive }) {
+  return (
+    <div
+      className={twJoin(
+        "rounded-md p-4",
+        isActive ? "bg-blue-500" : "bg-gray-200"
+      )}
+    />
+  );
+}
+
+// Accepts external className → twMerge (handles conflicts)
+function ExternalComponent({ className, isActive }) {
+  return (
+    <div
+      className={twMerge(
+        "rounded-md p-4",
+        isActive ? "bg-blue-500" : "bg-gray-200",
+        className
+      )}
+    />
+  );
+}
+```
+
+### Trade-offs to Consider
+
+**Reasons to use `twMerge`:**
+
+- Enables style composition through multiple component layers (e.g., `ContextMenuOption` → `MenuOption` → `BaseOption`)
+- Allows one-off style overrides without creating new variants
+- Defers abstraction—you can ship a red button now and add a `variant="destructive"` prop later if needed
+
+**Reasons to avoid `twMerge`:**
+
+- Adds ~7 kB to your bundle (the conflict resolution config is large)
+- Gives consumers more freedom than you may want—they can break your component's visual design
+- Makes refactoring harder—if you change internal classes, you may break consumers who were overriding them
+
+**When `twMerge` is the wrong tool:**
+
+- Tight bundle size constraints
+- Public component libraries where you need strict control over styling
+- Components whose internal styles change frequently
+
+### Alternatives to `twMerge`
+
+If `twMerge` doesn't fit your use case:
+
+**1. Explicit variant props** — The traditional approach:
+
+```tsx
+function Button({ variant = "primary", isFullWidth }) {
+  return (
+    <button
+      className={cn(
+        "px-4 py-2 rounded-md font-medium",
+        VARIANTS[variant],
+        isFullWidth && "w-full"
+      )}
+    />
+  );
+}
+
+const VARIANTS = {
+  primary: "bg-blue-500 text-white",
+  secondary: "bg-gray-200 text-gray-800",
+  destructive: "bg-red-500 text-white",
+};
+```
+
+**2. Tailwind's `!important` modifier** — For one-off overrides without `twMerge`:
+
+```tsx
+<Button className="!bg-red-500">Override</Button>
+```
+
+Downside: Only works one level deep (you can't override `!bg-red-500`).
+
+**3. CSS `:where()` for lower specificity** — Reduce base class specificity so normal classes override them:
+
+```css
+@custom-variant component (:where(&));
+```
+
+```tsx
+function Button({ className }) {
+  return (
+    <button
+      className={cn("component:bg-blue-500 component:text-white", className)}
+    />
+  );
+}
+
+// Now bg-red-500 wins without needing twMerge
+<Button className="bg-red-500">Override</Button>;
+```
+
+---
+
+## Refactoring Checklist
+
+When converting a monolithic component to compound components:
+
+- [ ] **Identify the distinct regions** — What are the visual/logical sections?
+- [ ] **Map the shared state** — What data do sub-components need to share?
+- [ ] **Design the context shape** — Keep it minimal; only share what's necessary
+- [ ] **Create the Root component** — Manages state, provides context
+- [ ] **Extract sub-components** — One per region, consuming context as needed
+- [ ] **Preserve existing API** — Consider keeping the old props API as a convenience wrapper
+- [ ] **Forward refs everywhere** — Every sub-component should accept a ref
+- [ ] **Spread ...props** — Pass through className, style, data-\* attributes
+- [ ] **Add displayName** — Helps with React DevTools debugging
+- [ ] **Write migration docs** — Show before/after examples
+
+---
+
+## Example: Refactoring an AppliedFilter Component
+
+### Before: Monolithic
+
+```tsx
+interface AppliedFilterProps {
+  label: string;
+  value: string;
+  onRemove: () => void;
+  icon?: React.ReactNode;
+  showRemoveButton?: boolean;
+  className?: string;
+  labelClassName?: string;
+  valueClassName?: string;
+  removeButtonClassName?: string;
+}
+
+function AppliedFilter({
+  label,
+  value,
+  onRemove,
+  icon,
+  showRemoveButton = true,
+  className,
+  labelClassName,
+  valueClassName,
+  removeButtonClassName,
+}: AppliedFilterProps) {
+  return (
+    <div className={cn("applied-filter", className)}>
+      {icon && <span className="applied-filter-icon">{icon}</span>}
+      <span className={cn("applied-filter-label", labelClassName)}>
+        {label}:
+      </span>
+      <span className={cn("applied-filter-value", valueClassName)}>
+        {value}
+      </span>
+      {showRemoveButton && (
+        <button
+          className={cn("applied-filter-remove", removeButtonClassName)}
+          onClick={onRemove}
+          aria-label={`Remove ${label} filter`}
+        >
+          ×
+        </button>
+      )}
+    </div>
+  );
+}
+```
+
+### After: Compound Components
+
+```tsx
+// Context
+interface AppliedFilterContextValue {
+  label: string;
+  onRemove: () => void;
+}
+
+const AppliedFilterContext = createContext<AppliedFilterContextValue | null>(
+  null
+);
+
+function useAppliedFilterContext() {
+  const context = useContext(AppliedFilterContext);
+  if (!context) {
+    throw new Error(
+      "AppliedFilter components must be used within <AppliedFilter.Root>"
+    );
+  }
+  return context;
+}
+
+// Root
+interface RootProps {
+  label: string;
+  onRemove: () => void;
+  children: React.ReactNode;
+  className?: string;
+}
+
+const Root = forwardRef<HTMLDivElement, RootProps>(
+  ({ label, onRemove, children, className, ...props }, ref) => {
+    return (
+      <AppliedFilterContext.Provider value={{ label, onRemove }}>
+        <div
+          ref={ref}
+          className={cn("applied-filter", className)}
+          role="listitem"
+          {...props}
+        >
+          {children}
+        </div>
+      </AppliedFilterContext.Provider>
+    );
+  }
+);
+Root.displayName = "AppliedFilter.Root";
+
+// Icon
+interface IconProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+const Icon = forwardRef<HTMLSpanElement, IconProps>(
+  ({ children, className, ...props }, ref) => {
+    return (
+      <span
+        ref={ref}
+        className={cn("applied-filter-icon", className)}
+        aria-hidden="true"
+        {...props}
+      >
+        {children}
+      </span>
+    );
+  }
+);
+Icon.displayName = "AppliedFilter.Icon";
+
+// Label
+interface LabelProps {
+  children?: React.ReactNode;
+  className?: string;
+}
+
+const Label = forwardRef<HTMLSpanElement, LabelProps>(
+  ({ children, className, ...props }, ref) => {
+    const { label } = useAppliedFilterContext();
+
+    return (
+      <span
+        ref={ref}
+        className={cn("applied-filter-label", className)}
+        {...props}
+      >
+        {children ?? label}:
+      </span>
+    );
+  }
+);
+Label.displayName = "AppliedFilter.Label";
+
+// Value
+interface ValueProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+const Value = forwardRef<HTMLSpanElement, ValueProps>(
+  ({ children, className, ...props }, ref) => {
+    return (
+      <span
+        ref={ref}
+        className={cn("applied-filter-value", className)}
+        {...props}
+      >
+        {children}
+      </span>
+    );
+  }
+);
+Value.displayName = "AppliedFilter.Value";
+
+// RemoveButton
+interface RemoveButtonProps {
+  children?: React.ReactNode;
+  className?: string;
+}
+
+const RemoveButton = forwardRef<HTMLButtonElement, RemoveButtonProps>(
+  ({ children, className, ...props }, ref) => {
+    const { label, onRemove } = useAppliedFilterContext();
+
+    return (
+      <button
+        ref={ref}
+        type="button"
+        className={cn("applied-filter-remove", className)}
+        onClick={onRemove}
+        aria-label={`Remove ${label} filter`}
+        {...props}
+      >
+        {children ?? "×"}
+      </button>
+    );
+  }
+);
+RemoveButton.displayName = "AppliedFilter.RemoveButton";
+
+// Export
+export const AppliedFilter = {
+  Root,
+  Icon,
+  Label,
+  Value,
+  RemoveButton,
+};
+```
+
+### Usage
+
+```tsx
+// Basic usage
+<AppliedFilter.Root label="Status" onRemove={handleRemove}>
+  <AppliedFilter.Label />
+  <AppliedFilter.Value>Active</AppliedFilter.Value>
+  <AppliedFilter.RemoveButton />
+</AppliedFilter.Root>
+
+// With custom icon
+<AppliedFilter.Root label="Date" onRemove={handleRemove}>
+  <AppliedFilter.Icon>
+    <CalendarIcon />
+  </AppliedFilter.Icon>
+  <AppliedFilter.Label />
+  <AppliedFilter.Value>Last 7 days</AppliedFilter.Value>
+  <AppliedFilter.RemoveButton>
+    <XIcon className="h-3 w-3" />
+  </AppliedFilter.RemoveButton>
+</AppliedFilter.Root>
+
+// Without remove button (read-only display)
+<AppliedFilter.Root label="Source" onRemove={() => {}}>
+  <AppliedFilter.Label>From</AppliedFilter.Label>
+  <AppliedFilter.Value>API</AppliedFilter.Value>
+</AppliedFilter.Root>
+
+// Fully custom styling
+<AppliedFilter.Root
+  label="Priority"
+  onRemove={handleRemove}
+  className="bg-red-100 border-red-300"
+>
+  <AppliedFilter.Value className="font-bold text-red-800">
+    High
+  </AppliedFilter.Value>
+  <AppliedFilter.RemoveButton className="text-red-600 hover:text-red-800" />
+</AppliedFilter.Root>
+```
+
+---
+
+## Summary
+
+Compound components trade a simpler API for flexibility and composability. Use them when consumers need control over structure, styling, or behavior—but resist the urge to apply the pattern everywhere. The best component APIs are as simple as possible and as flexible as necessary.
