@@ -4,8 +4,8 @@ import { MATCH_TYPES } from "@/hooks/useFilters/constants";
 import type { MatchType } from "@/hooks/useFilters/types";
 
 const MATCH_TYPE_LABELS: Record<MatchType, { short: string; full: string }> = {
-	[MATCH_TYPES.ALL]: { short: "all", full: "all filters must match" },
-	[MATCH_TYPES.ANY]: { short: "any", full: "any filter must match" },
+	[MATCH_TYPES.ALL]: { short: "All", full: "All filters must match" },
+	[MATCH_TYPES.ANY]: { short: "Any", full: "Any filter must match" },
 };
 
 interface MatchTypeDropdownProps {
@@ -22,11 +22,11 @@ export const MatchTypeDropdown = ({
 			<DropdownMenu.Trigger asChild>
 				<button
 					type="button"
-					className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20"
+					className="h-full flex items-center justify-center gap-1 px-4 text-sm font-medium text-gray-600 bg-transparent hover:text-gray-900 hover:bg-gray-200 focus:outline-none focus:bg-gray-200 focus:text-gray-900 focus:ring-2 focus:ring-inset focus:ring-blue-500 rounded-r-lg transition-colors"
 					aria-label="Filter match mode"
 				>
 					{MATCH_TYPE_LABELS[matchType].short}
-					<ChevronDown className="w-4 h-4 text-gray-500" />
+					<ChevronDown className="w-4 h-4" />
 				</button>
 			</DropdownMenu.Trigger>
 			<DropdownMenu.Portal>

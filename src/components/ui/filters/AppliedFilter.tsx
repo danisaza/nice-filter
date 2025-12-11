@@ -146,7 +146,7 @@ const Root = forwardRef<HTMLFieldSetElement, RootProps>(
 					ref={ref}
 					name={`${propertyNameToDisplay} filter`}
 					className={twMerge(
-						"border border-slate-300 text-slate-900 rounded inline-flex items-center",
+						"bg-white border border-slate-300 text-slate-900 rounded inline-flex items-center",
 						heightClass,
 						className,
 					)}

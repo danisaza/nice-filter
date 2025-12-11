@@ -87,12 +87,12 @@ describe("ComponentPreview", () => {
 				</TestWrapper>,
 			);
 
-			// The button should show "all" as the short label
+			// The button should show "All" as the short label
 			const triggerButton = screen.getByRole("button", {
 				name: /filter match mode/i,
 			});
 			expect(triggerButton).toBeInTheDocument();
-			expect(triggerButton).toHaveTextContent("all");
+			expect(triggerButton).toHaveTextContent("All");
 		});
 
 		test("opens dropdown when clicked", async () => {
@@ -138,8 +138,8 @@ describe("ComponentPreview", () => {
 				name: /any filter must match/i,
 			});
 
-			expect(allOption).toHaveTextContent("all filters must match");
-			expect(anyOption).toHaveTextContent("any filter must match");
+			expect(allOption).toHaveTextContent("All filters must match");
+			expect(anyOption).toHaveTextContent("Any filter must match");
 		});
 
 		test("'all' option is checked by default", async () => {
@@ -201,19 +201,19 @@ describe("ComponentPreview", () => {
 				name: /filter match mode/i,
 			});
 
-			// Initially shows "all"
-			expect(triggerButton).toHaveTextContent("all");
+			// Initially shows "All"
+			expect(triggerButton).toHaveTextContent("All");
 
-			// Open dropdown and select "any"
+			// Open dropdown and select "Any"
 			await user.click(triggerButton);
 			const anyOption = screen.getByRole("menuitemradio", {
 				name: /any filter must match/i,
 			});
 			await user.click(anyOption);
 
-			// Button should now show "any"
-			expect(triggerButton).toHaveTextContent("any");
-			expect(triggerButton).not.toHaveTextContent("all");
+			// Button should now show "Any"
+			expect(triggerButton).toHaveTextContent("Any");
+			expect(triggerButton).not.toHaveTextContent("All");
 		});
 
 		test("selecting 'any' then reopening shows 'any' as checked", async () => {
@@ -262,23 +262,23 @@ describe("ComponentPreview", () => {
 				name: /filter match mode/i,
 			});
 
-			// Select "any"
+			// Select "Any"
 			await user.click(triggerButton);
 			await user.click(
 				screen.getByRole("menuitemradio", { name: /any filter must match/i }),
 			);
 
 			// Verify it changed
-			expect(triggerButton).toHaveTextContent("any");
+			expect(triggerButton).toHaveTextContent("Any");
 
-			// Select "all" again
+			// Select "All" again
 			await user.click(triggerButton);
 			await user.click(
 				screen.getByRole("menuitemradio", { name: /all filters must match/i }),
 			);
 
 			// Verify it changed back
-			expect(triggerButton).toHaveTextContent("all");
+			expect(triggerButton).toHaveTextContent("All");
 		});
 
 		test("dropdown closes after selecting an option", async () => {
@@ -358,12 +358,12 @@ describe("ComponentPreview", () => {
 				screen.getByRole("menuitemradio", { name: /any filter must match/i }),
 			).toBeInTheDocument();
 
-			// Press ArrowDown to navigate to "any" option and Enter to select
+			// Press ArrowDown to navigate to "Any" option and Enter to select
 			await user.keyboard("{ArrowDown}");
 			await user.keyboard("{Enter}");
 
-			// Button should now show "any"
-			expect(triggerButton).toHaveTextContent("any");
+			// Button should now show "Any"
+			expect(triggerButton).toHaveTextContent("Any");
 		});
 
 		test("checkmark only appears on selected option, not on unselected", async () => {
@@ -469,6 +469,60 @@ describe("ComponentPreview", () => {
 			// Both elements should be in the document
 			expect(filterInput).toBeInTheDocument();
 			expect(matchTypeButton).toBeInTheDocument();
+		});
+	});
+
+	describe("Keyboard Navigation", () => {
+		test("pressing Tab from input moves focus to match type dropdown", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ComponentPreview />
+				</TestWrapper>,
+			);
+
+			const filterInput = screen.getByRole("combobox", {
+				name: /filter input/i,
+			});
+			const matchTypeButton = screen.getByRole("button", {
+				name: /filter match mode/i,
+			});
+
+			// Click into the input to focus it
+			await user.click(filterInput);
+			expect(filterInput).toHaveFocus();
+
+			// Press Tab - should move focus to the match type dropdown
+			await user.tab();
+			expect(matchTypeButton).toHaveFocus();
+		});
+	});
+
+	describe("Layout Dimensions", () => {
+		test("match type dropdown button fills full height of container", () => {
+			render(
+				<TestWrapper>
+					<ComponentPreview />
+				</TestWrapper>,
+			);
+
+			const matchTypeButton = screen.getByRole("button", {
+				name: /filter match mode/i,
+			});
+
+			// The button itself should have h-full class
+			expect(matchTypeButton).toHaveClass("h-full");
+
+			// Find the wrapper div with self-stretch that's a direct child of the flex container
+			const flexContainer = matchTypeButton.closest(".bg-gray-100");
+			expect(flexContainer).toBeInTheDocument();
+
+			// The wrapper around MatchTypeDropdown should have self-stretch
+			const dropdownWrapper = flexContainer!.querySelector(".self-stretch");
+			expect(dropdownWrapper).toBeInTheDocument();
+
+			// The dropdown button should be inside the self-stretch wrapper
+			expect(dropdownWrapper!.contains(matchTypeButton)).toBe(true);
 		});
 	});
 });
