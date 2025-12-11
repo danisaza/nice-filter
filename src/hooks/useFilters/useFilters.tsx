@@ -15,6 +15,7 @@ import {
 	OPERATORS,
 	RADIO_SELECTION_OPERATORS,
 	SELECTION_TYPES,
+	TEXT_SELECTION_OPERATORS,
 } from "./constants";
 import { filterRowByMatchType } from "./filtering-functions";
 import { MemoizedFilterSystem } from "./filtering-functions-memoized";
@@ -27,6 +28,7 @@ import type {
 	RadioOperator,
 	Row,
 	TAppliedFilter,
+	TextOperator,
 } from "./types";
 import { updateFilterValueAndRelationship } from "./utils";
 
@@ -39,7 +41,7 @@ type FiltersContextType<T extends Row> = {
 		filter: Omit<
 			TAppliedFilter,
 			"relationship" | "createdAt" | "_cacheVersion"
-		>,
+		> & { textValue?: string; isNegation?: boolean },
 	) => void;
 	filters: TAppliedFilter[];
 	// TODO: Consider updating filterCategories here to include a second type parameter for the property key
@@ -61,6 +63,7 @@ type FiltersContextType<T extends Row> = {
 		filterId: string,
 		filterValueUpdate: FilterValueUpdate,
 	) => void;
+	updateTextFilterValue: (filterId: string, textValue: string) => void;
 };
 
 type FiltersProviderProps<T extends Row> = {
@@ -87,7 +90,7 @@ export function FiltersProvider<T extends Row>({
 }: FiltersProviderProps<T>) {
 	const [filters, setFilters] = useState<TAppliedFilter[]>([]);
 	//              ^?
-	const [matchType, setMatchType] = useState<MatchType>(MATCH_TYPES.ANY);
+	const [matchType, setMatchType] = useState<MatchType>(MATCH_TYPES.ALL);
 	const [filterCategories, setFilterCategories] = useState<FilterOption<T>[]>(
 		[],
 	);
@@ -129,10 +132,12 @@ export function FiltersProvider<T extends Row>({
 			propertyNamePlural,
 			selectionType,
 			values,
-		}: Omit<
-			TAppliedFilter,
-			"createdAt" | "relationship" | "_cacheVersion"
-		>) => {
+			textValue,
+			isNegation = false,
+		}: Omit<TAppliedFilter, "createdAt" | "relationship" | "_cacheVersion"> & {
+			textValue?: string;
+			isNegation?: boolean;
+		}) => {
 			const newFilter = {
 				id,
 				createdAt: Date.now(),
@@ -146,11 +151,16 @@ export function FiltersProvider<T extends Row>({
 				if (!propertyNameSingular) {
 					throw new Error("propertyNameSingular is required for radio filters");
 				}
+				const computedRelationship = isNegation
+					? OPERATORS.IS_NOT
+					: values.length > 1
+						? OPERATORS.IS_ANY_OF
+						: OPERATORS.IS;
 				const radioValues = {
 					propertyNameSingular: propertyNameSingular,
 					propertyNamePlural: undefined,
 					selectionType: SELECTION_TYPES.RADIO,
-					relationship: OPERATORS.IS,
+					relationship: computedRelationship,
 				};
 				setFilters((prev) => [...prev, { ...newFilter, ...radioValues }]);
 				return;
@@ -162,13 +172,38 @@ export function FiltersProvider<T extends Row>({
 						"propertyNamePlural is required for checkbox filters",
 					);
 				}
+				const computedRelationship = isNegation
+					? values.length > 1
+						? OPERATORS.EXCLUDE_IF_ANY_OF
+						: OPERATORS.DO_NOT_INCLUDE
+					: values.length > 1
+						? OPERATORS.INCLUDE_ALL_OF
+						: OPERATORS.INCLUDE;
 				const checkboxValues = {
 					propertyNameSingular: undefined,
 					propertyNamePlural: propertyNamePlural,
 					selectionType: SELECTION_TYPES.CHECKBOXES,
-					relationship: OPERATORS.INCLUDE,
+					relationship: computedRelationship,
 				};
 				setFilters((prev) => [...prev, { ...newFilter, ...checkboxValues }]);
+				return;
+			}
+
+			if (selectionType === SELECTION_TYPES.TEXT) {
+				if (!propertyNameSingular) {
+					throw new Error("propertyNameSingular is required for text filters");
+				}
+				const computedRelationship = isNegation
+					? OPERATORS.DOES_NOT_CONTAIN
+					: OPERATORS.CONTAINS;
+				const textValues = {
+					propertyNameSingular: propertyNameSingular,
+					propertyNamePlural: undefined,
+					selectionType: SELECTION_TYPES.TEXT,
+					relationship: computedRelationship,
+					textValue: textValue ?? "",
+				};
+				setFilters((prev) => [...prev, { ...newFilter, ...textValues }]);
 				return;
 			}
 
@@ -204,6 +239,27 @@ export function FiltersProvider<T extends Row>({
 
 					return {
 						...updateFilterValueAndRelationship(f, newValues),
+						_cacheVersion: f._cacheVersion + 1,
+					};
+				}),
+			);
+		},
+		[],
+	);
+
+	const updateTextFilterValue = useCallback(
+		(filterId: string, textValue: string) => {
+			setFilters((prev) =>
+				prev.map((f) => {
+					if (f.id !== filterId) return f;
+					if (f.selectionType !== SELECTION_TYPES.TEXT) {
+						throw new Error(
+							`Cannot update text value on non-text filter: ${f.selectionType}`,
+						);
+					}
+					return {
+						...f,
+						textValue,
 						_cacheVersion: f._cacheVersion + 1,
 					};
 				}),
@@ -254,6 +310,21 @@ export function FiltersProvider<T extends Row>({
 							...f,
 							propertyNamePlural: f.propertyNamePlural,
 							relationship: relationship as CheckboxOperator,
+							_cacheVersion: f._cacheVersion + 1,
+						};
+					}
+
+					if (f.selectionType === SELECTION_TYPES.TEXT) {
+						const validTextOperators = [...TEXT_SELECTION_OPERATORS.ONE];
+						if (!validTextOperators.includes(relationship as TextOperator)) {
+							throw new Error(
+								`Invalid relationship "${relationship}" for text filter. Valid relationships are: ${validTextOperators.join(", ")}`,
+							);
+						}
+						return {
+							...f,
+							propertyNameSingular: f.propertyNameSingular,
+							relationship: relationship as TextOperator,
 							_cacheVersion: f._cacheVersion + 1,
 						};
 					}
@@ -313,9 +384,10 @@ export function FiltersProvider<T extends Row>({
 	const getPropertyNameToDisplay = useCallback(
 		(filterId: string) => {
 			const filter = getFilterOrThrow(filterId);
-			return filter.selectionType === SELECTION_TYPES.RADIO
-				? filter.propertyNameSingular
-				: filter.propertyNamePlural;
+			// TEXT and RADIO filters use singular, CHECKBOXES uses plural
+			return filter.selectionType === SELECTION_TYPES.CHECKBOXES
+				? filter.propertyNamePlural
+				: filter.propertyNameSingular;
 		},
 		[getFilterOrThrow],
 	);
@@ -339,6 +411,7 @@ export function FiltersProvider<T extends Row>({
 			totalRowCount: rows.length,
 			updateFilterRelationship,
 			updateFilterValues,
+			updateTextFilterValue,
 		}),
 		[
 			addFilter,
@@ -355,6 +428,7 @@ export function FiltersProvider<T extends Row>({
 			rows.length,
 			updateFilterRelationship,
 			updateFilterValues,
+			updateTextFilterValue,
 		],
 	);
 

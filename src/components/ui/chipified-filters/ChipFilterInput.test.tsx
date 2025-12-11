@@ -1,0 +1,3377 @@
+import { act, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type React from "react";
+import { useEffect } from "react";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+
+// Create a mutable container for the test context (hoisted to run first)
+const testContextHolder = vi.hoisted(() => ({
+	useFilters: null as (() => any) | null,
+	filtersContext: null as React.Context<any> | null,
+	filteredRowsContext: null as React.Context<any> | null,
+}));
+
+// Create a mutable mock for the api client (hoisted to run first)
+const mockApiClient = vi.hoisted(() => ({
+	parseFiltersMock: vi.fn(),
+}));
+
+// Mock @/App to use our test context's useFilters hook
+vi.mock("@/App", () => ({
+	useFilters: function useFilters() {
+		if (!testContextHolder.useFilters) {
+			throw new Error(
+				"Test context not initialized - ensure testContextHolder is populated before tests run",
+			);
+		}
+		return testContextHolder.useFilters();
+	},
+}));
+
+// Mock @/api-client for natural language parsing tests
+vi.mock("@/api-client", () => ({
+	api: {
+		api: {
+			"parse-filters": {
+				$post: (args: any) => mockApiClient.parseFiltersMock(args),
+			},
+		},
+	},
+}));
+
+import { FILTER_CATEGORIES } from "@/hooks/filter-categories.mock";
+// Import dependencies (these don't trigger mock because they don't use @/App directly)
+import createFiltersContext, {
+	FiltersProvider,
+} from "@/hooks/useFilters/useFilters";
+
+// Import the component under test (this triggers the mock via its @/App import,
+// but only defines the module - useFilters isn't called until render)
+import { ChipFilterInput } from "./ChipFilterInput";
+
+// Create the real test context
+type TestRow = Record<string, string>;
+const {
+	useFilters: testUseFilters,
+	filtersContext,
+	filteredRowsContext,
+} = createFiltersContext<TestRow>();
+
+// Populate the holder (this runs after imports but before tests)
+testContextHolder.useFilters = testUseFilters;
+testContextHolder.filtersContext = filtersContext;
+testContextHolder.filteredRowsContext = filteredRowsContext;
+
+const mockFilterCategories = FILTER_CATEGORIES;
+
+// Component that initializes filter categories after provider mounts
+function FilterCategoriesInitializer({
+	children,
+}: {
+	children: React.ReactNode;
+}) {
+	const { setFilterCategories } = testUseFilters();
+
+	useEffect(() => {
+		setFilterCategories(FILTER_CATEGORIES as any);
+	}, [setFilterCategories]);
+
+	return <>{children}</>;
+}
+
+// Test wrapper using the real FiltersProvider for proper React context reactivity
+function TestWrapper({ children }: { children: React.ReactNode }) {
+	return (
+		<FiltersProvider
+			context={filtersContext}
+			filteredRowsContext={filteredRowsContext}
+			rows={[]}
+			getRowCacheKey={() => ""}
+		>
+			<FilterCategoriesInitializer>{children}</FilterCategoriesInitializer>
+		</FiltersProvider>
+	);
+}
+
+// Helper component that wraps ChipFilterInput
+function ChipFilterInputWrapper() {
+	return <ChipFilterInput placeholder="Filter by typing key:value..." />;
+}
+
+/**
+ * Helper to find an AppliedFilter by its property name.
+ * AppliedFilter renders as a fieldset with name="{propertyName} filter".
+ * We query by the name attribute since fieldset's accessible name requires a legend.
+ */
+function getAppliedFilter(propertyName: string) {
+	const fieldset = document.querySelector(
+		`fieldset[name="${propertyName} filter"]`,
+	);
+	if (!fieldset) {
+		throw new Error(
+			`Unable to find AppliedFilter with name="${propertyName} filter"`,
+		);
+	}
+	return fieldset as HTMLFieldSetElement;
+}
+
+/**
+ * Helper to query for an AppliedFilter (returns null if not found).
+ */
+function queryAppliedFilter(propertyName: string) {
+	return document.querySelector(
+		`fieldset[name="${propertyName} filter"]`,
+	) as HTMLFieldSetElement | null;
+}
+
+describe("ChipFilterInput", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	describe("dropdown visibility on focus", () => {
+		test("dropdown is not visible initially", () => {
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+		});
+
+		test("dropdown becomes visible when input is focused", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			const listbox = screen.getByRole("listbox");
+			expect(listbox).toBeInTheDocument();
+
+			// Should show all filter keys (from filterCategories)
+			const options = within(listbox).getAllByRole("option");
+			expect(options).toHaveLength(mockFilterCategories.length);
+		});
+	});
+
+	describe("first option highlighted by default", () => {
+		test("first option has aria-selected=true when dropdown opens", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			const listbox = screen.getByRole("listbox");
+			const options = within(listbox).getAllByRole("option");
+
+			expect(options[0]).toHaveAttribute("aria-selected", "true");
+			expect(options[1]).toHaveAttribute("aria-selected", "false");
+		});
+	});
+
+	describe("arrow key navigation", () => {
+		test("ArrowDown moves highlight to next option", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// First option should be highlighted initially
+			let options = within(screen.getByRole("listbox")).getAllByRole("option");
+			expect(options[0]).toHaveAttribute("aria-selected", "true");
+
+			// Press ArrowDown
+			await user.keyboard("{ArrowDown}");
+
+			// Second option should now be highlighted
+			options = within(screen.getByRole("listbox")).getAllByRole("option");
+			expect(options[0]).toHaveAttribute("aria-selected", "false");
+			expect(options[1]).toHaveAttribute("aria-selected", "true");
+		});
+
+		test("ArrowUp moves highlight to previous option", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Move to second option
+			await user.keyboard("{ArrowDown}");
+
+			let options = within(screen.getByRole("listbox")).getAllByRole("option");
+			expect(options[1]).toHaveAttribute("aria-selected", "true");
+
+			// Press ArrowUp
+			await user.keyboard("{ArrowUp}");
+
+			// First option should be highlighted again
+			options = within(screen.getByRole("listbox")).getAllByRole("option");
+			expect(options[0]).toHaveAttribute("aria-selected", "true");
+			expect(options[1]).toHaveAttribute("aria-selected", "false");
+		});
+	});
+
+	describe("looping behavior", () => {
+		test("ArrowUp from first option wraps to last option", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// First option should be highlighted initially
+			let options = within(screen.getByRole("listbox")).getAllByRole("option");
+			expect(options[0]).toHaveAttribute("aria-selected", "true");
+
+			// Press ArrowUp - should wrap to last
+			await user.keyboard("{ArrowUp}");
+
+			options = within(screen.getByRole("listbox")).getAllByRole("option");
+			const lastIndex = options.length - 1;
+			expect(options[0]).toHaveAttribute("aria-selected", "false");
+			expect(options[lastIndex]).toHaveAttribute("aria-selected", "true");
+		});
+
+		test("ArrowDown from last option wraps to first option", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Navigate to last option
+			const options = within(screen.getByRole("listbox")).getAllByRole(
+				"option",
+			);
+			const lastIndex = options.length - 1;
+
+			for (let i = 0; i < lastIndex; i++) {
+				await user.keyboard("{ArrowDown}");
+			}
+
+			// Verify we're at the last option
+			let currentOptions = within(screen.getByRole("listbox")).getAllByRole(
+				"option",
+			);
+			expect(currentOptions[lastIndex]).toHaveAttribute(
+				"aria-selected",
+				"true",
+			);
+
+			// Press ArrowDown - should wrap to first
+			await user.keyboard("{ArrowDown}");
+
+			currentOptions = within(screen.getByRole("listbox")).getAllByRole(
+				"option",
+			);
+			expect(currentOptions[0]).toHaveAttribute("aria-selected", "true");
+			expect(currentOptions[lastIndex]).toHaveAttribute(
+				"aria-selected",
+				"false",
+			);
+		});
+	});
+
+	describe("Escape key resets highlighted option", () => {
+		test("pressing Escape and reopening dropdown resets highlight to first option", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// First option should be highlighted initially
+			let options = within(screen.getByRole("listbox")).getAllByRole("option");
+			expect(options[0]).toHaveAttribute("aria-selected", "true");
+			expect(options[2]).toHaveAttribute("aria-selected", "false");
+
+			// Navigate to third option
+			await user.keyboard("{ArrowDown}");
+			await user.keyboard("{ArrowDown}");
+
+			// Third option should now be highlighted
+			options = within(screen.getByRole("listbox")).getAllByRole("option");
+			expect(options[0]).toHaveAttribute("aria-selected", "false");
+			expect(options[2]).toHaveAttribute("aria-selected", "true");
+
+			// Press Escape to close dropdown
+			await user.keyboard("{Escape}");
+
+			// Dropdown should be closed
+			expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+			// Blur input, then click to reopen dropdown
+			await user.click(document.body);
+			await user.click(input);
+
+			// Dropdown should be visible again
+			const listbox = screen.getByRole("listbox");
+			expect(listbox).toBeInTheDocument();
+
+			// First option should be highlighted again (reset on close)
+			options = within(listbox).getAllByRole("option");
+			expect(options[0]).toHaveAttribute("aria-selected", "true");
+			expect(options[2]).toHaveAttribute("aria-selected", "false");
+		});
+	});
+
+	describe("Enter on column key", () => {
+		test("pressing Enter on a key suggestion adds the key and colon to input and shows values", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// First option should be "status:" - press Enter
+			await user.keyboard("{Enter}");
+
+			// Input should now contain "status:"
+			expect(input).toHaveValue("status:");
+
+			// Dropdown should now show value options for status
+			const listbox = screen.getByRole("listbox");
+			const options = within(listbox).getAllByRole("option");
+
+			// Should show the status values (from FILTER_CATEGORIES)
+			expect(options.length).toBeGreaterThan(0);
+			expect(options[0]).toHaveTextContent("Not Started");
+
+			// First value option should be highlighted
+			expect(options[0]).toHaveAttribute("aria-selected", "true");
+		});
+	});
+
+	describe("Enter on value creates chip", () => {
+		test("pressing Enter on a value suggestion creates a filter and clears input", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Select "status:" key
+			await user.keyboard("{Enter}");
+
+			// Now select first value option (should be "Not Started")
+			await user.keyboard("{Enter}");
+
+			// Input should be cleared
+			expect(input).toHaveValue("");
+
+			// An AppliedFilter should be created for "status"
+			const appliedFilter = getAppliedFilter("status");
+			expect(appliedFilter).toBeInTheDocument();
+			// Check it displays the property name and selected value
+			expect(within(appliedFilter).getByText("status")).toBeInTheDocument();
+			expect(
+				within(appliedFilter).getByText("Not Started"),
+			).toBeInTheDocument();
+		});
+
+		test("pressing Enter on a value with spaces (like 'Not Started') creates a filter correctly", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type "status:Not Started" manually
+			await user.type(input, "status:Not Started");
+
+			// Press Enter to create the filter
+			await user.keyboard("{Enter}");
+
+			// Input should be cleared
+			expect(input).toHaveValue("");
+
+			// An AppliedFilter should be created for "status" with "Not Started"
+			const appliedFilter = getAppliedFilter("status");
+			expect(appliedFilter).toBeInTheDocument();
+			expect(within(appliedFilter).getByText("status")).toBeInTheDocument();
+			expect(
+				within(appliedFilter).getByText("Not Started"),
+			).toBeInTheDocument();
+		});
+
+		test("can navigate to different value with arrow keys before selecting", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Select "status:" key
+			await user.keyboard("{Enter}");
+
+			// Navigate to second option
+			await user.keyboard("{ArrowDown}");
+
+			// Select it
+			await user.keyboard("{Enter}");
+
+			// An AppliedFilter should be created
+			const appliedFilter = getAppliedFilter("status");
+			expect(appliedFilter).toBeInTheDocument();
+		});
+
+		test("input is focused and dropdown is visible immediately after creating a filter", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Select "status:" key
+			await user.keyboard("{Enter}");
+
+			// Select first value to create filter
+			await user.keyboard("{Enter}");
+
+			// Verify filter was created
+			const appliedFilter = getAppliedFilter("status");
+			expect(appliedFilter).toBeInTheDocument();
+
+			// Input should still be focused after filter creation
+			expect(input).toHaveFocus();
+
+			// Dropdown should be visible with filter key suggestions
+			const listbox = screen.getByRole("listbox");
+			expect(listbox).toBeInTheDocument();
+
+			// Should show filter key options (the initial autocomplete suggestions)
+			const options = within(listbox).getAllByRole("option");
+			expect(options.length).toBeGreaterThan(0);
+		});
+	});
+
+	describe("Smart space key behavior", () => {
+		test("space should NOT select a suggestion when dropdown is hidden (after Escape)", async () => {
+			/**
+			 * When the dropdown is hidden (e.g., after pressing Escape), pressing space
+			 * should add a space character, not autocomplete.
+			 *
+			 * Repro steps:
+			 * 1. Focus input - dropdown opens with suggestions
+			 * 2. Type "sta" - a valid prefix for "status", dropdown shows filtered suggestions
+			 * 3. Press Escape - dropdown closes
+			 * 4. Press spacebar
+			 *
+			 * EXPECTED: Input contains "sta " (space added)
+			 * ACTUAL (BUG): Input contains "status:" (suggestion erroneously selected)
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Dropdown should be open initially
+			expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+			// Type "sta" which is a valid prefix for "status"
+			await user.type(input, "sta");
+			expect(input).toHaveValue("sta");
+
+			// Dropdown should still be visible with "status" suggestion
+			expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+			// Press Escape to close the dropdown
+			await user.keyboard("{Escape}");
+
+			// Dropdown should be hidden
+			expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+			// Press spacebar - should add a space, NOT autocomplete to "status:"
+			await user.keyboard(" ");
+
+			// Input should contain "sta " (space added), NOT "status:" (suggestion selected)
+			expect(input).toHaveValue("sta ");
+		});
+
+		test("after adding space to 'sta', input 'sta ' should be in natural language mode", async () => {
+			/**
+			 * After escaping the dropdown and adding a space, "sta " is no longer a valid
+			 * prefix for any column name, so the input should now be in natural language mode.
+			 *
+			 * Repro steps:
+			 * 1. Type "sta" - valid prefix for "status"
+			 * 2. Press Escape - dropdown closes
+			 * 3. Press spacebar - input becomes "sta "
+			 * 4. Observe that the magic wand icon is displayed (indicating NL mode)
+			 *
+			 * EXPECTED: Magic wand icon displayed because "sta " is natural language
+			 * ACTUAL (BUG): Search icon displayed because we're not detecting NL mode correctly
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type "sta" which is a valid prefix for "status"
+			await user.type(input, "sta");
+			expect(input).toHaveValue("sta");
+
+			// Should show search icon (not in NL mode yet - "sta" is valid prefix)
+			expect(screen.getByTestId("search-icon")).toBeInTheDocument();
+			expect(screen.queryByTestId("magic-wand-icon")).not.toBeInTheDocument();
+
+			// Press Escape to close the dropdown
+			await user.keyboard("{Escape}");
+
+			// Press spacebar - input becomes "sta "
+			await user.keyboard(" ");
+			expect(input).toHaveValue("sta ");
+
+			// "sta " is NOT a valid prefix for any column (no column starts with "sta ")
+			// Therefore we should be in natural language mode
+			// The magic wand icon should now be displayed
+			expect(screen.getByTestId("magic-wand-icon")).toBeInTheDocument();
+			expect(screen.queryByTestId("search-icon")).not.toBeInTheDocument();
+		});
+
+		test("space selects first option when input is empty and dropdown is open", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Dropdown should be open with first option highlighted
+			const listbox = screen.getByRole("listbox");
+			const options = within(listbox).getAllByRole("option");
+			expect(options[0]).toHaveAttribute("aria-selected", "true");
+
+			// Input should be empty
+			expect(input).toHaveValue("");
+
+			// Press space - should select the first option (status:)
+			await user.keyboard(" ");
+
+			// Input should now contain the key with colon (e.g., "status:")
+			expect(input).toHaveValue("status:");
+
+			// Space should NOT have been typed into the input
+			expect(input).not.toHaveValue(" ");
+		});
+
+		test("space selects highlighted option after arrow navigation when input is empty", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// First option should be highlighted initially
+			let options = within(screen.getByRole("listbox")).getAllByRole("option");
+			expect(options[0]).toHaveAttribute("aria-selected", "true");
+
+			// Navigate down to second option
+			await user.keyboard("{ArrowDown}");
+
+			// Second option should now be highlighted
+			options = within(screen.getByRole("listbox")).getAllByRole("option");
+			expect(options[1]).toHaveAttribute("aria-selected", "true");
+
+			// Get the text of the second option for later verification
+			const secondOptionText = options[1].textContent?.replace(":", "") || "";
+
+			// Press space - should select the highlighted (second) option
+			await user.keyboard(" ");
+
+			// Input should contain the second option key with colon
+			expect(input).toHaveValue(`${secondOptionText}:`);
+
+			// Space should NOT have been typed into the input
+			expect(input).not.toHaveValue(" ");
+		});
+
+		test("space toggles highlighted option after arrow key navigation (not first match)", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type "priority:" to show the priority values (Low, Medium, High)
+			await user.type(input, "priority:");
+			expect(input).toHaveValue("priority:");
+
+			// Verify dropdown shows priority values with first option (Low) highlighted
+			const listbox = screen.getByRole("listbox");
+			let options = within(listbox).getAllByRole("option");
+			expect(options[0]).toHaveTextContent("Low");
+			expect(options[0]).toHaveAttribute("aria-selected", "true");
+			expect(options[1]).toHaveTextContent("Medium");
+			expect(options[1]).toHaveAttribute("aria-selected", "false");
+
+			// Navigate down to highlight "Medium" instead of "Low"
+			await user.keyboard("{ArrowDown}");
+
+			// Verify "Medium" is now highlighted
+			options = within(screen.getByRole("listbox")).getAllByRole("option");
+			expect(options[0]).toHaveAttribute("aria-selected", "false");
+			expect(options[1]).toHaveAttribute("aria-selected", "true");
+
+			// Press space - should TOGGLE the HIGHLIGHTED option (Medium) for multi-select
+			await user.keyboard(" ");
+
+			// Input should still show "priority:" (multi-select mode keeps dropdown open)
+			expect(input).toHaveValue("priority:");
+
+			// Press Enter to commit the selection
+			await user.keyboard("{Enter}");
+
+			// Now input should be cleared
+			expect(input).toHaveValue("");
+
+			// An AppliedFilter should be created with "Medium", not "Low"
+			const appliedFilter = getAppliedFilter("priority");
+			expect(appliedFilter).toBeInTheDocument();
+			expect(within(appliedFilter).getByText("Medium")).toBeInTheDocument();
+			expect(within(appliedFilter).queryByText("Low")).not.toBeInTheDocument();
+		});
+
+		test("space adds to input when it would be a valid prefix (e.g. 'not' -> 'not ')", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type "status:not" (prefix of "Not Started")
+			await user.type(input, "status:not");
+			expect(input).toHaveValue("status:not");
+
+			// Press space - should add space since "not " is a valid prefix
+			await user.keyboard(" ");
+
+			// Input should have the space added
+			expect(input).toHaveValue("status:not ");
+
+			// No filter should be created yet
+			expect(queryAppliedFilter("status")).not.toBeInTheDocument();
+		});
+
+		test("space toggles selection when it would NOT be a valid prefix (e.g. 'Low')", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type "priority:Low" (complete match, no option starts with "Low ")
+			await user.type(input, "priority:Low");
+			expect(input).toHaveValue("priority:Low");
+
+			// Press space - should toggle selection since "Low " is NOT a valid prefix
+			await user.keyboard(" ");
+
+			// Input should still have "priority:Low" (multi-select mode)
+			expect(input).toHaveValue("priority:Low");
+
+			// Press Enter to commit the selection
+			await user.keyboard("{Enter}");
+
+			// Input should be cleared
+			expect(input).toHaveValue("");
+
+			// An AppliedFilter should be created
+			const appliedFilter = getAppliedFilter("priority");
+			expect(appliedFilter).toBeInTheDocument();
+			expect(within(appliedFilter).getByText("Low")).toBeInTheDocument();
+		});
+	});
+
+	describe("Backspace key and filter focus management", () => {
+		test("pressing Backspace when input is empty focuses the last filter's X button", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Create a filter: select "status:" key, then first value
+			await user.keyboard("{Enter}");
+			await user.keyboard("{Enter}");
+
+			// Verify filter is created
+			await waitFor(() => {
+				const appliedFilter = getAppliedFilter("status");
+				expect(appliedFilter).toBeInTheDocument();
+			});
+
+			// Ensure input is empty (it should be after filter creation)
+			expect(input).toHaveValue("");
+
+			// Press Backspace - should focus the X button, not delete the filter
+			await user.keyboard("{Backspace}");
+
+			// Filter should still exist
+			const appliedFilter = getAppliedFilter("status");
+			expect(appliedFilter).toBeInTheDocument();
+
+			// The X (remove) button should be focused
+			const removeButton =
+				within(appliedFilter).getByLabelText("Remove filter");
+			expect(removeButton).toHaveFocus();
+		});
+
+		test("pressing Backspace on a focused X button deletes the filter", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Create a filter
+			await user.keyboard("{Enter}");
+			await user.keyboard("{Enter}");
+
+			// Verify filter is created
+			await waitFor(() => {
+				const appliedFilter = getAppliedFilter("status");
+				expect(appliedFilter).toBeInTheDocument();
+			});
+
+			// Press Backspace to focus the X button
+			await user.keyboard("{Backspace}");
+
+			// Verify X button is focused
+			const appliedFilter = getAppliedFilter("status");
+			const removeButton =
+				within(appliedFilter).getByLabelText("Remove filter");
+			expect(removeButton).toHaveFocus();
+
+			// Press Backspace again to delete the filter
+			await act(async () => {
+				await user.keyboard("{Backspace}");
+			});
+
+			// Filter should be removed
+			await waitFor(() => {
+				expect(queryAppliedFilter("status")).not.toBeInTheDocument();
+			});
+		});
+
+		test("pressing Enter on a focused X button deletes the filter", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Create a filter
+			await user.keyboard("{Enter}");
+			await user.keyboard("{Enter}");
+
+			// Verify filter is created
+			await waitFor(() => {
+				const appliedFilter = getAppliedFilter("status");
+				expect(appliedFilter).toBeInTheDocument();
+			});
+
+			// Press Backspace to focus the X button
+			await user.keyboard("{Backspace}");
+
+			// Verify X button is focused
+			const appliedFilter = getAppliedFilter("status");
+			const removeButton =
+				within(appliedFilter).getByLabelText("Remove filter");
+			expect(removeButton).toHaveFocus();
+
+			// Press Enter to delete the filter
+			await act(async () => {
+				await user.keyboard("{Enter}");
+			});
+
+			// Filter should be removed
+			await waitFor(() => {
+				expect(queryAppliedFilter("status")).not.toBeInTheDocument();
+			});
+		});
+
+		test("when a filter is deleted, focus moves to the previous filter's X button", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Create first filter (status)
+			await user.type(input, "status:");
+			await user.keyboard("{Enter}");
+
+			await waitFor(() => {
+				expect(getAppliedFilter("status")).toBeInTheDocument();
+			});
+
+			// Create second filter (priority)
+			await user.click(input);
+			await user.type(input, "priority:");
+			await user.keyboard("{Enter}");
+
+			await waitFor(() => {
+				expect(getAppliedFilter("priority")).toBeInTheDocument();
+			});
+
+			// Focus input and press Backspace to focus the last filter's X button
+			await user.click(input);
+			await user.keyboard("{Backspace}");
+
+			// Verify second filter's X button is focused
+			const secondFilter = getAppliedFilter("priority");
+			const secondRemoveButton =
+				within(secondFilter).getByLabelText("Remove filter");
+			expect(secondRemoveButton).toHaveFocus();
+
+			// Press Backspace to delete the second filter
+			await act(async () => {
+				await user.keyboard("{Backspace}");
+			});
+
+			// Wait for deletion and focus to move (setTimeout in handleFilterRemove)
+			await waitFor(() => {
+				expect(queryAppliedFilter("priority")).not.toBeInTheDocument();
+			});
+
+			// Wait for the focus to be applied (setTimeout(0) in handleFilterRemove)
+			await waitFor(() => {
+				const firstFilter = getAppliedFilter("status");
+				const firstRemoveButton =
+					within(firstFilter).getByLabelText("Remove filter");
+				expect(firstRemoveButton).toHaveFocus();
+			});
+		});
+
+		test("when the only filter is deleted, focus moves to the input", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Create a single filter
+			await user.keyboard("{Enter}");
+			await user.keyboard("{Enter}");
+
+			await waitFor(() => {
+				expect(getAppliedFilter("status")).toBeInTheDocument();
+			});
+
+			// Press Backspace to focus the X button
+			await user.keyboard("{Backspace}");
+
+			// Verify X button is focused
+			const appliedFilter = getAppliedFilter("status");
+			const removeButton =
+				within(appliedFilter).getByLabelText("Remove filter");
+			expect(removeButton).toHaveFocus();
+
+			// Delete the filter
+			await act(async () => {
+				await user.keyboard("{Backspace}");
+			});
+
+			// Wait for deletion and focus to move
+			await waitFor(() => {
+				expect(queryAppliedFilter("status")).not.toBeInTheDocument();
+			});
+
+			// Wait for the focus to be applied (setTimeout(0) in handleFilterRemove)
+			await waitFor(() => {
+				expect(input).toHaveFocus();
+			});
+		});
+
+		test("clicking the X button to remove a filter focuses the previous filter's X button", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Create first filter (status)
+			await user.type(input, "status:");
+			await user.keyboard("{Enter}");
+
+			await waitFor(() => {
+				expect(getAppliedFilter("status")).toBeInTheDocument();
+			});
+
+			// Create second filter (priority)
+			await user.click(input);
+			await user.type(input, "priority:");
+			await user.keyboard("{Enter}");
+
+			await waitFor(() => {
+				expect(getAppliedFilter("priority")).toBeInTheDocument();
+			});
+
+			// Click the X button on the second filter
+			const secondFilter = getAppliedFilter("priority");
+			const secondRemoveButton =
+				within(secondFilter).getByLabelText("Remove filter");
+			await user.click(secondRemoveButton);
+
+			// Wait for deletion and focus to move
+			await waitFor(() => {
+				expect(queryAppliedFilter("priority")).not.toBeInTheDocument();
+			});
+
+			// Wait for the focus to be applied (setTimeout(0) in handleFilterRemove)
+			await waitFor(() => {
+				const firstFilter = getAppliedFilter("status");
+				const firstRemoveButton =
+					within(firstFilter).getByLabelText("Remove filter");
+				expect(firstRemoveButton).toHaveFocus();
+			});
+		});
+
+		test("deleting multiple filters in sequence maintains proper focus chain", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Create three filters
+			await user.type(input, "status:");
+			await user.keyboard("{Enter}");
+			await waitFor(() => {
+				expect(getAppliedFilter("status")).toBeInTheDocument();
+			});
+
+			await user.click(input);
+			await user.type(input, "priority:");
+			await user.keyboard("{Enter}");
+			await waitFor(() => {
+				expect(getAppliedFilter("priority")).toBeInTheDocument();
+			});
+
+			await user.click(input);
+			await user.type(input, "tags:");
+			await user.keyboard("{Enter}");
+			await waitFor(() => {
+				expect(getAppliedFilter("tags")).toBeInTheDocument();
+			});
+
+			// Focus input and press Backspace to focus the last filter's X button
+			await user.click(input);
+			await user.keyboard("{Backspace}");
+
+			// Delete third filter (tags)
+			await act(async () => {
+				await user.keyboard("{Backspace}");
+			});
+			await waitFor(() => {
+				expect(queryAppliedFilter("tags")).not.toBeInTheDocument();
+			});
+
+			// Wait for focus to move to second filter's X button
+			await waitFor(() => {
+				const priorityFilter = getAppliedFilter("priority");
+				expect(
+					within(priorityFilter).getByLabelText("Remove filter"),
+				).toHaveFocus();
+			});
+
+			// Delete second filter (priority)
+			await act(async () => {
+				await user.keyboard("{Backspace}");
+			});
+			await waitFor(() => {
+				expect(queryAppliedFilter("priority")).not.toBeInTheDocument();
+			});
+
+			// Wait for focus to move to first filter's X button
+			await waitFor(() => {
+				const statusFilter = getAppliedFilter("status");
+				expect(
+					within(statusFilter).getByLabelText("Remove filter"),
+				).toHaveFocus();
+			});
+
+			// Delete first filter (status)
+			await act(async () => {
+				await user.keyboard("{Backspace}");
+			});
+			await waitFor(() => {
+				expect(queryAppliedFilter("status")).not.toBeInTheDocument();
+			});
+
+			// Wait for focus to move to the input
+			await waitFor(() => {
+				expect(input).toHaveFocus();
+			});
+		});
+	});
+
+	describe("Multi-select click behavior", () => {
+		test("clicking option label after selecting checkboxes should include all pending selections", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type "tags" and press space to select the "tags" column
+			await user.type(input, "tags");
+			await user.keyboard(" ");
+
+			// Input should now contain "tags:"
+			expect(input).toHaveValue("tags:");
+
+			// Dropdown should show tag value options
+			const listbox = screen.getByRole("listbox");
+			const options = within(listbox).getAllByRole("option");
+
+			// Find the checkbox buttons for Bug and Feature
+			const bugOption = options.find((opt) => opt.textContent?.includes("Bug"));
+			const featureOption = options.find((opt) =>
+				opt.textContent?.includes("Feature"),
+			);
+			const testingOption = options.find((opt) =>
+				opt.textContent?.includes("Testing"),
+			);
+
+			expect(bugOption).toBeDefined();
+			expect(featureOption).toBeDefined();
+			expect(testingOption).toBeDefined();
+
+			// Click the checkbox for "Bug" (the checkbox inside the option)
+			const bugCheckbox = within(bugOption!).getByRole("checkbox");
+			await user.click(bugCheckbox);
+
+			// Click the checkbox for "Feature"
+			const featureCheckbox = within(featureOption!).getByRole("checkbox");
+			await user.click(featureCheckbox);
+
+			// Dropdown should still be open with pending selections
+			expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+			// Now click the label for "Testing" (click the option button itself, not the checkbox)
+			// We need to click on the text part, not the checkbox button
+			await user.click(testingOption!);
+
+			// A filter should be created
+			await waitFor(() => {
+				// Use "tags" because propertyNamePlural is "tags"
+				const appliedFilter = queryAppliedFilter("tags");
+				expect(appliedFilter).toBeInTheDocument();
+			});
+
+			// The filter should include ALL three values (Bug, Feature, Testing)
+			const appliedFilter = getAppliedFilter("tags");
+
+			// Check that all three values are in the filter (rendered as comma-separated string)
+			expect(
+				within(appliedFilter).getByText("Bug, Feature, Testing"),
+			).toBeInTheDocument();
+		});
+	});
+
+	describe("Enter with pending selections and highlighted option", () => {
+		test("pressing Enter should include the currently highlighted option along with pending selections", async () => {
+			/**
+			 * BUG REPRODUCTION:
+			 * 1. Select a column (e.g., "priority:")
+			 * 2. Use spacebar to select one or more options (e.g., "Low")
+			 * 3. Use arrow keys to move highlighting to an unselected option (e.g., "High")
+			 * 4. Press Enter
+			 *
+			 * EXPECTED: Filter is created with both "Low" AND "High"
+			 * ACTUAL (BUG): Filter is created with only "Low" - the highlighted "High" is NOT included
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type "priority:" to show the priority values (Low, Medium, High)
+			await user.type(input, "priority:");
+			expect(input).toHaveValue("priority:");
+
+			// Verify dropdown shows priority values with first option (Low) highlighted
+			const listbox = screen.getByRole("listbox");
+			let options = within(listbox).getAllByRole("option");
+			expect(options[0]).toHaveTextContent("Low");
+			expect(options[0]).toHaveAttribute("aria-selected", "true");
+			expect(options[1]).toHaveTextContent("Medium");
+			expect(options[2]).toHaveTextContent("High");
+
+			// Step 2: Press space to select "Low" (adds to pending selections)
+			await user.keyboard(" ");
+
+			// Verify we're in multi-select mode (input should still show "priority:")
+			expect(input).toHaveValue("priority:");
+			expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+			// Step 3: Navigate down twice to highlight "High" (which is NOT selected yet)
+			await user.keyboard("{ArrowDown}");
+			await user.keyboard("{ArrowDown}");
+
+			// Verify "High" is now highlighted
+			options = within(screen.getByRole("listbox")).getAllByRole("option");
+			expect(options[2]).toHaveAttribute("aria-selected", "true");
+			expect(options[2]).toHaveTextContent("High");
+
+			// Step 4: Press Enter to commit
+			await user.keyboard("{Enter}");
+
+			// Input should be cleared
+			expect(input).toHaveValue("");
+
+			// An AppliedFilter should be created
+			const appliedFilter = getAppliedFilter("priority");
+			expect(appliedFilter).toBeInTheDocument();
+
+			// BUG: The filter should include BOTH "Low" (space-selected) AND "High" (highlighted when Enter pressed)
+			// Currently, only "Low" is included and "High" is erroneously NOT included
+			expect(within(appliedFilter).getByText("Low, High")).toBeInTheDocument();
+		});
+
+		test("pressing Enter with multiple pending selections should include highlighted option as well", async () => {
+			/**
+			 * More comprehensive test:
+			 * 1. Select "priority:" column
+			 * 2. Space to select "Low"
+			 * 3. Arrow down to "Medium", Space to select it
+			 * 4. Arrow down to "High" (highlight it but don't space-select)
+			 * 5. Press Enter
+			 *
+			 * EXPECTED: Filter with "Low", "Medium", AND "High"
+			 * ACTUAL (BUG): Filter with only "Low" and "Medium"
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type "priority:" to show the priority values
+			await user.type(input, "priority:");
+
+			// Space to select "Low"
+			await user.keyboard(" ");
+
+			// Arrow down to "Medium" and space to select it
+			await user.keyboard("{ArrowDown}");
+			await user.keyboard(" ");
+
+			// Arrow down to "High" (highlight but don't select with space)
+			await user.keyboard("{ArrowDown}");
+
+			// Verify "High" is highlighted
+			const options = within(screen.getByRole("listbox")).getAllByRole(
+				"option",
+			);
+			expect(options[2]).toHaveAttribute("aria-selected", "true");
+			expect(options[2]).toHaveTextContent("High");
+
+			// Press Enter to commit
+			await user.keyboard("{Enter}");
+
+			// Input should be cleared
+			expect(input).toHaveValue("");
+
+			// Filter should include all three: Low, Medium, AND High
+			const appliedFilter = getAppliedFilter("priority");
+			expect(appliedFilter).toBeInTheDocument();
+			expect(
+				within(appliedFilter).getByText("Low, Medium, High"),
+			).toBeInTheDocument();
+		});
+	});
+
+	describe("Blur with pending selections", () => {
+		test("clicking away from dropdown with pending selections should apply the filter", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type "priority:" to show the priority values
+			await user.type(input, "priority:");
+			expect(input).toHaveValue("priority:");
+
+			// Verify dropdown shows priority values
+			const listbox = screen.getByRole("listbox");
+			const options = within(listbox).getAllByRole("option");
+			expect(options[0]).toHaveTextContent("Low");
+
+			// Press space to toggle selection (creates pending selection)
+			await user.keyboard(" ");
+
+			// Verify we're in multi-select mode (input should still show "priority:")
+			expect(input).toHaveValue("priority:");
+
+			// Dropdown should still be open with the pending selection
+			expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+			// Click away from the input (blur)
+			await user.click(document.body);
+
+			// Wait for blur effects
+			await waitFor(() => {
+				expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+			});
+
+			// BUG: The pending selection should have been applied as a filter
+			// Currently, clicking away discards the pending selection
+			const appliedFilter = queryAppliedFilter("priority");
+			expect(appliedFilter).toBeInTheDocument();
+			expect(within(appliedFilter!).getByText("Low")).toBeInTheDocument();
+		});
+
+		test("clicking away from dropdown with multiple pending selections should apply all as a single filter", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type "priority:" to show the priority values
+			await user.type(input, "priority:");
+
+			// Select first option (Low) with space
+			await user.keyboard(" ");
+
+			// Navigate to second option (Medium) and select it too
+			await user.keyboard("{ArrowDown}");
+			await user.keyboard(" ");
+
+			// Verify we're still in multi-select mode
+			expect(input).toHaveValue("priority:");
+			expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+			// Click away from the input (blur)
+			await user.click(document.body);
+
+			// Wait for blur effects
+			await waitFor(() => {
+				expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+			});
+
+			// BUG: Both pending selections should have been applied as a single filter
+			const appliedFilter = queryAppliedFilter("priority");
+			expect(appliedFilter).toBeInTheDocument();
+			// Both values should be in the filter
+			expect(
+				within(appliedFilter!).getByText("Low, Medium"),
+			).toBeInTheDocument();
+		});
+	});
+
+	/**
+	 * BUG: Erroneous hover state on first filter's operator when hovering elsewhere
+	 *
+	 * Repro steps:
+	 * 1. Apply a filter (any will do)
+	 * 2. Apply a second filter
+	 * 3. Move the mouse to hover over the second filter (or anywhere in the container)
+	 * 4. BUG: The "operator" (e.g., "include") of the FIRST filter erroneously gains a hover state
+	 *
+	 * This is a CSS-level bug that cannot be fully tested in jsdom (which doesn't compute CSS).
+	 * These tests verify the DOM structure and JavaScript event handling are correct,
+	 * which helps narrow down the bug to a CSS/styling issue.
+	 *
+	 * Suspected causes:
+	 * 1. The <label> element wrapping the filter chips may have unexpected hover behavior
+	 * 2. CSS pseudo-class bleeding between sibling elements
+	 * 3. Overlapping elements or z-index issues
+	 */
+	describe("Hover state isolation between filter chips", () => {
+		test("hovering over one filter chip should not trigger hover state on another filter's operator button", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Create first filter (tags: Bug)
+			await user.type(input, "tags:");
+			await user.keyboard("{Enter}"); // Select first tag value (Bug)
+
+			// Verify first filter is created
+			await waitFor(() => {
+				const appliedFilter = getAppliedFilter("tags");
+				expect(appliedFilter).toBeInTheDocument();
+			});
+
+			// Create second filter (priority: Low)
+			await user.click(input);
+			await user.type(input, "priority:");
+			await user.keyboard("{Enter}"); // Select first priority value (Low)
+
+			// Verify second filter is created
+			await waitFor(() => {
+				const appliedFilter = getAppliedFilter("priority");
+				expect(appliedFilter).toBeInTheDocument();
+			});
+
+			// Get the operator buttons from both filters
+			const firstFilter = getAppliedFilter("tags");
+			const secondFilter = getAppliedFilter("priority");
+
+			const firstFilterOperator = within(firstFilter).getByLabelText(
+				"Filter relationship",
+			);
+			const secondFilterOperator = within(secondFilter).getByLabelText(
+				"Filter relationship",
+			);
+
+			// Verify both operator buttons exist and are separate elements
+			expect(firstFilterOperator).toBeInTheDocument();
+			expect(secondFilterOperator).toBeInTheDocument();
+			expect(firstFilterOperator).not.toBe(secondFilterOperator);
+
+			// Hover over the second filter's operator button
+			await user.hover(secondFilterOperator);
+
+			// The first filter's operator button should NOT be in any unexpected state
+			// (not focused, not have data-state indicating hover, etc.)
+			expect(firstFilterOperator).not.toHaveFocus();
+			expect(document.activeElement).not.toBe(firstFilterOperator);
+
+			// Verify the elements are in separate fieldsets (proper DOM isolation)
+			expect(firstFilterOperator.closest("fieldset")).toBe(firstFilter);
+			expect(secondFilterOperator.closest("fieldset")).toBe(secondFilter);
+			expect(firstFilterOperator.closest("fieldset")).not.toBe(
+				secondFilterOperator.closest("fieldset"),
+			);
+		});
+
+		test("each filter chip's operator button should be independently hoverable", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Create two filters
+			await user.type(input, "tags:");
+			await user.keyboard("{Enter}");
+			await waitFor(() => {
+				expect(getAppliedFilter("tags")).toBeInTheDocument();
+			});
+
+			await user.click(input);
+			await user.type(input, "priority:");
+			await user.keyboard("{Enter}");
+			await waitFor(() => {
+				expect(getAppliedFilter("priority")).toBeInTheDocument();
+			});
+
+			const firstFilter = getAppliedFilter("tags");
+			const secondFilter = getAppliedFilter("priority");
+			const firstOperator = within(firstFilter).getByLabelText(
+				"Filter relationship",
+			);
+			const secondOperator = within(secondFilter).getByLabelText(
+				"Filter relationship",
+			);
+
+			// Track mouseenter events on both operators
+			const firstOperatorMouseEnter = vi.fn();
+			const secondOperatorMouseEnter = vi.fn();
+			firstOperator.addEventListener("mouseenter", firstOperatorMouseEnter);
+			secondOperator.addEventListener("mouseenter", secondOperatorMouseEnter);
+
+			// Hover over first operator
+			await user.hover(firstOperator);
+			expect(firstOperatorMouseEnter).toHaveBeenCalledTimes(1);
+			expect(secondOperatorMouseEnter).toHaveBeenCalledTimes(0);
+
+			// Unhover and hover over second operator
+			await user.unhover(firstOperator);
+			await user.hover(secondOperator);
+			expect(firstOperatorMouseEnter).toHaveBeenCalledTimes(1); // Should not increase
+			expect(secondOperatorMouseEnter).toHaveBeenCalledTimes(1);
+
+			// Cleanup
+			firstOperator.removeEventListener("mouseenter", firstOperatorMouseEnter);
+			secondOperator.removeEventListener(
+				"mouseenter",
+				secondOperatorMouseEnter,
+			);
+		});
+
+		test("hovering over the container should not trigger hover on nested operator buttons", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Create a filter
+			await user.type(input, "tags:");
+			await user.keyboard("{Enter}");
+			await waitFor(() => {
+				expect(getAppliedFilter("tags")).toBeInTheDocument();
+			});
+
+			const appliedFilter = getAppliedFilter("tags");
+			const operatorButton = within(appliedFilter).getByLabelText(
+				"Filter relationship",
+			);
+
+			// Find the parent container element by its ID
+			const containerElement = document.getElementById("chip-filter-container");
+			expect(containerElement).toBeInTheDocument();
+
+			// Track mouseenter on the operator button
+			const operatorMouseEnter = vi.fn();
+			operatorButton.addEventListener("mouseenter", operatorMouseEnter);
+
+			// Hover over the container (but not directly over the operator button)
+			// by hovering over the input instead
+			await user.hover(input);
+
+			// The operator button should NOT receive a mouseenter event
+			// when hovering over a different part of the container
+			expect(operatorMouseEnter).toHaveBeenCalledTimes(0);
+
+			// Cleanup
+			operatorButton.removeEventListener("mouseenter", operatorMouseEnter);
+		});
+
+		test("the filter chips container should NOT be a label element wrapping interactive buttons", async () => {
+			/**
+			 * This test ensures the hover bug fix remains in place.
+			 *
+			 * The <label> element has special behavior in HTML - clicking on a label
+			 * focuses/clicks its associated form control. This can cause unexpected
+			 * hover interactions when the label wraps interactive elements like buttons.
+			 *
+			 * The fix was to change the container from <label> to <fieldset>, which:
+			 * 1. Prevents hover state bleeding between nested interactive elements
+			 * 2. Is semantically correct for grouping form controls
+			 * 3. Can contain interactive elements
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Create a filter
+			await user.type(input, "tags:");
+			await user.keyboard("{Enter}");
+			await waitFor(() => {
+				expect(getAppliedFilter("tags")).toBeInTheDocument();
+			});
+
+			// Get the container that wraps both the filter chips and the input by its ID
+			const container = document.getElementById("chip-filter-container");
+
+			// The container should be a <fieldset>, not a <label>
+			// Using a <label> would cause hover state bleeding to nested buttons
+			// Using <fieldset> is semantically correct for grouping form controls
+			expect(container).toBeInTheDocument();
+			expect(container?.tagName.toLowerCase()).toBe("fieldset");
+			expect(container?.tagName.toLowerCase()).not.toBe("label");
+		});
+	});
+
+	describe("Roving tabindex for applied filters (Radix Toolbar)", () => {
+		/**
+		 * Tests for the roving tabindex pattern implemented via Radix Toolbar.
+		 *
+		 * Expected behavior:
+		 * - All applied filters act as a single tab stop
+		 * - Arrow keys navigate between focusable elements within filters
+		 * - Tab moves to the input (or other elements outside the toolbar)
+		 */
+
+		test("applied filters are wrapped in a toolbar with proper ARIA role", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Create a filter
+			await user.type(input, "status:");
+			await user.keyboard("{Enter}");
+
+			await waitFor(() => {
+				expect(getAppliedFilter("status")).toBeInTheDocument();
+			});
+
+			// There should be a toolbar element wrapping the filters
+			const toolbar = screen.getByRole("toolbar", {
+				name: /applied filters/i,
+			});
+			expect(toolbar).toBeInTheDocument();
+		});
+
+		test("toolbar is not rendered when there are no filters", async () => {
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			// No toolbar should exist without filters
+			expect(
+				screen.queryByRole("toolbar", { name: /applied filters/i }),
+			).not.toBeInTheDocument();
+		});
+
+		test("arrow keys navigate between buttons within a single filter", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Create a filter
+			await user.type(input, "status:");
+			await user.keyboard("{Enter}");
+
+			await waitFor(() => {
+				expect(getAppliedFilter("status")).toBeInTheDocument();
+			});
+
+			const appliedFilter = getAppliedFilter("status");
+
+			// Get the focusable buttons within the filter
+			const operatorButton = within(appliedFilter).getByLabelText(
+				"Filter relationship",
+			);
+			const valuesButton = within(appliedFilter).getByLabelText(/filter by/i);
+			const removeButton =
+				within(appliedFilter).getByLabelText("Remove filter");
+
+			// Focus the operator button (first focusable in toolbar)
+			operatorButton.focus();
+			expect(operatorButton).toHaveFocus();
+
+			// Press ArrowRight - should move to values button
+			await user.keyboard("{ArrowRight}");
+			expect(valuesButton).toHaveFocus();
+
+			// Press ArrowRight - should move to remove button
+			await user.keyboard("{ArrowRight}");
+			expect(removeButton).toHaveFocus();
+
+			// Press ArrowLeft - should move back to values button
+			await user.keyboard("{ArrowLeft}");
+			expect(valuesButton).toHaveFocus();
+		});
+
+		test("arrow keys navigate across multiple filters", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Create first filter
+			await user.type(input, "status:");
+			await user.keyboard("{Enter}");
+
+			await waitFor(() => {
+				expect(getAppliedFilter("status")).toBeInTheDocument();
+			});
+
+			// Create second filter
+			await user.click(input);
+			await user.type(input, "priority:");
+			await user.keyboard("{Enter}");
+
+			await waitFor(() => {
+				expect(getAppliedFilter("priority")).toBeInTheDocument();
+			});
+
+			const firstFilter = getAppliedFilter("status");
+			const secondFilter = getAppliedFilter("priority");
+
+			// Get the remove button of first filter and operator button of second filter
+			const firstFilterRemove =
+				within(firstFilter).getByLabelText("Remove filter");
+			const secondFilterOperator = within(secondFilter).getByLabelText(
+				"Filter relationship",
+			);
+
+			// Focus the remove button of first filter
+			firstFilterRemove.focus();
+			expect(firstFilterRemove).toHaveFocus();
+
+			// Press ArrowRight - should move to second filter's operator button
+			await user.keyboard("{ArrowRight}");
+			expect(secondFilterOperator).toHaveFocus();
+
+			// Press ArrowLeft - should move back to first filter's remove button
+			await user.keyboard("{ArrowLeft}");
+			expect(firstFilterRemove).toHaveFocus();
+		});
+
+		test("Home key moves focus to first toolbar item", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Create two filters
+			await user.type(input, "status:");
+			await user.keyboard("{Enter}");
+			await waitFor(() => {
+				expect(getAppliedFilter("status")).toBeInTheDocument();
+			});
+
+			await user.click(input);
+			await user.type(input, "priority:");
+			await user.keyboard("{Enter}");
+			await waitFor(() => {
+				expect(getAppliedFilter("priority")).toBeInTheDocument();
+			});
+
+			const firstFilter = getAppliedFilter("status");
+			const secondFilter = getAppliedFilter("priority");
+
+			const firstOperator = within(firstFilter).getByLabelText(
+				"Filter relationship",
+			);
+			const secondRemove = within(secondFilter).getByLabelText("Remove filter");
+
+			// Focus the last button (second filter's remove button)
+			secondRemove.focus();
+			expect(secondRemove).toHaveFocus();
+
+			// Press Home - should move to first toolbar item
+			await user.keyboard("{Home}");
+			expect(firstOperator).toHaveFocus();
+		});
+
+		test("End key moves focus to last toolbar item", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Create two filters
+			await user.type(input, "status:");
+			await user.keyboard("{Enter}");
+			await waitFor(() => {
+				expect(getAppliedFilter("status")).toBeInTheDocument();
+			});
+
+			await user.click(input);
+			await user.type(input, "priority:");
+			await user.keyboard("{Enter}");
+			await waitFor(() => {
+				expect(getAppliedFilter("priority")).toBeInTheDocument();
+			});
+
+			const firstFilter = getAppliedFilter("status");
+			const secondFilter = getAppliedFilter("priority");
+
+			const firstOperator = within(firstFilter).getByLabelText(
+				"Filter relationship",
+			);
+			const secondRemove = within(secondFilter).getByLabelText("Remove filter");
+
+			// Focus the first button
+			firstOperator.focus();
+			expect(firstOperator).toHaveFocus();
+
+			// Press End - should move to last toolbar item
+			await user.keyboard("{End}");
+			expect(secondRemove).toHaveFocus();
+		});
+
+		test("left arrow on first operator stays put, right arrow on last X moves to input", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Create a filter
+			await user.type(input, "status:");
+			await user.keyboard("{Enter}");
+
+			await waitFor(() => {
+				expect(getAppliedFilter("status")).toBeInTheDocument();
+			});
+
+			const appliedFilter = getAppliedFilter("status");
+			const operatorButton = within(appliedFilter).getByLabelText(
+				"Filter relationship",
+			);
+			const removeButton =
+				within(appliedFilter).getByLabelText("Remove filter");
+
+			// Focus the first button (operator)
+			operatorButton.focus();
+			expect(operatorButton).toHaveFocus();
+
+			// Press ArrowLeft - should NOT wrap, focus stays on operator button
+			await user.keyboard("{ArrowLeft}");
+			expect(operatorButton).toHaveFocus();
+
+			// Navigate to the remove button
+			removeButton.focus();
+			expect(removeButton).toHaveFocus();
+
+			// Press ArrowRight - should move focus to input (not wrap)
+			await user.keyboard("{ArrowRight}");
+			expect(input).toHaveFocus();
+		});
+	});
+
+	describe("Text filter creation", () => {
+		test("selecting a text column creates a draft filter chip with inline input", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Navigate to the "text" column option and select it
+			// The text column should be the last one in the filter categories
+			await user.type(input, "text");
+			await user.keyboard("{Enter}");
+
+			// A draft filter chip should appear with an inline input
+			// The draft has a specific class/styling (border-blue-400)
+			const draftFieldset = document.querySelector(
+				'fieldset[name="text filter"]',
+			);
+			expect(draftFieldset).toBeInTheDocument();
+
+			// The draft should have an editable text input
+			const draftInput = within(draftFieldset as HTMLElement).getByRole(
+				"textbox",
+			);
+			expect(draftInput).toBeInTheDocument();
+			expect(draftInput).toHaveFocus();
+		});
+
+		test("BUG REPRO: text filter should only be created ONCE when user tabs away", async () => {
+			/**
+			 * BUG: When the user creates a text filter and tabs away, the filter is created twice.
+			 *
+			 * Repro steps:
+			 * 1. Focus the main input
+			 * 2. Select "text" as the column (which creates a draft text filter)
+			 * 3. Type "foobar" as the value
+			 * 4. Press Tab to blur the draft input
+			 *
+			 * EXPECTED: One filter chip with text value "foobar"
+			 * ACTUAL (BUG): Two filter chips are created
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Step 1-2: Select "text" column
+			await user.type(input, "text");
+			await user.keyboard("{Enter}");
+
+			// Verify the draft filter is created
+			const draftFieldset = document.querySelector(
+				'fieldset[name="text filter"]',
+			);
+			expect(draftFieldset).toBeInTheDocument();
+
+			// Step 3: Type the filter value
+			const draftInput = within(draftFieldset as HTMLElement).getByRole(
+				"textbox",
+			);
+			await user.type(draftInput, "foobar");
+
+			// Step 4: Press Tab to blur the draft input (commit the filter)
+			await user.tab();
+
+			// Wait for any async effects
+			await waitFor(() => {
+				// The draft should be gone (converted to a committed filter)
+				expect(
+					screen.queryByPlaceholderText("type to search..."),
+				).not.toBeInTheDocument();
+			});
+
+			// BUG: There should be exactly ONE filter chip, not two
+			const allTextFilters = document.querySelectorAll(
+				'fieldset[name="text filter"]',
+			);
+			expect(allTextFilters).toHaveLength(1);
+		});
+
+		test("text filter should only be created ONCE when user presses Enter", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Select "text" column
+			await user.type(input, "text");
+			await user.keyboard("{Enter}");
+
+			// Verify the draft filter is created
+			const draftFieldset = document.querySelector(
+				'fieldset[name="text filter"]',
+			);
+			expect(draftFieldset).toBeInTheDocument();
+
+			// Type the filter value
+			const draftInput = within(draftFieldset as HTMLElement).getByRole(
+				"textbox",
+			);
+			await user.type(draftInput, "foobar");
+
+			// Press Enter to commit the filter
+			await user.keyboard("{Enter}");
+
+			// Wait for any async effects
+			await waitFor(() => {
+				// The draft input should be gone
+				expect(
+					screen.queryByPlaceholderText("type to search..."),
+				).not.toBeInTheDocument();
+			});
+
+			// There should be exactly ONE filter chip, not two
+			const allTextFilters = document.querySelectorAll(
+				'fieldset[name="text filter"]',
+			);
+			expect(allTextFilters).toHaveLength(1);
+		});
+	});
+
+	describe("Draft text filter operator editing", () => {
+		/**
+		 * Helper to create a draft text filter and return relevant elements.
+		 */
+		async function createDraftTextFilter(
+			user: ReturnType<typeof userEvent.setup>,
+		) {
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Select "text" column to create a draft
+			await user.type(input, "text");
+			await user.keyboard("{Enter}");
+
+			const draftFieldset = document.querySelector(
+				'fieldset[name="text filter"]',
+			) as HTMLFieldSetElement;
+
+			const draftInput = within(draftFieldset).getByRole("textbox");
+			const operatorButton = within(draftFieldset).getByRole("button", {
+				name: /filter relationship/i,
+			});
+
+			return { draftFieldset, draftInput, operatorButton, mainInput: input };
+		}
+
+		test("left arrow key at cursor position 0 moves focus to operator button", async () => {
+			const user = userEvent.setup();
+			const { draftInput, operatorButton } = await createDraftTextFilter(user);
+
+			// Verify input has focus and cursor is at position 0 (empty input)
+			expect(draftInput).toHaveFocus();
+			expect((draftInput as HTMLInputElement).selectionStart).toBe(0);
+
+			// Press left arrow
+			await user.keyboard("{ArrowLeft}");
+
+			// Focus should move to operator button
+			expect(operatorButton).toHaveFocus();
+		});
+
+		test("left arrow key does NOT move focus when cursor is not at position 0", async () => {
+			const user = userEvent.setup();
+			const { draftInput } = await createDraftTextFilter(user);
+
+			// Type some text
+			await user.type(draftInput, "hello");
+
+			// Cursor is now at position 5 (end of "hello")
+			expect((draftInput as HTMLInputElement).selectionStart).toBe(5);
+
+			// Press left arrow - should just move cursor within text
+			await user.keyboard("{ArrowLeft}");
+
+			// Focus should stay on input (cursor moved to position 4)
+			expect(draftInput).toHaveFocus();
+			expect((draftInput as HTMLInputElement).selectionStart).toBe(4);
+		});
+
+		test("left arrow key moves focus to operator only when cursor reaches position 0", async () => {
+			const user = userEvent.setup();
+			const { draftInput, operatorButton } = await createDraftTextFilter(user);
+
+			// Type "hi" (2 characters)
+			await user.type(draftInput, "hi");
+			expect((draftInput as HTMLInputElement).selectionStart).toBe(2);
+
+			// Press left arrow twice to reach position 0
+			await user.keyboard("{ArrowLeft}"); // position 1
+			expect(draftInput).toHaveFocus();
+			expect((draftInput as HTMLInputElement).selectionStart).toBe(1);
+
+			await user.keyboard("{ArrowLeft}"); // position 0
+			expect(draftInput).toHaveFocus();
+			expect((draftInput as HTMLInputElement).selectionStart).toBe(0);
+
+			// Now pressing left arrow should move focus to operator
+			await user.keyboard("{ArrowLeft}");
+			expect(operatorButton).toHaveFocus();
+		});
+
+		test("right arrow key on operator button returns focus to text input", async () => {
+			const user = userEvent.setup();
+			const { draftInput, operatorButton } = await createDraftTextFilter(user);
+
+			// Move focus to operator button
+			await user.keyboard("{ArrowLeft}");
+			expect(operatorButton).toHaveFocus();
+
+			// Press right arrow
+			await user.keyboard("{ArrowRight}");
+
+			// Focus should return to text input
+			expect(draftInput).toHaveFocus();
+		});
+
+		test("clicking operator button opens dropdown with operator options", async () => {
+			const user = userEvent.setup();
+			const { operatorButton } = await createDraftTextFilter(user);
+
+			// Click the operator button
+			await user.click(operatorButton);
+
+			// Dropdown should be visible with both options
+			const menu = screen.getByRole("menu");
+			expect(menu).toBeInTheDocument();
+
+			const containsOption = within(menu).getByRole("menuitemradio", {
+				name: "contains",
+			});
+			const doesNotContainOption = within(menu).getByRole("menuitemradio", {
+				name: "does not contain",
+			});
+
+			expect(containsOption).toBeInTheDocument();
+			expect(doesNotContainOption).toBeInTheDocument();
+
+			// "contains" should be checked by default
+			expect(containsOption).toHaveAttribute("aria-checked", "true");
+			expect(doesNotContainOption).toHaveAttribute("aria-checked", "false");
+		});
+
+		test("selecting 'does not contain' updates the operator display", async () => {
+			const user = userEvent.setup();
+			const { operatorButton } = await createDraftTextFilter(user);
+
+			// Verify initial operator is "contains"
+			expect(operatorButton).toHaveTextContent("contains");
+
+			// Click to open dropdown
+			await user.click(operatorButton);
+
+			// Select "does not contain"
+			const doesNotContainOption = screen.getByRole("menuitemradio", {
+				name: "does not contain",
+			});
+			await user.click(doesNotContainOption);
+
+			// Operator button should now show "does not contain"
+			expect(operatorButton).toHaveTextContent("does not contain");
+		});
+
+		test("focus returns to text input after selecting operator from dropdown", async () => {
+			const user = userEvent.setup();
+			const { draftInput, operatorButton } = await createDraftTextFilter(user);
+
+			// Click to open dropdown
+			await user.click(operatorButton);
+
+			// Select "does not contain"
+			const doesNotContainOption = screen.getByRole("menuitemradio", {
+				name: "does not contain",
+			});
+			await user.click(doesNotContainOption);
+
+			// Focus should return to the text input
+			await waitFor(() => {
+				expect(draftInput).toHaveFocus();
+			});
+		});
+
+		test("committing filter with 'contains' operator creates filter with correct relationship", async () => {
+			const user = userEvent.setup();
+			const { draftInput } = await createDraftTextFilter(user);
+
+			// Type a value and commit
+			await user.type(draftInput, "searchterm");
+			await user.keyboard("{Enter}");
+
+			// Wait for the committed filter
+			await waitFor(() => {
+				expect(
+					screen.queryByPlaceholderText("type to search..."),
+				).not.toBeInTheDocument();
+			});
+
+			// The committed filter should show "contains"
+			const committedFilter = document.querySelector(
+				'fieldset[name="text filter"]',
+			) as HTMLFieldSetElement;
+			expect(committedFilter).toBeInTheDocument();
+
+			// Find the operator button in the committed filter
+			const operatorButton = within(committedFilter).getByRole("button", {
+				name: /filter relationship/i,
+			});
+			expect(operatorButton).toHaveTextContent("contains");
+		});
+
+		test("committing filter with 'does not contain' operator creates filter with correct relationship", async () => {
+			const user = userEvent.setup();
+			const { draftInput, operatorButton } = await createDraftTextFilter(user);
+
+			// Change operator to "does not contain"
+			await user.click(operatorButton);
+			const doesNotContainOption = screen.getByRole("menuitemradio", {
+				name: "does not contain",
+			});
+			await user.click(doesNotContainOption);
+
+			// Type a value and commit
+			await user.type(draftInput, "excludethis");
+			await user.keyboard("{Enter}");
+
+			// Wait for the committed filter
+			await waitFor(() => {
+				expect(
+					screen.queryByPlaceholderText("type to search..."),
+				).not.toBeInTheDocument();
+			});
+
+			// The committed filter should show "does not contain"
+			const committedFilter = document.querySelector(
+				'fieldset[name="text filter"]',
+			) as HTMLFieldSetElement;
+			expect(committedFilter).toBeInTheDocument();
+
+			const committedOperatorButton = within(committedFilter).getByRole(
+				"button",
+				{ name: /filter relationship/i },
+			);
+			expect(committedOperatorButton).toHaveTextContent("does not contain");
+		});
+
+		test("escape key on operator button cancels the draft filter", async () => {
+			const user = userEvent.setup();
+			const { draftFieldset, operatorButton, mainInput } =
+				await createDraftTextFilter(user);
+
+			// Verify draft exists
+			expect(draftFieldset).toBeInTheDocument();
+
+			// Navigate to operator button via left arrow key
+			await user.keyboard("{ArrowLeft}");
+			expect(operatorButton).toHaveFocus();
+
+			// Press Escape
+			await user.keyboard("{Escape}");
+
+			// Draft should be cancelled
+			await waitFor(() => {
+				expect(
+					document.querySelector('fieldset[name="text filter"]'),
+				).not.toBeInTheDocument();
+			});
+
+			// Main input should be focused
+			expect(mainInput).toHaveFocus();
+		});
+
+		test("interacting with operator dropdown does not prematurely commit the filter", async () => {
+			const user = userEvent.setup();
+			const { draftFieldset, operatorButton } =
+				await createDraftTextFilter(user);
+
+			// Open the dropdown
+			await user.click(operatorButton);
+
+			// Verify dropdown is open
+			expect(screen.getByRole("menu")).toBeInTheDocument();
+
+			// Navigate with keyboard (this causes focus changes)
+			await user.keyboard("{ArrowDown}");
+			await user.keyboard("{ArrowUp}");
+
+			// Close dropdown by pressing Escape
+			await user.keyboard("{Escape}");
+
+			// Draft should still exist (not committed)
+			expect(draftFieldset).toBeInTheDocument();
+			expect(
+				within(draftFieldset).getByPlaceholderText("type to search..."),
+			).toBeInTheDocument();
+		});
+
+		test("clicking outside the draft filter commits it if it has content", async () => {
+			const user = userEvent.setup();
+			const { draftInput, mainInput } = await createDraftTextFilter(user);
+
+			// Type some content
+			await user.type(draftInput, "myvalue");
+
+			// Click on the main input (outside the draft filter)
+			await user.click(mainInput);
+
+			// Filter should be committed
+			await waitFor(() => {
+				expect(
+					screen.queryByPlaceholderText("type to search..."),
+				).not.toBeInTheDocument();
+			});
+
+			const committedFilter = document.querySelector(
+				'fieldset[name="text filter"]',
+			);
+			expect(committedFilter).toBeInTheDocument();
+		});
+
+		test("keyboard navigation: left arrow from input -> operator -> right arrow back to input", async () => {
+			const user = userEvent.setup();
+			const { draftInput, operatorButton } = await createDraftTextFilter(user);
+
+			// Start at input (position 0)
+			expect(draftInput).toHaveFocus();
+
+			// Left arrow -> operator
+			await user.keyboard("{ArrowLeft}");
+			expect(operatorButton).toHaveFocus();
+
+			// Right arrow -> back to input
+			await user.keyboard("{ArrowRight}");
+			expect(draftInput).toHaveFocus();
+
+			// Type something
+			await user.type(draftInput, "test");
+
+			// Move cursor to start
+			await user.keyboard("{Home}");
+			expect((draftInput as HTMLInputElement).selectionStart).toBe(0);
+
+			// Left arrow -> operator again
+			await user.keyboard("{ArrowLeft}");
+			expect(operatorButton).toHaveFocus();
+		});
+
+		test("can change operator multiple times before committing", async () => {
+			const user = userEvent.setup();
+			const { operatorButton } = await createDraftTextFilter(user);
+
+			// Initial: "contains"
+			expect(operatorButton).toHaveTextContent("contains");
+
+			// Change to "does not contain"
+			await user.click(operatorButton);
+			await user.click(
+				screen.getByRole("menuitemradio", { name: "does not contain" }),
+			);
+			expect(operatorButton).toHaveTextContent("does not contain");
+
+			// Change back to "contains"
+			await user.click(operatorButton);
+			await user.click(screen.getByRole("menuitemradio", { name: "contains" }));
+			expect(operatorButton).toHaveTextContent("contains");
+
+			// Change to "does not contain" again
+			await user.click(operatorButton);
+			await user.click(
+				screen.getByRole("menuitemradio", { name: "does not contain" }),
+			);
+			expect(operatorButton).toHaveTextContent("does not contain");
+		});
+
+		test("operator selection is preserved when typing and committing", async () => {
+			const user = userEvent.setup();
+			const { draftInput, operatorButton } = await createDraftTextFilter(user);
+
+			// Change operator
+			await user.click(operatorButton);
+			await user.click(
+				screen.getByRole("menuitemradio", { name: "does not contain" }),
+			);
+
+			// Type first part
+			await user.type(draftInput, "first");
+
+			// Verify operator is still "does not contain"
+			expect(operatorButton).toHaveTextContent("does not contain");
+
+			// Type more
+			await user.type(draftInput, " second");
+
+			// Still "does not contain"
+			expect(operatorButton).toHaveTextContent("does not contain");
+
+			// Commit
+			await user.keyboard("{Enter}");
+
+			// Verify committed filter has correct operator
+			await waitFor(() => {
+				const committedFilter = document.querySelector(
+					'fieldset[name="text filter"]',
+				) as HTMLFieldSetElement;
+				const committedOp = within(committedFilter).getByRole("button", {
+					name: /filter relationship/i,
+				});
+				expect(committedOp).toHaveTextContent("does not contain");
+			});
+		});
+
+		test("Enter key on operator button opens dropdown (does not commit)", async () => {
+			const user = userEvent.setup();
+			const { draftFieldset, operatorButton } =
+				await createDraftTextFilter(user);
+
+			// Navigate to operator button via left arrow
+			await user.keyboard("{ArrowLeft}");
+			expect(operatorButton).toHaveFocus();
+
+			// Press Enter
+			await user.keyboard("{Enter}");
+
+			// Dropdown should open (not commit the filter)
+			expect(screen.getByRole("menu")).toBeInTheDocument();
+
+			// Draft should still exist
+			expect(draftFieldset).toBeInTheDocument();
+		});
+
+		test("Space key on operator button opens dropdown", async () => {
+			const user = userEvent.setup();
+			const { draftFieldset, operatorButton } =
+				await createDraftTextFilter(user);
+
+			// Navigate to operator button via left arrow
+			await user.keyboard("{ArrowLeft}");
+			expect(operatorButton).toHaveFocus();
+
+			// Press Space
+			await user.keyboard(" ");
+
+			// Dropdown should open
+			expect(screen.getByRole("menu")).toBeInTheDocument();
+
+			// Draft should still exist
+			expect(draftFieldset).toBeInTheDocument();
+		});
+	});
+
+	describe("BUG: Filter operator not set correctly for multi-select", () => {
+		/**
+		 * BUG: When creating a filter with multiple selections, the operator is
+		 * erroneously set to the single-value operator instead of the multi-value operator.
+		 *
+		 * Radio Columns:
+		 * - Expected: "is any of" when multiple values selected
+		 * - Actual (BUG): "is"
+		 *
+		 * Checkbox Columns:
+		 * - Expected: "include all of" when multiple values selected
+		 * - Actual (BUG): "include"
+		 */
+
+		describe("Radio columns - keyboard interaction", () => {
+			test("selecting multiple values with keyboard should set operator to 'is any of'", async () => {
+				/**
+				 * Repro steps:
+				 * 1. User types "status" and presses Enter/Space to select the column
+				 * 2. User selects "Not Started" with space
+				 * 3. User navigates down and selects "Completed" with space
+				 * 4. User presses Enter to apply the filter
+				 *
+				 * EXPECTED: Filter operator is "is any of"
+				 * ACTUAL (BUG): Filter operator is erroneously "is"
+				 */
+				const user = userEvent.setup();
+				render(
+					<TestWrapper>
+						<ChipFilterInputWrapper />
+					</TestWrapper>,
+				);
+
+				const input = screen.getByRole("combobox", { name: /filter input/i });
+				await user.click(input);
+
+				// Type "status" to filter to the status column and select it
+				await user.type(input, "status");
+				await user.keyboard("{Enter}");
+
+				// Input should now have "status:"
+				expect(input).toHaveValue("status:");
+
+				// Verify dropdown shows status values
+				const listbox = screen.getByRole("listbox");
+				const options = within(listbox).getAllByRole("option");
+				expect(options[0]).toHaveTextContent("Not Started");
+				expect(options[2]).toHaveTextContent("Completed");
+
+				// Select "Not Started" with space
+				await user.keyboard(" ");
+
+				// Navigate down to "Completed" (index 2)
+				await user.keyboard("{ArrowDown}"); // to "In Progress"
+				await user.keyboard("{ArrowDown}"); // to "Completed"
+
+				// Select "Completed" with space
+				await user.keyboard(" ");
+
+				// Press Enter to apply the filter
+				await user.keyboard("{Enter}");
+
+				// Verify filter is created
+				const appliedFilter = getAppliedFilter("status");
+				expect(appliedFilter).toBeInTheDocument();
+
+				// BUG: The filter should show "is any of" as the operator, not "is"
+				const operatorButton = within(appliedFilter).getByLabelText(
+					"Filter relationship",
+				);
+				expect(operatorButton).toHaveTextContent("is any of");
+			});
+		});
+
+		describe("Radio columns - mouse interaction", () => {
+			test("selecting multiple values with mouse should set operator to 'is any of'", async () => {
+				/**
+				 * Repro steps:
+				 * 1. User types "status" and clicks to select the column
+				 * 2. User clicks checkbox next to "Not Started"
+				 * 3. User clicks checkbox next to "Completed"
+				 * 4. User clicks on an option label (or presses Enter) to apply
+				 *
+				 * EXPECTED: Filter operator is "is any of"
+				 * ACTUAL (BUG): Filter operator is erroneously "is"
+				 */
+				const user = userEvent.setup();
+				render(
+					<TestWrapper>
+						<ChipFilterInputWrapper />
+					</TestWrapper>,
+				);
+
+				const input = screen.getByRole("combobox", { name: /filter input/i });
+				await user.click(input);
+
+				// Type "status" and select it
+				await user.type(input, "status");
+				await user.keyboard("{Enter}");
+
+				expect(input).toHaveValue("status:");
+
+				// Get the dropdown options
+				const listbox = screen.getByRole("listbox");
+				const options = within(listbox).getAllByRole("option");
+
+				// Find "Not Started" and "Completed" options
+				const notStartedOption = options.find((opt) =>
+					opt.textContent?.includes("Not Started"),
+				);
+				const completedOption = options.find((opt) =>
+					opt.textContent?.includes("Completed"),
+				);
+
+				expect(notStartedOption).toBeDefined();
+				expect(completedOption).toBeDefined();
+
+				// Click the checkbox for "Not Started"
+				const notStartedCheckbox = within(notStartedOption!).getByRole(
+					"checkbox",
+				);
+				await user.click(notStartedCheckbox);
+
+				// Click the checkbox for "Completed"
+				const completedCheckbox = within(completedOption!).getByRole(
+					"checkbox",
+				);
+				await user.click(completedCheckbox);
+
+				// Click on an option label to apply (clicking the option itself, not checkbox)
+				// We'll click on "In Progress" option to apply all selections
+				const inProgressOption = options.find((opt) =>
+					opt.textContent?.includes("In Progress"),
+				);
+				await user.click(inProgressOption!);
+
+				// Wait for filter to be created
+				await waitFor(() => {
+					expect(getAppliedFilter("status")).toBeInTheDocument();
+				});
+
+				const appliedFilter = getAppliedFilter("status");
+
+				// BUG: The filter should show "is any of" as the operator, not "is"
+				const operatorButton = within(appliedFilter).getByLabelText(
+					"Filter relationship",
+				);
+				expect(operatorButton).toHaveTextContent("is any of");
+			});
+		});
+
+		describe("Checkbox columns - keyboard interaction", () => {
+			test("selecting multiple values with keyboard should set operator to 'include all of'", async () => {
+				/**
+				 * Repro steps:
+				 * 1. User types "tags" and presses Enter/Space to select the column
+				 * 2. User selects "Bug" with space
+				 * 3. User navigates and selects "Documentation" with space
+				 * 4. User presses Enter to apply the filter
+				 *
+				 * EXPECTED: Filter operator is "include all of"
+				 * ACTUAL (BUG): Filter operator is erroneously "include"
+				 */
+				const user = userEvent.setup();
+				render(
+					<TestWrapper>
+						<ChipFilterInputWrapper />
+					</TestWrapper>,
+				);
+
+				const input = screen.getByRole("combobox", { name: /filter input/i });
+				await user.click(input);
+
+				// Type "tags" to filter to the tags column and select it
+				await user.type(input, "tags");
+				await user.keyboard("{Enter}");
+
+				// Input should now have "tags:"
+				expect(input).toHaveValue("tags:");
+
+				// Verify dropdown shows tag values
+				const listbox = screen.getByRole("listbox");
+				const options = within(listbox).getAllByRole("option");
+
+				// Find Bug and Documentation options
+				const bugIndex = options.findIndex((opt) =>
+					opt.textContent?.includes("Bug"),
+				);
+				const docIndex = options.findIndex((opt) =>
+					opt.textContent?.includes("Documentation"),
+				);
+				expect(bugIndex).toBeGreaterThanOrEqual(0);
+				expect(docIndex).toBeGreaterThanOrEqual(0);
+
+				// Select "Bug" with space (assuming it's first option)
+				await user.keyboard(" ");
+
+				// Navigate to "Documentation" (it's at index 2 based on TAGS array)
+				await user.keyboard("{ArrowDown}"); // to Feature
+				await user.keyboard("{ArrowDown}"); // to Documentation
+
+				// Select "Documentation" with space
+				await user.keyboard(" ");
+
+				// Press Enter to apply the filter
+				await user.keyboard("{Enter}");
+
+				// Verify filter is created
+				const appliedFilter = getAppliedFilter("tags");
+				expect(appliedFilter).toBeInTheDocument();
+
+				// BUG: The filter should show "include all of" as the operator, not "include"
+				const operatorButton = within(appliedFilter).getByLabelText(
+					"Filter relationship",
+				);
+				expect(operatorButton).toHaveTextContent("include all of");
+			});
+		});
+
+		describe("Checkbox columns - mouse interaction", () => {
+			test("selecting multiple values with mouse should set operator to 'include all of'", async () => {
+				/**
+				 * Repro steps:
+				 * 1. User types "tags" and clicks to select the column
+				 * 2. User clicks checkbox next to "Bug"
+				 * 3. User clicks checkbox next to "Documentation"
+				 * 4. User clicks on an option label to apply
+				 *
+				 * EXPECTED: Filter operator is "include all of"
+				 * ACTUAL (BUG): Filter operator is erroneously "include"
+				 */
+				const user = userEvent.setup();
+				render(
+					<TestWrapper>
+						<ChipFilterInputWrapper />
+					</TestWrapper>,
+				);
+
+				const input = screen.getByRole("combobox", { name: /filter input/i });
+				await user.click(input);
+
+				// Type "tags" and select it
+				await user.type(input, "tags");
+				await user.keyboard("{Enter}");
+
+				expect(input).toHaveValue("tags:");
+
+				// Get the dropdown options
+				const listbox = screen.getByRole("listbox");
+				const options = within(listbox).getAllByRole("option");
+
+				// Find "Bug" and "Documentation" options
+				const bugOption = options.find((opt) =>
+					opt.textContent?.includes("Bug"),
+				);
+				const documentationOption = options.find((opt) =>
+					opt.textContent?.includes("Documentation"),
+				);
+
+				expect(bugOption).toBeDefined();
+				expect(documentationOption).toBeDefined();
+
+				// Click the checkbox for "Bug"
+				const bugCheckbox = within(bugOption!).getByRole("checkbox");
+				await user.click(bugCheckbox);
+
+				// Click the checkbox for "Documentation"
+				const documentationCheckbox = within(documentationOption!).getByRole(
+					"checkbox",
+				);
+				await user.click(documentationCheckbox);
+
+				// Click on another option label to apply (e.g., "Testing")
+				const testingOption = options.find((opt) =>
+					opt.textContent?.includes("Testing"),
+				);
+				await user.click(testingOption!);
+
+				// Wait for filter to be created
+				await waitFor(() => {
+					expect(getAppliedFilter("tags")).toBeInTheDocument();
+				});
+
+				const appliedFilter = getAppliedFilter("tags");
+
+				// BUG: The filter should show "include all of" as the operator, not "include"
+				const operatorButton = within(appliedFilter).getByLabelText(
+					"Filter relationship",
+				);
+				expect(operatorButton).toHaveTextContent("include all of");
+			});
+		});
+
+		describe("Single selection should still use single-value operators", () => {
+			test("radio column with single selection should use 'is' operator", async () => {
+				const user = userEvent.setup();
+				render(
+					<TestWrapper>
+						<ChipFilterInputWrapper />
+					</TestWrapper>,
+				);
+
+				const input = screen.getByRole("combobox", { name: /filter input/i });
+				await user.click(input);
+
+				// Select status column
+				await user.type(input, "status");
+				await user.keyboard("{Enter}");
+
+				// Select only one value
+				await user.keyboard("{Enter}"); // Select first option
+
+				// Verify filter is created with "is" operator
+				const appliedFilter = getAppliedFilter("status");
+				const operatorButton = within(appliedFilter).getByLabelText(
+					"Filter relationship",
+				);
+				expect(operatorButton).toHaveTextContent("is");
+			});
+
+			test("checkbox column with single selection should use 'include' operator", async () => {
+				const user = userEvent.setup();
+				render(
+					<TestWrapper>
+						<ChipFilterInputWrapper />
+					</TestWrapper>,
+				);
+
+				const input = screen.getByRole("combobox", { name: /filter input/i });
+				await user.click(input);
+
+				// Select tags column
+				await user.type(input, "tags");
+				await user.keyboard("{Enter}");
+
+				// Select only one value
+				await user.keyboard("{Enter}"); // Select first option
+
+				// Verify filter is created with "include" operator
+				const appliedFilter = getAppliedFilter("tags");
+				const operatorButton = within(appliedFilter).getByLabelText(
+					"Filter relationship",
+				);
+				expect(operatorButton).toHaveTextContent("include");
+			});
+		});
+	});
+
+	describe("Natural language mode", () => {
+		test("dropdown should NOT show when in natural language mode even if last typed character matches a column prefix", async () => {
+			/**
+			 * BUG: When in natural language mode, typing a character that happens to be
+			 * a valid prefix for a column name should NOT show the autocomplete dropdown.
+			 *
+			 * Repro steps:
+			 * 1. Type "this is " - this puts us in natural language mode (no column prefix match)
+			 * 2. Type "a" - making the full input "this is a"
+			 * 3. "a" is a valid prefix for "assignee", but the FULL input "this is a" is NOT
+			 *
+			 * EXPECTED: No dropdown shown (we're in natural language mode)
+			 * ACTUAL (BUG): Dropdown shows suggestions for "assignee" because "a" matches
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Dropdown should show initially (empty input shows all columns)
+			expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+			// Type "this is " - this is natural language (no column starts with "this")
+			await user.type(input, "this is ");
+
+			// Dropdown should be hidden because we're in natural language mode
+			expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+			// Now type "a" - the input becomes "this is a"
+			// "a" matches "assignee" but "this is a" does NOT match any column
+			await user.type(input, "a");
+
+			// Verify the full input value
+			expect(input).toHaveValue("this is a");
+
+			// BUG: Dropdown should still be hidden because the FULL input "this is a"
+			// does not match any column prefix
+			expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+		});
+
+		test("natural language mode should check the entire input, not just recent characters", async () => {
+			/**
+			 * Additional test case: Typing "show me sta" should NOT show dropdown
+			 * even though "sta" is a prefix for "status"
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type a phrase that ends with a valid column prefix
+			await user.type(input, "show me sta");
+
+			expect(input).toHaveValue("show me sta");
+
+			// "sta" is a valid prefix for "status", but "show me sta" is NOT
+			// So dropdown should be hidden (natural language mode)
+			expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+		});
+
+		test("natural language mode is detected when input does not start with a column prefix", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type something that's clearly natural language
+			await user.type(input, "find all completed tasks");
+
+			expect(input).toHaveValue("find all completed tasks");
+
+			// Should be in natural language mode - no dropdown
+			expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+		});
+
+		test("typing a valid column prefix should show dropdown (not natural language mode)", async () => {
+			/**
+			 * Sanity check: When input IS a valid column prefix, dropdown should show
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type "sta" which is a valid prefix for "status"
+			await user.type(input, "sta");
+
+			expect(input).toHaveValue("sta");
+
+			// Dropdown SHOULD be visible because "sta" is a valid prefix for "status"
+			const listbox = screen.getByRole("listbox");
+			expect(listbox).toBeInTheDocument();
+
+			// Should show "status" as a suggestion
+			expect(within(listbox).getByText("status:")).toBeInTheDocument();
+		});
+
+		test("pressing space in natural language mode should add space to input, not select a suggestion", async () => {
+			/**
+			 * BUG: When in natural language mode, pressing space erroneously selects
+			 * a suggestion instead of adding a space to the input.
+			 *
+			 * Repro steps:
+			 * 1. Focus the input
+			 * 2. Type "the status" (natural language mode - "the status" doesn't start with valid column)
+			 * 3. Press spacebar
+			 *
+			 * EXPECTED: Input contains "the status " (space added)
+			 * ACTUAL (BUG): Input contains "status:" (suggestion selected)
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type "the status" - this is natural language mode
+			await user.type(input, "the status");
+
+			expect(input).toHaveValue("the status");
+
+			// Verify we're in natural language mode (no dropdown)
+			expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+			// Press space
+			await user.keyboard(" ");
+
+			// BUG: Input should have "the status " (space added)
+			// NOT "status:" (suggestion erroneously selected)
+			expect(input).toHaveValue("the status ");
+		});
+
+		test("pressing space in natural language mode should not trigger any autocomplete action", async () => {
+			/**
+			 * Additional test case: "show me " + space should become "show me  "
+			 * (two spaces at the end)
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type natural language with trailing space
+			await user.type(input, "show me ");
+
+			expect(input).toHaveValue("show me ");
+
+			// Press space again
+			await user.keyboard(" ");
+
+			// Should just add another space
+			expect(input).toHaveValue("show me  ");
+		});
+	});
+
+	describe("Dropdown position behavior", () => {
+		// Helper to get the dropdown element
+		function getDropdown() {
+			return screen.getByRole("listbox");
+		}
+
+		// Helper to extract left position from dropdown style
+		function getDropdownLeftPosition() {
+			const dropdown = getDropdown();
+			return Number.parseInt(dropdown.style.left, 10);
+		}
+
+		test("dropdown position is captured when autocomplete first shows", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Dropdown should be visible with a position
+			const dropdown = getDropdown();
+			expect(dropdown).toBeInTheDocument();
+			expect(dropdown.style.left).toBeDefined();
+			expect(dropdown.style.top).toBeDefined();
+		});
+
+		test("dropdown position updates when a filter is added", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Get initial position (before mocking)
+			const initialLeft = getDropdownLeftPosition();
+
+			// Mock getBoundingClientRect to simulate the input moving right after a chip is added
+			const container = document.getElementById("chip-filter-input-wrapper");
+			const inputElement = input;
+			const originalContainerGetBoundingClientRect =
+				container?.getBoundingClientRect.bind(container);
+
+			// Helper to count filters in DOM dynamically
+			const getFilterCount = () =>
+				document.querySelectorAll('fieldset[name$=" filter"]').length;
+
+			if (container) {
+				vi.spyOn(container, "getBoundingClientRect").mockImplementation(() => {
+					return (originalContainerGetBoundingClientRect?.() || {
+						top: 100,
+						left: 50,
+						bottom: 150,
+						right: 400,
+						width: 350,
+						height: 50,
+						x: 50,
+						y: 100,
+						toJSON: () => {},
+					}) as DOMRect;
+				});
+			}
+
+			vi.spyOn(inputElement, "getBoundingClientRect").mockImplementation(() => {
+				// Dynamically check filter count in DOM to simulate input position change
+				const filterCount = getFilterCount();
+				const leftOffset = filterCount * 100;
+				return {
+					top: 100,
+					bottom: 142,
+					right: 200 + leftOffset,
+					width: 100,
+					height: 42,
+					x: 50 + leftOffset,
+					y: 100,
+					left: 50 + leftOffset,
+					toJSON: () => {},
+				} as DOMRect;
+			});
+
+			// Add a filter: select "status:" key, then first value
+			await user.keyboard("{Enter}");
+			await user.keyboard("{Enter}");
+
+			// Verify filter is created
+			await waitFor(() => {
+				const appliedFilter = getAppliedFilter("status");
+				expect(appliedFilter).toBeInTheDocument();
+			});
+
+			// Get the new position - it should have updated
+			const newLeft = getDropdownLeftPosition();
+
+			// The position should have changed (increased) since the input moved right
+			expect(newLeft).toBeGreaterThan(initialLeft);
+		});
+
+		test("dropdown position updates when a filter is removed", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Store original getBoundingClientRect
+			const inputElement = input;
+			const container = document.getElementById("chip-filter-input-wrapper");
+			const originalContainerGetBoundingClientRect =
+				container?.getBoundingClientRect.bind(container);
+
+			// Helper to count filters in DOM dynamically
+			const getFilterCount = () =>
+				document.querySelectorAll('fieldset[name$=" filter"]').length;
+
+			if (container) {
+				vi.spyOn(container, "getBoundingClientRect").mockImplementation(() => {
+					return (originalContainerGetBoundingClientRect?.() || {
+						top: 100,
+						left: 0,
+						bottom: 150,
+						right: 400,
+						width: 400,
+						height: 50,
+						x: 0,
+						y: 100,
+						toJSON: () => {},
+					}) as DOMRect;
+				});
+			}
+
+			vi.spyOn(inputElement, "getBoundingClientRect").mockImplementation(() => {
+				// Dynamically check filter count in DOM to simulate input position change
+				const filterCount = getFilterCount();
+				const leftOffset = filterCount * 100;
+				return {
+					top: 100,
+					bottom: 142,
+					right: 150 + leftOffset,
+					width: 100,
+					height: 42,
+					x: 50 + leftOffset,
+					y: 100,
+					left: 50 + leftOffset,
+					toJSON: () => {},
+				} as DOMRect;
+			});
+
+			// Add a filter
+			await user.keyboard("{Enter}");
+			await user.keyboard("{Enter}");
+
+			// Verify filter is created
+			await waitFor(() => {
+				const appliedFilter = getAppliedFilter("status");
+				expect(appliedFilter).toBeInTheDocument();
+			});
+
+			// Get position with filter (input moved right by 100px due to chip)
+			const positionWithFilter = getDropdownLeftPosition();
+
+			// Remove the filter with backspace (first backspace focuses X button, second deletes)
+			await act(async () => {
+				await user.keyboard("{Backspace}");
+				await user.keyboard("{Backspace}");
+			});
+
+			// Verify filter is removed
+			await waitFor(() => {
+				expect(queryAppliedFilter("status")).not.toBeInTheDocument();
+			});
+
+			// Get position after filter removed
+			const positionAfterRemoval = getDropdownLeftPosition();
+
+			// Position should have decreased (moved back left) by 100px
+			expect(positionAfterRemoval).toBeLessThan(positionWithFilter);
+			expect(positionWithFilter - positionAfterRemoval).toBe(100);
+		});
+
+		test("dropdown position does NOT change when input loses and regains focus", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Get initial position
+			const initialLeft = getDropdownLeftPosition();
+
+			// Blur the input (dropdown should hide)
+			await user.tab();
+
+			// Wait for the blur timeout (200ms in handleInputBlur)
+			await act(async () => {
+				await new Promise((resolve) => setTimeout(resolve, 250));
+			});
+
+			// Dropdown should be hidden
+			expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+			// Focus the input again
+			await user.click(input);
+
+			// Dropdown should be visible again
+			await waitFor(() => {
+				expect(screen.getByRole("listbox")).toBeInTheDocument();
+			});
+
+			// Position should be the same as before
+			const positionAfterRefocus = getDropdownLeftPosition();
+			expect(positionAfterRefocus).toBe(initialLeft);
+		});
+
+		test("dropdown position stays stable while typing (does not shift per keystroke)", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Get initial position
+			const initialLeft = getDropdownLeftPosition();
+
+			// Type several characters
+			await user.type(input, "sta");
+
+			// Position should remain the same
+			const positionAfterTyping = getDropdownLeftPosition();
+			expect(positionAfterTyping).toBe(initialLeft);
+
+			// Type more
+			await user.type(input, "tus:");
+
+			// Position should still be the same
+			const positionAfterMoreTyping = getDropdownLeftPosition();
+			expect(positionAfterMoreTyping).toBe(initialLeft);
+		});
+	});
+
+	describe("Natural language filter parsing with negation", () => {
+		/**
+		 * BUG: When adding radio/checkbox filters from natural language AI parsing,
+		 * the `parsedFilter.isNegation` flag is completely ignored.
+		 *
+		 * The addFilter call only passes the values and uses default relationships
+		 * (IS/IS_ANY_OF for radio, INCLUDE/INCLUDE_ALL_OF for checkboxes).
+		 *
+		 * Queries like "tasks not assigned to John" or "exclude bugs" will incorrectly
+		 * create inclusive filters instead of exclusive ones.
+		 *
+		 * The text filter handling correctly respects `isNegation` by setting
+		 * OPERATORS.DOES_NOT_CONTAIN vs OPERATORS.CONTAINS, but this logic is
+		 * missing for other filter types.
+		 */
+		test("radio filter with isNegation=true should use IS_NOT relationship", async () => {
+			// Mock the API to return a negated radio filter
+			const mockApiResponse = {
+				filters: [
+					{
+						columnName: "status",
+						columnType: "radio" as const,
+						values: ["Completed"],
+						isNegation: true, // This is the key flag being tested
+					},
+				],
+				matchType: "all" as const,
+			};
+
+			mockApiClient.parseFiltersMock.mockResolvedValue({
+				ok: true,
+				json: () => Promise.resolve(mockApiResponse),
+			});
+
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type natural language query that triggers negation
+			await user.type(input, "tasks that are not completed");
+
+			// Press Enter to trigger natural language parsing
+			await user.keyboard("{Enter}");
+
+			// Wait for the filter to be created
+			await waitFor(() => {
+				const appliedFilter = getAppliedFilter("status");
+				expect(appliedFilter).toBeInTheDocument();
+			});
+
+			// The filter should have "is not" relationship since isNegation=true
+			// BUG: Currently it uses "is" (default) instead of "is not"
+			const appliedFilter = getAppliedFilter("status");
+			const operatorButton = within(appliedFilter).getByRole("button", {
+				name: /filter relationship/i,
+			});
+
+			// This should be "is not" but currently fails because isNegation is ignored
+			expect(operatorButton).toHaveTextContent("is not");
+		});
+
+		test("checkbox filter with isNegation=true should use DO_NOT_INCLUDE relationship", async () => {
+			// Mock the API to return a negated checkbox filter
+			const mockApiResponse = {
+				filters: [
+					{
+						columnName: "tags",
+						columnType: "checkboxes" as const,
+						values: ["Bug"],
+						isNegation: true, // This is the key flag being tested
+					},
+				],
+				matchType: "all" as const,
+			};
+
+			mockApiClient.parseFiltersMock.mockResolvedValue({
+				ok: true,
+				json: () => Promise.resolve(mockApiResponse),
+			});
+
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type natural language query that triggers negation
+			await user.type(input, "exclude all bugs");
+
+			// Press Enter to trigger natural language parsing
+			await user.keyboard("{Enter}");
+
+			// Wait for the filter to be created
+			await waitFor(() => {
+				const appliedFilter = getAppliedFilter("tags");
+				expect(appliedFilter).toBeInTheDocument();
+			});
+
+			// The filter should have "do not include" relationship since isNegation=true
+			// BUG: Currently it uses "include" (default) instead of "do not include"
+			const appliedFilter = getAppliedFilter("tags");
+			const operatorButton = within(appliedFilter).getByRole("button", {
+				name: /filter relationship/i,
+			});
+
+			// This should be "do not include" but currently fails because isNegation is ignored
+			expect(operatorButton).toHaveTextContent("do not include");
+		});
+	});
+});

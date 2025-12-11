@@ -6,7 +6,7 @@ import useNewFilterCreatedAtCutoff from "@/hooks/useNewFilterCreatedAtCutoff";
 import AppliedFilters from "./components/ui/filters/AppliedFilters";
 import FilterDropdown from "./components/ui/filters/FilterDropdown";
 import MatchTypeSwitcher from "./components/ui/filters/MatchTypeSwitcher";
-import { FILTER_CATEGORIES } from "./hooks/filter-options-mock-data";
+import { FILTER_CATEGORIES } from "./hooks/filter-categories.mock";
 
 export default function Filters() {
 	const [open, setOpen] = useState(false);

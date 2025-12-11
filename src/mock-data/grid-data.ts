@@ -1,37 +1,18 @@
 import { v4 as uuidv4 } from "uuid";
+import {
+	ASSIGNEES,
+	type Assignee,
+	PRIORITIES,
+	type Priority,
+	STATUSES,
+	type Status,
+	TAGS,
+	type Tag,
+} from "@/shared/filter-columns-and-values.mock";
+import { STATIC_ROWS } from "./static-rows";
 
-export type Status = "Not Started" | "In Progress" | "Completed" | "Cancelled";
-export type Priority = "Low" | "Medium" | "High";
-export type Tag =
-	| "Bug"
-	| "Feature"
-	| "Documentation"
-	| "Refactoring"
-	| "Testing"
-	| "Other";
-type Assignee = "John Doe" | "Jane Smith" | "Alice Johnson" | "Bob Brown";
-
-const STATUSES: Status[] = [
-	"Not Started",
-	"In Progress",
-	"Completed",
-	"Cancelled",
-];
-const PRIORITIES: Priority[] = ["Low", "Medium", "High"];
-const TAGS: Tag[] = [
-	"Bug",
-	"Feature",
-	"Documentation",
-	"Refactoring",
-	"Testing",
-	"Other",
-];
-const ASSIGNEES: Assignee[] = [
-	"John Doe",
-	"Jane Smith",
-	"Alice Johnson",
-	"Bob Brown",
-];
+// Re-export types for consumers that import from this file
+export type { Status, Priority, Tag, Assignee };
 
 const TASK_PREFIXES = [
 	"Implement",
@@ -96,19 +77,33 @@ function randomItems<T>(arr: T[], min: number, max: number): T[] {
 	return shuffled.slice(0, count);
 }
 
+/**
+ * Generates rows for the grid.
+ * - If numRows <= 100, returns the first numRows from STATIC_ROWS
+ * - If numRows > 100, returns all 100 STATIC_ROWS plus (numRows - 100) randomly generated rows
+ */
 export function generateRows(numRows: number): MyRow[] {
-	const data: MyRow[] = [];
-	for (let i = 0; i < numRows; i++) {
+	if (numRows <= STATIC_ROWS.length) {
+		return STATIC_ROWS.slice(0, numRows);
+	}
+
+	// Start with all static rows
+	const data: MyRow[] = [...STATIC_ROWS];
+
+	// Generate additional random rows for the remainder
+	const additionalRowsNeeded = numRows - STATIC_ROWS.length;
+	for (let i = 0; i < additionalRowsNeeded; i++) {
+		const rowNumber = STATIC_ROWS.length + i + 1;
 		data.push({
 			id: uuidv4(),
 			lastUpdated: String(
 				Date.now() - Math.floor(Math.random() * 1000 * 60 * 60 * 10),
 			), // sometime in the last 10 hours
-			text: `${randomItem(TASK_PREFIXES)} ${randomItem(TASK_SUBJECTS)} ${i + 1}`,
-			status: randomItem(STATUSES),
-			tags: randomItems(TAGS, 1, 3),
-			assignee: randomItem(ASSIGNEES),
-			priority: randomItem(PRIORITIES),
+			text: `${randomItem(TASK_PREFIXES)} ${randomItem(TASK_SUBJECTS)} ${rowNumber}`,
+			status: randomItem([...STATUSES]),
+			tags: randomItems([...TAGS], 1, 3),
+			assignee: randomItem([...ASSIGNEES]),
+			priority: randomItem([...PRIORITIES]),
 		});
 	}
 	return data;

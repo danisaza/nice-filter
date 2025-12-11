@@ -1,44 +1,138 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import * as Toolbar from "@radix-ui/react-toolbar";
 import { X } from "lucide-react";
-import { memo, useRef, useState } from "react";
+import type React from "react";
+import { memo, useEffect, useRef, useState } from "react";
+import { twMerge } from "tailwind-merge";
 import { useFilters } from "@/App.tsx";
 import FilterDropdownSubCategory from "@/components/ui/filters/FilterDropdownSubCategory";
 import {
 	CHECKBOX_SELECTION_OPERATORS,
 	RADIO_SELECTION_OPERATORS,
 	SELECTION_TYPES,
+	TEXT_SELECTION_OPERATORS,
 } from "@/hooks/useFilters/constants";
 import type { Operator, TAppliedFilter } from "@/hooks/useFilters/types";
 
 const dropdownMenuContentClassNames =
-	"border border-slate-300 min-w-[220px] bg-white rounded-md p-1 shadow-lg animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2";
+	"border border-gray-200 min-w-[220px] bg-white rounded-lg shadow-lg animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2";
 
-const AppliedFilter = memo(({ filter }: { filter: TAppliedFilter }) => {
-	const { getPropertyNameToDisplay } = useFilters();
-	const propertyNameToDisplay = getPropertyNameToDisplay(filter.id);
+export type ChipHeight = "sm" | "md" | "lg";
 
+export const CHIP_HEIGHT_VARIANTS = {
+	sm: "h-7",
+	md: "h-9",
+	lg: "h-11",
+} as const satisfies Record<ChipHeight, string>;
+
+export const CHIP_TEXT_SIZE_VARIANTS = {
+	sm: "text-sm",
+	md: "text-base",
+	lg: "text-lg",
+} as const satisfies Record<ChipHeight, string>;
+
+interface AppliedFilterProps {
+	filter: TAppliedFilter;
+	/** Callback to register the remove button ref for focus management */
+	removeButtonRef?: (el: HTMLButtonElement | null) => void;
+	/** Custom remove handler that handles focus management */
+	onRemove?: () => void;
+	/** Callback when right arrow is pressed on the remove button (for custom navigation) */
+	onRemoveButtonRightArrow?: () => void;
+	/** Height variant for the chip. Defaults to "md" (36px). */
+	chipHeight?: ChipHeight;
+}
+
+const AppliedFilter = memo(
+	({
+		filter,
+		removeButtonRef,
+		onRemove,
+		onRemoveButtonRightArrow,
+		chipHeight = "md",
+	}: AppliedFilterProps) => {
+		const { getPropertyNameToDisplay } = useFilters();
+		const propertyNameToDisplay = getPropertyNameToDisplay(filter.id);
+		const heightClass = CHIP_HEIGHT_VARIANTS[chipHeight];
+
+		// Text filters have a different layout with an editable text input
+		if (filter.selectionType === SELECTION_TYPES.TEXT) {
+			return (
+				<fieldset
+					name={`${propertyNameToDisplay} filter`}
+					className={twMerge(
+						"border border-slate-300 text-slate-900 rounded inline-flex items-center",
+						heightClass,
+					)}
+				>
+					<Left
+						propertyNameToDisplay={propertyNameToDisplay}
+						chipHeight={chipHeight}
+					/>
+					<TextMiddle filter={filter} chipHeight={chipHeight} />
+					<TextRight filter={filter} chipHeight={chipHeight} />
+					<Remove
+						filterId={filter.id}
+						buttonRef={removeButtonRef}
+						onRemove={onRemove}
+						onRightArrow={onRemoveButtonRightArrow}
+						chipHeight={chipHeight}
+					/>
+				</fieldset>
+			);
+		}
+
+		return (
+			<fieldset
+				name={`${propertyNameToDisplay} filter`}
+				className={twMerge(
+					"border border-slate-300 text-slate-900 rounded inline-flex items-center",
+					heightClass,
+				)}
+			>
+				<Left
+					propertyNameToDisplay={propertyNameToDisplay}
+					chipHeight={chipHeight}
+				/>
+				<Middle filter={filter} chipHeight={chipHeight} />
+				<Right filter={filter} chipHeight={chipHeight} />
+				<Remove
+					filterId={filter.id}
+					buttonRef={removeButtonRef}
+					onRemove={onRemove}
+					onRightArrow={onRemoveButtonRightArrow}
+					chipHeight={chipHeight}
+				/>
+			</fieldset>
+		);
+	},
+);
+
+const Left = ({
+	propertyNameToDisplay,
+	chipHeight,
+}: {
+	propertyNameToDisplay: string;
+	chipHeight: ChipHeight;
+}) => {
 	return (
-		<fieldset
-			name={`${propertyNameToDisplay} filter`}
-			className="border border-slate-300 text-slate-900 rounded inline-flex items-center h-9"
+		<span
+			className={twMerge(
+				"px-2 rounded-tl rounded-bl border-r border-slate-200 h-full flex items-center",
+				CHIP_TEXT_SIZE_VARIANTS[chipHeight],
+			)}
 		>
-			<Left propertyNameToDisplay={propertyNameToDisplay} />
-			<Middle filter={filter} />
-			<Right filter={filter} />
-			<Remove filterId={filter.id} />
-		</fieldset>
-	);
-});
-
-const Left = ({ propertyNameToDisplay }: { propertyNameToDisplay: string }) => {
-	return (
-		<span className="px-2 rounded-tl rounded-bl border-r border-slate-200 h-full flex items-center">
 			{propertyNameToDisplay}
 		</span>
 	);
 };
 
-const Middle = ({ filter }: { filter: TAppliedFilter }) => {
+interface MiddleProps {
+	filter: TAppliedFilter;
+	chipHeight: ChipHeight;
+}
+
+const Middle = ({ filter, chipHeight }: MiddleProps) => {
 	const { updateFilterRelationship } = useFilters();
 
 	const { selectionType, values } = filter;
@@ -54,17 +148,23 @@ const Middle = ({ filter }: { filter: TAppliedFilter }) => {
 	} else {
 		relationshipOptions = relationshipOptionsByNumValues.MANY;
 	}
+
 	return (
 		<DropdownMenu.Root>
-			<DropdownMenu.Trigger asChild>
-				<button
-					type="button"
-					className="h-full px-2 whitespace-nowrap border-r border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
-					aria-label={`Filter relationship`}
-				>
-					{filter.relationship}
-				</button>
-			</DropdownMenu.Trigger>
+			<Toolbar.Button asChild>
+				<DropdownMenu.Trigger asChild>
+					<button
+						type="button"
+						className={twMerge(
+							"h-full px-2 whitespace-nowrap border-r border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1",
+							CHIP_TEXT_SIZE_VARIANTS[chipHeight],
+						)}
+						aria-label={`Filter relationship`}
+					>
+						{filter.relationship}
+					</button>
+				</DropdownMenu.Trigger>
+			</Toolbar.Button>
 			<DropdownMenu.Portal>
 				<DropdownMenu.Content
 					className={dropdownMenuContentClassNames}
@@ -83,7 +183,7 @@ const Middle = ({ filter }: { filter: TAppliedFilter }) => {
 					>
 						{relationshipOptions.map((relationshipOption) => (
 							<DropdownMenu.RadioItem
-								className="text-nowrap relative flex items-center px-2 py-1.5 outline-none transition-colors focus:bg-slate-100 focus:text-slate-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+								className="text-nowrap relative flex items-center px-3 py-2 text-sm outline-none transition-colors text-gray-700 hover:bg-gray-50 focus:bg-blue-50 focus:text-blue-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
 								key={relationshipOption}
 								value={relationshipOption}
 							>
@@ -99,7 +199,163 @@ const Middle = ({ filter }: { filter: TAppliedFilter }) => {
 	);
 };
 
-const Right = ({ filter }: { filter: TAppliedFilter }) => {
+interface TextMiddleProps {
+	filter: TAppliedFilter;
+	chipHeight: ChipHeight;
+}
+
+/**
+ * Middle section for text filters - shows relationship dropdown (contains/does not contain)
+ */
+const TextMiddle = ({ filter, chipHeight }: TextMiddleProps) => {
+	const { updateFilterRelationship } = useFilters();
+
+	// Text filters always have the same set of operators
+	const relationshipOptions = TEXT_SELECTION_OPERATORS.ONE;
+
+	return (
+		<DropdownMenu.Root>
+			<Toolbar.Button asChild>
+				<DropdownMenu.Trigger asChild>
+					<button
+						type="button"
+						className={twMerge(
+							"h-full px-2 whitespace-nowrap border-r border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1",
+							CHIP_TEXT_SIZE_VARIANTS[chipHeight],
+						)}
+						aria-label="Filter relationship"
+					>
+						{filter.relationship}
+					</button>
+				</DropdownMenu.Trigger>
+			</Toolbar.Button>
+			<DropdownMenu.Portal>
+				<DropdownMenu.Content
+					className={dropdownMenuContentClassNames}
+					sideOffset={5}
+				>
+					<DropdownMenu.RadioGroup
+						value={filter.relationship}
+						onValueChange={(option) => {
+							if (
+								!(relationshipOptions as readonly string[]).includes(option)
+							) {
+								console.error(`Invalid relationship option: ${option}`);
+								return;
+							}
+							updateFilterRelationship(filter.id, option as Operator);
+						}}
+					>
+						{relationshipOptions.map((relationshipOption) => (
+							<DropdownMenu.RadioItem
+								className="text-nowrap relative flex items-center px-3 py-2 text-sm outline-none transition-colors text-gray-700 hover:bg-gray-50 focus:bg-blue-50 focus:text-blue-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+								key={relationshipOption}
+								value={relationshipOption}
+							>
+								{relationshipOption}
+							</DropdownMenu.RadioItem>
+						))}
+					</DropdownMenu.RadioGroup>
+					<DropdownMenu.Arrow className="fill-white" />
+				</DropdownMenu.Content>
+			</DropdownMenu.Portal>
+		</DropdownMenu.Root>
+	);
+};
+
+/**
+ * Right section for text filters - shows the text value with optional editing
+ */
+const TextRight = ({
+	filter,
+	chipHeight,
+}: {
+	filter: TAppliedFilter;
+	chipHeight: ChipHeight;
+}) => {
+	const { updateTextFilterValue } = useFilters();
+	const [isEditing, setIsEditing] = useState(false);
+	const [editValue, setEditValue] = useState(
+		filter.selectionType === SELECTION_TYPES.TEXT ? filter.textValue : "",
+	);
+	const inputRef = useRef<HTMLInputElement>(null);
+
+	// Focus input when editing starts
+	useEffect(() => {
+		if (isEditing && inputRef.current) {
+			inputRef.current.focus();
+			inputRef.current.select();
+		}
+	}, [isEditing]);
+
+	const handleCommit = () => {
+		if (filter.selectionType === SELECTION_TYPES.TEXT) {
+			updateTextFilterValue(filter.id, editValue.trim());
+		}
+		setIsEditing(false);
+	};
+
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+		if (e.key === "Enter") {
+			e.preventDefault();
+			handleCommit();
+		} else if (e.key === "Escape") {
+			e.preventDefault();
+			// Reset to original value
+			if (filter.selectionType === SELECTION_TYPES.TEXT) {
+				setEditValue(filter.textValue);
+			}
+			setIsEditing(false);
+		}
+	};
+
+	const displayValue =
+		filter.selectionType === SELECTION_TYPES.TEXT
+			? filter.textValue || "..."
+			: "...";
+
+	if (isEditing) {
+		return (
+			<input
+				ref={inputRef}
+				type="text"
+				value={editValue}
+				onChange={(e) => setEditValue(e.target.value)}
+				onBlur={handleCommit}
+				onKeyDown={handleKeyDown}
+				className={twMerge(
+					"h-full px-2 min-w-[100px] max-w-[200px] border-r border-slate-200 outline-none text-sm focus:ring-2 focus:ring-slate-400 focus:ring-inset",
+					CHIP_TEXT_SIZE_VARIANTS[chipHeight],
+				)}
+				aria-label="Filter text value"
+			/>
+		);
+	}
+
+	return (
+		<Toolbar.Button asChild>
+			<button
+				type="button"
+				onClick={() => setIsEditing(true)}
+				className={twMerge(
+					"h-full px-2 whitespace-nowrap cursor-pointer border-r border-slate-200 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 max-w-[200px] truncate",
+					CHIP_TEXT_SIZE_VARIANTS[chipHeight],
+				)}
+				aria-label="Edit filter text value"
+			>
+				{displayValue}
+			</button>
+		</Toolbar.Button>
+	);
+};
+
+const Right = ({
+	filter,
+	chipHeight,
+}: {
+	filter: TAppliedFilter;
+	chipHeight: ChipHeight;
+}) => {
 	const { filterCategories } = useFilters();
 	const { selectionType, propertyNameSingular, propertyNamePlural, values } =
 		filter;
@@ -155,17 +411,22 @@ const Right = ({ filter }: { filter: TAppliedFilter }) => {
 			) : null}
 
 			{/* Visible button that acts as the interactive element */}
-			<button
-				ref={buttonRef}
-				type="button"
-				onClick={() => handleOpenChange(!isOpen)}
-				aria-haspopup="menu"
-				aria-expanded={isOpen}
-				className="h-full px-2 whitespace-nowrap cursor-pointer border-r border-slate-200 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
-				aria-label={`Filter by ${propertyNameToDisplay}`}
-			>
-				{selectedOptionsLabel}
-			</button>
+			<Toolbar.Button asChild>
+				<button
+					ref={buttonRef}
+					type="button"
+					onClick={() => handleOpenChange(!isOpen)}
+					aria-haspopup="menu"
+					aria-expanded={isOpen}
+					className={twMerge(
+						"h-full px-2 whitespace-nowrap cursor-pointer border-r border-slate-200 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1",
+						CHIP_TEXT_SIZE_VARIANTS[chipHeight],
+					)}
+					aria-label={`Filter by ${propertyNameToDisplay}`}
+				>
+					{selectedOptionsLabel}
+				</button>
+			</Toolbar.Button>
 
 			<DropdownMenu.Portal>
 				<DropdownMenu.Content
@@ -175,7 +436,7 @@ const Right = ({ filter }: { filter: TAppliedFilter }) => {
 						event.preventDefault();
 						buttonRef.current?.focus();
 					}}
-					className="border shadow-md border-gray-300 min-w-[220px] rounded-md bg-white p-[5px] will-change-[opacity,transform] data-[side=bottom]:animate-slideUpAndFade data-[side=left]:animate-slideRightAndFade data-[side=right]:animate-slideLeftAndFade data-[side=top]:animate-slideDownAndFade"
+					className="border border-gray-200 min-w-[220px] rounded-lg bg-white shadow-lg will-change-[opacity,transform] data-[side=bottom]:animate-slideUpAndFade data-[side=left]:animate-slideRightAndFade data-[side=right]:animate-slideLeftAndFade data-[side=top]:animate-slideDownAndFade"
 				>
 					<FilterDropdownSubCategory
 						standalone
@@ -189,18 +450,71 @@ const Right = ({ filter }: { filter: TAppliedFilter }) => {
 	);
 };
 
+interface RemoveProps {
+	filterId: string;
+	/** Callback to register the button ref for focus management */
+	buttonRef?: (el: HTMLButtonElement | null) => void;
+	/** Custom remove handler that handles focus management */
+	onRemove?: () => void;
+	/** Callback when right arrow is pressed (for custom navigation out of toolbar) */
+	onRightArrow?: () => void;
+	chipHeight: ChipHeight;
+}
+
 // not memoizing this component because it's already so cheap to render
-const Remove = ({ filterId }: { filterId: string }) => {
+const Remove = ({
+	filterId,
+	buttonRef,
+	onRemove,
+	onRightArrow,
+	chipHeight,
+}: RemoveProps) => {
 	const { removeFilter } = useFilters();
+
+	const handleRemove = () => {
+		if (onRemove) {
+			onRemove();
+		} else {
+			removeFilter(filterId);
+		}
+	};
+
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+		// Delete filter on Backspace or Enter when focused on the X button
+		if (e.key === "Backspace" || e.key === "Enter") {
+			e.preventDefault();
+			handleRemove();
+		}
+		// Custom right arrow navigation (e.g., to exit toolbar and focus input)
+		if (e.key === "ArrowRight" && onRightArrow) {
+			e.preventDefault();
+			e.stopPropagation();
+			onRightArrow();
+		}
+	};
+
 	return (
-		<button
-			type="button"
-			className="h-full px-2 rounded-tr rounded-br text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
-			onClick={() => removeFilter(filterId)}
-			aria-label={`Remove filter`}
-		>
-			<X className="w-4 h-4" aria-hidden="true" />
-		</button>
+		<Toolbar.Button asChild>
+			<button
+				ref={buttonRef}
+				type="button"
+				className="h-full px-2 rounded-tr rounded-br text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
+				onClick={handleRemove}
+				onKeyDown={handleKeyDown}
+				aria-label={`Remove filter`}
+			>
+				<X
+					className={twMerge(
+						chipHeight === "sm"
+							? "w-3 h-3"
+							: chipHeight === "md"
+								? "w-4 h-4"
+								: "w-5 h-5",
+					)}
+					aria-hidden="true"
+				/>
+			</button>
+		</Toolbar.Button>
 	);
 };
 
