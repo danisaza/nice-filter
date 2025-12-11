@@ -496,6 +496,97 @@ describe("ComponentPreview", () => {
 			await user.tab();
 			expect(matchTypeButton).toHaveFocus();
 		});
+
+		test("pressing left arrow at start of input moves focus to last applied filter", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ComponentPreview />
+				</TestWrapper>,
+			);
+
+			const filterInput = screen.getByRole("combobox", {
+				name: /filter input/i,
+			});
+
+			// Create a filter first
+			await user.click(filterInput);
+			await user.type(filterInput, "status:");
+			const inProgressOption = await screen.findByRole("option", {
+				name: /in progress/i,
+			});
+			await user.click(inProgressOption);
+
+			// Verify filter was created - find by the name attribute
+			const statusFilter = document.querySelector(
+				'fieldset[name="status filter"]',
+			);
+			expect(statusFilter).toBeInTheDocument();
+
+			// Focus the input and ensure cursor is at position 0
+			await user.click(filterInput);
+			expect(filterInput).toHaveFocus();
+			expect(filterInput).toHaveValue("");
+
+			// Press left arrow - should move focus to the last filter's remove button
+			await user.keyboard("{ArrowLeft}");
+
+			// Focus should now be on the remove button of the status filter
+			const removeButton = within(statusFilter as HTMLElement).getByRole(
+				"button",
+				{ name: /remove/i },
+			);
+			expect(removeButton).toHaveFocus();
+		});
+
+		test("pressing right arrow at end of input moves focus to match type dropdown", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ComponentPreview />
+				</TestWrapper>,
+			);
+
+			const filterInput = screen.getByRole("combobox", {
+				name: /filter input/i,
+			});
+			const matchTypeButton = screen.getByRole("button", {
+				name: /filter match mode/i,
+			});
+
+			// Focus the input (it's empty, so cursor is at position 0 which is also the end)
+			await user.click(filterInput);
+			expect(filterInput).toHaveFocus();
+			expect(filterInput).toHaveValue("");
+
+			// Press right arrow - should move focus to match type dropdown
+			await user.keyboard("{ArrowRight}");
+			expect(matchTypeButton).toHaveFocus();
+		});
+
+		test("pressing left arrow on match type dropdown moves focus to input", async () => {
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ComponentPreview />
+				</TestWrapper>,
+			);
+
+			const filterInput = screen.getByRole("combobox", {
+				name: /filter input/i,
+			});
+			const matchTypeButton = screen.getByRole("button", {
+				name: /filter match mode/i,
+			});
+
+			// Focus the match type dropdown
+			matchTypeButton.focus();
+			expect(matchTypeButton).toHaveFocus();
+
+			// Press left arrow - should move focus to the input
+			await user.keyboard("{ArrowLeft}");
+			expect(filterInput).toHaveFocus();
+		});
 	});
 
 	describe("Layout Dimensions", () => {

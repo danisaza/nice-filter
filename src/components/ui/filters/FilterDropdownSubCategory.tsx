@@ -9,6 +9,7 @@ import type { ComboboxOption, TAppliedFilter } from "@/hooks/useFilters/types";
 //       (i.e. the user is updating an existing filter from an AppliedFilter dropdown)
 type FilterDropdownSubCategoryProps = {
 	categoryId: string;
+	onFilterCreated?: () => void;
 } & (
 	| { standalone: true; after?: undefined; filterId: string }
 	| { standalone?: false; after: number; filterId?: undefined }
