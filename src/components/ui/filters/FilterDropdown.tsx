@@ -120,6 +120,7 @@ const FilterDropdown = ({
 				aria-haspopup="menu"
 				aria-expanded={dropdownMenuOpen}
 				variant="ghost"
+				data-testid="filter-dropdown"
 				className={twMerge(
 					"group cursor-default data-[state=open]:bg-accent data-[state=open]:text-accent-foreground",
 					dropdownMenuOpen ? "relative bg-accent text-accent-foreground" : "",
@@ -131,6 +132,7 @@ const FilterDropdown = ({
 			</Button>
 			<DropdownMenu.Content
 				align="start"
+				data-testid="filter-dropdown-content"
 				className="border border-gray-300 w-[260px] rounded bg-white shadow-md data-[state=open]:data-[side=bottom]:animate-slideUpAndFade data-[state=open]:data-[side=left]:animate-slideRightAndFade data-[state=open]:data-[side=right]:animate-slideLeftAndFade data-[state=open]:data-[side=top]:animate-slideDownAndFade"
 				sideOffset={25}
 				alignOffset={0}
