@@ -40,10 +40,11 @@ const FilterDropdown = ({
 	const formattedFilterCategories: ComboboxOption[] = useMemo(
 		() =>
 			filterCategories.map((f) => {
+				// TEXT and RADIO use singular, CHECKBOXES uses plural
 				const name =
-					f.selectionType === SELECTION_TYPES.RADIO
-						? f.propertyNameSingular
-						: f.propertyNamePlural;
+					f.selectionType === SELECTION_TYPES.CHECKBOXES
+						? f.propertyNamePlural
+						: f.propertyNameSingular;
 				const titleCaseName = name
 					.split(" ")
 					.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -161,6 +162,7 @@ const FilterDropdown = ({
 						key={subItem.id}
 						category={subItem}
 						triggerText={subItem.label}
+						onFilterCreated={() => setDropdownMenuOpen(false)}
 						onKeyDown={
 							index === 0
 								? firstCategoryOnKeyDown

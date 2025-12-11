@@ -8,6 +8,7 @@ type FilterDropdownCategoryProps = {
 	after: number;
 	category: ComboboxOption;
 	onKeyDown?: KeyboardEventHandler<HTMLDivElement> | undefined;
+	onFilterCreated?: () => void;
 	triggerText: string;
 };
 
@@ -40,6 +41,7 @@ const FilterDropdownCategory = memo(
 								key={`filter-builder-subcategory-${props.category.id}`}
 								categoryId={props.category.id}
 								standalone={false}
+								onFilterCreated={props.onFilterCreated}
 							/>
 						</DropdownMenu.SubContent>
 					</DropdownMenu.Portal>

@@ -25,3 +25,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Branch review notes
+BRANCH_REVIEW_NOTES.md
+docs/branch-features/

@@ -7,6 +7,7 @@ import {
 	CHECKBOX_SELECTION_OPERATORS,
 	RADIO_SELECTION_OPERATORS,
 	SELECTION_TYPES,
+	TEXT_SELECTION_OPERATORS,
 } from "@/hooks/useFilters/constants";
 import type { Operator, TAppliedFilter } from "@/hooks/useFilters/types";
 
@@ -41,18 +42,23 @@ const Left = ({ propertyNameToDisplay }: { propertyNameToDisplay: string }) => {
 const Middle = ({ filter }: { filter: TAppliedFilter }) => {
 	const { updateFilterRelationship } = useFilters();
 
-	const { selectionType, values } = filter;
+	const { selectionType } = filter;
 
-	// Get the relationship options based on the number of values
+	// Get the relationship options based on selection type and number of values
 	let relationshipOptions: readonly Operator[];
-	const relationshipOptionsByNumValues =
-		selectionType === SELECTION_TYPES.RADIO
-			? RADIO_SELECTION_OPERATORS
-			: CHECKBOX_SELECTION_OPERATORS;
-	if (values.length === 1) {
-		relationshipOptions = relationshipOptionsByNumValues.ONE;
+	if (selectionType === SELECTION_TYPES.TEXT) {
+		relationshipOptions = TEXT_SELECTION_OPERATORS.ONE;
 	} else {
-		relationshipOptions = relationshipOptionsByNumValues.MANY;
+		const values = filter.values;
+		const relationshipOptionsByNumValues =
+			selectionType === SELECTION_TYPES.RADIO
+				? RADIO_SELECTION_OPERATORS
+				: CHECKBOX_SELECTION_OPERATORS;
+		if (values.length === 1) {
+			relationshipOptions = relationshipOptionsByNumValues.ONE;
+		} else {
+			relationshipOptions = relationshipOptionsByNumValues.MANY;
+		}
 	}
 	return (
 		<DropdownMenu.Root>
@@ -101,8 +107,7 @@ const Middle = ({ filter }: { filter: TAppliedFilter }) => {
 
 const Right = ({ filter }: { filter: TAppliedFilter }) => {
 	const { filterCategories } = useFilters();
-	const { selectionType, propertyNameSingular, propertyNamePlural, values } =
-		filter;
+	const { selectionType, propertyNameSingular, propertyNamePlural } = filter;
 	const category = filterCategories.find((c) => c.id === filter.categoryId);
 	const [isOpen, setIsOpen] = useState(false);
 	const buttonRef = useRef<HTMLButtonElement>(null);
@@ -115,13 +120,22 @@ const Right = ({ filter }: { filter: TAppliedFilter }) => {
 		console.error("Category not found");
 		return null;
 	}
-	const propertyNameToDisplay =
-		selectionType === SELECTION_TYPES.RADIO
-			? propertyNameSingular
-			: propertyNamePlural;
 
-	const selectedOptionsLabel =
-		values.length > 0 ? values.map((v) => v.label).join(", ") : "...";
+	// TEXT filters use singular, CHECKBOXES uses plural, RADIO uses singular
+	const propertyNameToDisplay =
+		selectionType === SELECTION_TYPES.CHECKBOXES
+			? propertyNamePlural
+			: propertyNameSingular;
+
+	// For TEXT filters, display the textValue; for others, display selected options
+	let selectedOptionsLabel: string;
+	if (selectionType === SELECTION_TYPES.TEXT) {
+		selectedOptionsLabel = filter.textValue || "...";
+	} else {
+		const values = filter.values;
+		selectedOptionsLabel =
+			values.length > 0 ? values.map((v) => v.label).join(", ") : "...";
+	}
 
 	const handleOpenChange = (open: boolean) => {
 		if (open && buttonRef.current) {
