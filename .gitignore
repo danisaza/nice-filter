@@ -29,3 +29,6 @@ dist-ssr
 # Branch review notes
 BRANCH_REVIEW_NOTES.md
 docs/branch-features/
+
+# proprietary cursor rule from being a paid supporter of the project - it requires a license to use
+.cursor/rules/tailwind.mdc
