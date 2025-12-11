@@ -1,4 +1,5 @@
 import * as Toolbar from "@radix-ui/react-toolbar";
+import { Loader2 } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
@@ -843,11 +844,13 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 						aria-controls="autocomplete-dropdown"
 						aria-expanded={showAutocomplete}
 					/>
-					{isNaturalLanguageMode && (
+					{isParsingNaturalLanguage ? (
+						<Loader2 className="w-4 h-4 text-gray-500 animate-spin ml-2" />
+					) : isNaturalLanguageMode ? (
 						<span className="text-xs text-gray-500 whitespace-nowrap ml-2">
 							Press Enter to build your filter.
 						</span>
-					)}
+					) : null}
 				</div>
 			</fieldset>
 
