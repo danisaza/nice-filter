@@ -3,6 +3,7 @@ import * as Toolbar from "@radix-ui/react-toolbar";
 import { X } from "lucide-react";
 import type React from "react";
 import { memo, useEffect, useRef, useState } from "react";
+import { twMerge } from "tailwind-merge";
 import { useFilters } from "@/App.tsx";
 import FilterDropdownSubCategory from "@/components/ui/filters/FilterDropdownSubCategory";
 import {
@@ -16,6 +17,20 @@ import type { Operator, TAppliedFilter } from "@/hooks/useFilters/types";
 const dropdownMenuContentClassNames =
 	"border border-slate-300 min-w-[220px] bg-white rounded-md p-1 shadow-lg animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2";
 
+export type ChipHeight = "sm" | "md" | "lg";
+
+export const CHIP_HEIGHT_VARIANTS = {
+	sm: "h-7",
+	md: "h-9",
+	lg: "h-11",
+} as const satisfies Record<ChipHeight, string>;
+
+export const CHIP_TEXT_SIZE_VARIANTS = {
+	sm: "text-sm",
+	md: "text-base",
+	lg: "text-lg",
+} as const satisfies Record<ChipHeight, string>;
+
 interface AppliedFilterProps {
 	filter: TAppliedFilter;
 	/** Callback to register the remove button ref for focus management */
@@ -26,6 +41,8 @@ interface AppliedFilterProps {
 	onRemoveButtonRightArrow?: () => void;
 	/** If true, left arrow on the operator button won't navigate (prevents wrap) */
 	preventOperatorLeftWrap?: boolean;
+	/** Height variant for the chip. Defaults to "md" (36px). */
+	chipHeight?: ChipHeight;
 }
 
 const AppliedFilter = memo(
@@ -35,28 +52,38 @@ const AppliedFilter = memo(
 		onRemove,
 		onRemoveButtonRightArrow,
 		preventOperatorLeftWrap,
+		chipHeight = "md",
 	}: AppliedFilterProps) => {
 		const { getPropertyNameToDisplay } = useFilters();
 		const propertyNameToDisplay = getPropertyNameToDisplay(filter.id);
+		const heightClass = CHIP_HEIGHT_VARIANTS[chipHeight];
 
 		// Text filters have a different layout with an editable text input
 		if (filter.selectionType === SELECTION_TYPES.TEXT) {
 			return (
 				<fieldset
 					name={`${propertyNameToDisplay} filter`}
-					className="border border-slate-300 text-slate-900 rounded inline-flex items-center h-9"
+					className={twMerge(
+						"border border-slate-300 text-slate-900 rounded inline-flex items-center",
+						heightClass,
+					)}
 				>
-					<Left propertyNameToDisplay={propertyNameToDisplay} />
+					<Left
+						propertyNameToDisplay={propertyNameToDisplay}
+						chipHeight={chipHeight}
+					/>
 					<TextMiddle
 						filter={filter}
 						preventLeftWrap={preventOperatorLeftWrap}
+						chipHeight={chipHeight}
 					/>
-					<TextRight filter={filter} />
+					<TextRight filter={filter} chipHeight={chipHeight} />
 					<Remove
 						filterId={filter.id}
 						buttonRef={removeButtonRef}
 						onRemove={onRemove}
 						onRightArrow={onRemoveButtonRightArrow}
+						chipHeight={chipHeight}
 					/>
 				</fieldset>
 			);
@@ -65,25 +92,47 @@ const AppliedFilter = memo(
 		return (
 			<fieldset
 				name={`${propertyNameToDisplay} filter`}
-				className="border border-slate-300 text-slate-900 rounded inline-flex items-center h-9"
+				className={twMerge(
+					"border border-slate-300 text-slate-900 rounded inline-flex items-center",
+					heightClass,
+				)}
 			>
-				<Left propertyNameToDisplay={propertyNameToDisplay} />
-				<Middle filter={filter} preventLeftWrap={preventOperatorLeftWrap} />
-				<Right filter={filter} />
+				<Left
+					propertyNameToDisplay={propertyNameToDisplay}
+					chipHeight={chipHeight}
+				/>
+				<Middle
+					filter={filter}
+					preventLeftWrap={preventOperatorLeftWrap}
+					chipHeight={chipHeight}
+				/>
+				<Right filter={filter} chipHeight={chipHeight} />
 				<Remove
 					filterId={filter.id}
 					buttonRef={removeButtonRef}
 					onRemove={onRemove}
 					onRightArrow={onRemoveButtonRightArrow}
+					chipHeight={chipHeight}
 				/>
 			</fieldset>
 		);
 	},
 );
 
-const Left = ({ propertyNameToDisplay }: { propertyNameToDisplay: string }) => {
+const Left = ({
+	propertyNameToDisplay,
+	chipHeight,
+}: {
+	propertyNameToDisplay: string;
+	chipHeight: ChipHeight;
+}) => {
 	return (
-		<span className="px-2 rounded-tl rounded-bl border-r border-slate-200 h-full flex items-center">
+		<span
+			className={twMerge(
+				"px-2 rounded-tl rounded-bl border-r border-slate-200 h-full flex items-center",
+				CHIP_TEXT_SIZE_VARIANTS[chipHeight],
+			)}
+		>
 			{propertyNameToDisplay}
 		</span>
 	);
@@ -93,9 +142,10 @@ interface MiddleProps {
 	filter: TAppliedFilter;
 	/** If true, left arrow won't navigate (prevents wrap) */
 	preventLeftWrap?: boolean;
+	chipHeight: ChipHeight;
 }
 
-const Middle = ({ filter, preventLeftWrap }: MiddleProps) => {
+const Middle = ({ filter, preventLeftWrap, chipHeight }: MiddleProps) => {
 	const { updateFilterRelationship } = useFilters();
 
 	const { selectionType, values } = filter;
@@ -125,7 +175,10 @@ const Middle = ({ filter, preventLeftWrap }: MiddleProps) => {
 				<DropdownMenu.Trigger asChild>
 					<button
 						type="button"
-						className="h-full px-2 whitespace-nowrap border-r border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
+						className={twMerge(
+							"h-full px-2 whitespace-nowrap border-r border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1",
+							CHIP_TEXT_SIZE_VARIANTS[chipHeight],
+						)}
 						aria-label={`Filter relationship`}
 						onKeyDown={handleKeyDown}
 					>
@@ -171,12 +224,17 @@ interface TextMiddleProps {
 	filter: TAppliedFilter;
 	/** If true, left arrow won't navigate (prevents wrap) */
 	preventLeftWrap?: boolean;
+	chipHeight: ChipHeight;
 }
 
 /**
  * Middle section for text filters - shows relationship dropdown (contains/does not contain)
  */
-const TextMiddle = ({ filter, preventLeftWrap }: TextMiddleProps) => {
+const TextMiddle = ({
+	filter,
+	preventLeftWrap,
+	chipHeight,
+}: TextMiddleProps) => {
 	const { updateFilterRelationship } = useFilters();
 
 	// Text filters always have the same set of operators
@@ -195,7 +253,10 @@ const TextMiddle = ({ filter, preventLeftWrap }: TextMiddleProps) => {
 				<DropdownMenu.Trigger asChild>
 					<button
 						type="button"
-						className="h-full px-2 whitespace-nowrap border-r border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
+						className={twMerge(
+							"h-full px-2 whitespace-nowrap border-r border-slate-200 hover:bg-slate-100 text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1",
+							CHIP_TEXT_SIZE_VARIANTS[chipHeight],
+						)}
 						aria-label="Filter relationship"
 						onKeyDown={handleKeyDown}
 					>
@@ -240,7 +301,13 @@ const TextMiddle = ({ filter, preventLeftWrap }: TextMiddleProps) => {
 /**
  * Right section for text filters - shows the text value with optional editing
  */
-const TextRight = ({ filter }: { filter: TAppliedFilter }) => {
+const TextRight = ({
+	filter,
+	chipHeight,
+}: {
+	filter: TAppliedFilter;
+	chipHeight: ChipHeight;
+}) => {
 	const { updateTextFilterValue } = useFilters();
 	const [isEditing, setIsEditing] = useState(false);
 	const [editValue, setEditValue] = useState(
@@ -291,7 +358,10 @@ const TextRight = ({ filter }: { filter: TAppliedFilter }) => {
 				onChange={(e) => setEditValue(e.target.value)}
 				onBlur={handleCommit}
 				onKeyDown={handleKeyDown}
-				className="h-full px-2 min-w-[100px] max-w-[200px] border-r border-slate-200 outline-none text-sm focus:ring-2 focus:ring-slate-400 focus:ring-inset"
+				className={twMerge(
+					"h-full px-2 min-w-[100px] max-w-[200px] border-r border-slate-200 outline-none text-sm focus:ring-2 focus:ring-slate-400 focus:ring-inset",
+					CHIP_TEXT_SIZE_VARIANTS[chipHeight],
+				)}
 				aria-label="Filter text value"
 			/>
 		);
@@ -302,7 +372,10 @@ const TextRight = ({ filter }: { filter: TAppliedFilter }) => {
 			<button
 				type="button"
 				onClick={() => setIsEditing(true)}
-				className="h-full px-2 whitespace-nowrap cursor-pointer border-r border-slate-200 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 max-w-[200px] truncate"
+				className={twMerge(
+					"h-full px-2 whitespace-nowrap cursor-pointer border-r border-slate-200 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 max-w-[200px] truncate",
+					CHIP_TEXT_SIZE_VARIANTS[chipHeight],
+				)}
 				aria-label="Edit filter text value"
 			>
 				{displayValue}
@@ -311,7 +384,13 @@ const TextRight = ({ filter }: { filter: TAppliedFilter }) => {
 	);
 };
 
-const Right = ({ filter }: { filter: TAppliedFilter }) => {
+const Right = ({
+	filter,
+	chipHeight,
+}: {
+	filter: TAppliedFilter;
+	chipHeight: ChipHeight;
+}) => {
 	const { filterCategories } = useFilters();
 	const { selectionType, propertyNameSingular, propertyNamePlural, values } =
 		filter;
@@ -374,7 +453,10 @@ const Right = ({ filter }: { filter: TAppliedFilter }) => {
 					onClick={() => handleOpenChange(!isOpen)}
 					aria-haspopup="menu"
 					aria-expanded={isOpen}
-					className="h-full px-2 whitespace-nowrap cursor-pointer border-r border-slate-200 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
+					className={twMerge(
+						"h-full px-2 whitespace-nowrap cursor-pointer border-r border-slate-200 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1",
+						CHIP_TEXT_SIZE_VARIANTS[chipHeight],
+					)}
 					aria-label={`Filter by ${propertyNameToDisplay}`}
 				>
 					{selectedOptionsLabel}
@@ -411,6 +493,7 @@ interface RemoveProps {
 	onRemove?: () => void;
 	/** Callback when right arrow is pressed (for custom navigation out of toolbar) */
 	onRightArrow?: () => void;
+	chipHeight: ChipHeight;
 }
 
 // not memoizing this component because it's already so cheap to render
@@ -419,6 +502,7 @@ const Remove = ({
 	buttonRef,
 	onRemove,
 	onRightArrow,
+	chipHeight,
 }: RemoveProps) => {
 	const { removeFilter } = useFilters();
 
@@ -454,7 +538,16 @@ const Remove = ({
 				onKeyDown={handleKeyDown}
 				aria-label={`Remove filter`}
 			>
-				<X className="w-4 h-4" aria-hidden="true" />
+				<X
+					className={twMerge(
+						chipHeight === "sm"
+							? "w-3 h-3"
+							: chipHeight === "md"
+								? "w-4 h-4"
+								: "w-5 h-5",
+					)}
+					aria-hidden="true"
+				/>
 			</button>
 		</Toolbar.Button>
 	);

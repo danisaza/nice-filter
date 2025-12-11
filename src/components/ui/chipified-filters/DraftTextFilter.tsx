@@ -3,6 +3,12 @@ import * as Toolbar from "@radix-ui/react-toolbar";
 import { X } from "lucide-react";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
+import { twMerge } from "tailwind-merge";
+import {
+	CHIP_HEIGHT_VARIANTS,
+	CHIP_TEXT_SIZE_VARIANTS,
+	type ChipHeight,
+} from "../filters/AppliedFilter";
 import type { DraftTextFilterState } from "./ChipFilterInput";
 
 const TEXT_OPERATORS = ["contains", "does not contain"] as const;
@@ -13,6 +19,8 @@ interface DraftTextFilterProps {
 	onCancel: () => void;
 	onTextChange: (value: string) => void;
 	onOperatorChange: (operator: "contains" | "does not contain") => void;
+	/** Height variant for the chip. Defaults to "md" (36px). */
+	chipHeight?: ChipHeight;
 }
 
 const dropdownMenuContentClassNames =
@@ -28,6 +36,7 @@ export const DraftTextFilter: React.FC<DraftTextFilterProps> = ({
 	onCancel,
 	onTextChange,
 	onOperatorChange,
+	chipHeight = "md",
 }) => {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const operatorButtonRef = useRef<HTMLButtonElement>(null);
@@ -117,10 +126,12 @@ export const DraftTextFilter: React.FC<DraftTextFilterProps> = ({
 		}
 	};
 
+	const heightClass = CHIP_HEIGHT_VARIANTS[chipHeight];
+
 	return (
 		<fieldset
 			name={`${draft.propertyNameSingular} filter`}
-			className="border border-blue-400 text-slate-900 rounded inline-flex items-center h-9 bg-blue-50"
+			className={`border border-blue-400 text-slate-900 rounded inline-flex items-center ${heightClass} bg-blue-50`}
 		>
 			{/* Property name */}
 			<span className="px-2 rounded-tl rounded-bl border-r border-blue-300 h-full flex items-center text-sm">
@@ -186,7 +197,10 @@ export const DraftTextFilter: React.FC<DraftTextFilterProps> = ({
 				onKeyDown={handleKeyDown}
 				onBlur={handleBlur}
 				placeholder="type to search..."
-				className="px-2 h-full min-w-[100px] max-w-[200px] outline-none text-sm bg-transparent"
+				className={twMerge(
+					"px-2 h-full min-w-[100px] max-w-[200px] outline-none text-sm bg-transparent",
+					CHIP_TEXT_SIZE_VARIANTS[chipHeight],
+				)}
 				aria-label={`${draft.propertyNameSingular} filter value`}
 			/>
 

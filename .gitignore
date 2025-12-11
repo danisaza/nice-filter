@@ -1,6 +1,9 @@
 # environment variables
 .env
 
+# proprietary cursor rule from being a paid supporter of the project - it requires a license to use
+.cursor/rules/tailwind.mdc
+
 # Logs
 logs
 *.log

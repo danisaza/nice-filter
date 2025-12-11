@@ -764,71 +764,77 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 			<fieldset
 				id="chip-filter-container"
 				onClick={handleContainerClick}
-				className="flex items-center flex-wrap w-full gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-opacity-20 transition-all cursor-text min-h-[42px]"
+				className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white hover:border-gray-400 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-opacity-20 transition-all cursor-text min-h-[44px]"
 			>
 				<legend className="sr-only">Filter controls</legend>
-				{isParsingNaturalLanguage ? (
-					<div
-						data-testid="loading-spinner"
-						className="w-4 h-4 flex-shrink-0 animate-spin rounded-full border-2 border-purple-500 border-t-transparent"
-					/>
-				) : isNaturalLanguageMode ? (
-					<MagicWandIcon
-						data-testid="magic-wand-icon"
-						className="w-4 h-4 text-purple-500 flex-shrink-0"
-					/>
-				) : (
-					<Search
-						data-testid="search-icon"
-						className="w-4 h-4 text-gray-400 flex-shrink-0"
-					/>
-				)}
+				{/* Inner wrapper div handles flex layout. The min-h ensures content
+				    fills the fieldset's content area for proper vertical centering. */}
+				<div className="flex items-center flex-wrap gap-2 min-h-[28px]">
+					{isParsingNaturalLanguage ? (
+						<div
+							data-testid="loading-spinner"
+							className="w-4 h-4 flex-shrink-0 animate-spin rounded-full border-2 border-purple-500 border-t-transparent"
+						/>
+					) : isNaturalLanguageMode ? (
+						<MagicWandIcon
+							data-testid="magic-wand-icon"
+							className="w-4 h-4 text-purple-500 flex-shrink-0"
+						/>
+					) : (
+						<Search
+							data-testid="search-icon"
+							className="w-4 h-4 text-gray-400 flex-shrink-0"
+						/>
+					)}
 
-				{sortedFilters.length > 0 || draftTextFilter ? (
-					<Toolbar.Root aria-label="Applied filters" className="contents">
-						{sortedFilters.map((filter, index) => (
-							<AppliedFilter
-								key={filter.id}
-								filter={filter}
-								removeButtonRef={createRemoveButtonRef(filter.id)}
-								onRemove={() => handleFilterRemove(filter.id)}
-								onRemoveButtonRightArrow={
-									index === sortedFilters.length - 1
-										? () => inputRef.current?.focus()
-										: undefined
-								}
-								preventOperatorLeftWrap={index === 0}
-							/>
-						))}
-						{draftTextFilter ? (
-							<DraftTextFilter
-								draft={draftTextFilter}
-								onCommit={commitDraftTextFilter}
-								onCancel={cancelDraftTextFilter}
-								onTextChange={updateDraftTextValue}
-								onOperatorChange={updateDraftOperator}
-							/>
-						) : null}
-					</Toolbar.Root>
-				) : null}
+					{sortedFilters.length > 0 || draftTextFilter ? (
+						<Toolbar.Root aria-label="Applied filters" className="contents">
+							{sortedFilters.map((filter, index) => (
+								<AppliedFilter
+									key={filter.id}
+									filter={filter}
+									removeButtonRef={createRemoveButtonRef(filter.id)}
+									onRemove={() => handleFilterRemove(filter.id)}
+									onRemoveButtonRightArrow={
+										index === sortedFilters.length - 1
+											? () => inputRef.current?.focus()
+											: undefined
+									}
+									preventOperatorLeftWrap={index === 0}
+									chipHeight="sm"
+								/>
+							))}
+							{draftTextFilter ? (
+								<DraftTextFilter
+									draft={draftTextFilter}
+									onCommit={commitDraftTextFilter}
+									onCancel={cancelDraftTextFilter}
+									onTextChange={updateDraftTextValue}
+									onOperatorChange={updateDraftOperator}
+									chipHeight="sm"
+								/>
+							) : null}
+						</Toolbar.Root>
+					) : null}
 
-				<input
-					ref={inputRef}
-					type="text"
-					value={inputValue}
-					onChange={handleInputChange}
-					onKeyDown={handleInputKeyDown}
-					onFocus={handleInputFocus}
-					onBlur={handleInputBlur}
-					placeholder={sortedFilters.length === 0 ? placeholder : ""}
-					disabled={isParsingNaturalLanguage}
-					className="flex-1 min-w-[120px] outline-none text-sm text-gray-900 placeholder-gray-400 bg-transparent dark:bg-transparent disabled:opacity-50"
-					role="combobox"
-					aria-label="Filter input"
-					aria-autocomplete="list"
-					aria-controls="autocomplete-dropdown"
-					aria-expanded={showAutocomplete}
-				/>
+					<input
+						ref={inputRef}
+						type="text"
+						value={inputValue}
+						onChange={handleInputChange}
+						onKeyDown={handleInputKeyDown}
+						onFocus={handleInputFocus}
+						onBlur={handleInputBlur}
+						placeholder={sortedFilters.length === 0 ? placeholder : ""}
+						disabled={isParsingNaturalLanguage}
+						className="flex-1 min-w-[120px] outline-none text-sm text-gray-900 placeholder-gray-400 bg-transparent dark:bg-transparent disabled:opacity-50"
+						role="combobox"
+						aria-label="Filter input"
+						aria-autocomplete="list"
+						aria-controls="autocomplete-dropdown"
+						aria-expanded={showAutocomplete}
+					/>
+				</div>
 			</fieldset>
 
 			<AutocompleteDropdown
