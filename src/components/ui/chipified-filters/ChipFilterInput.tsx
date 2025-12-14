@@ -1,5 +1,5 @@
 import * as Toolbar from "@radix-ui/react-toolbar";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search, Sparkles } from "lucide-react";
 import type React from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
@@ -329,7 +329,7 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 				elementToFocus?.focus();
 			}, 0);
 		},
-		[sortedFilters, removeFilter],
+		[sortedFilters, removeFilter, inputRef],
 	);
 
 	const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -416,6 +416,12 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 
 			// For key suggestions, select them immediately (no multi-select for keys)
 			if (highlightedSuggestion?.type === "key") {
+				// If the user has started typing, Space should insert a literal space so they can
+				// continue writing natural language (e.g. "status is in progress").
+				// Keep the convenience behavior only for the empty-input case.
+				if (inputValue.trim()) {
+					return;
+				}
 				e.preventDefault();
 				handleSuggestionSelect(highlightedSuggestion);
 				return;
@@ -484,8 +490,9 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 		// Right arrow at end of input moves focus to match type dropdown
 		if (e.key === "ArrowRight" && onRightArrowAtEnd) {
 			const input = e.currentTarget;
-			const atEnd = input.selectionStart === inputValue.length &&
-			              input.selectionEnd === inputValue.length;
+			const atEnd =
+				input.selectionStart === inputValue.length &&
+				input.selectionEnd === inputValue.length;
 			if (atEnd) {
 				e.preventDefault();
 				onRightArrowAtEnd();
@@ -664,7 +671,7 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 		setDraftTextFilter(null);
 		// Focus the main input after committing
 		inputRef.current?.focus();
-	}, [draftTextFilter, filterCategories, addFilter]);
+	}, [draftTextFilter, filterCategories, addFilter, inputRef]);
 
 	/**
 	 * Cancels the draft text filter without committing.
@@ -672,7 +679,7 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 	const cancelDraftTextFilter = useCallback(() => {
 		setDraftTextFilter(null);
 		inputRef.current?.focus();
-	}, []);
+	}, [inputRef]);
 
 	/**
 	 * Updates the text value of the draft text filter.
@@ -798,8 +805,24 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 				{/* Inner wrapper div handles flex layout. The min-h ensures content
 				    fills the fieldset's content area for proper vertical centering. */}
 				<div className="flex items-center flex-wrap gap-2 min-h-[28px]">
+					{/* Leading icon (used by layout + visual tests). */}
+					<span className="text-gray-500 flex items-center" aria-hidden="true">
+						{isNaturalLanguageMode ? (
+							<Sparkles
+								data-testid="magic-wand-icon"
+								className="w-4 h-4 text-blue-400"
+							/>
+						) : (
+							<Search data-testid="search-icon" className="w-4 h-4" />
+						)}
+					</span>
+
 					{sortedFilters.length > 0 || draftTextFilter ? (
-						<Toolbar.Root aria-label="Applied filters" className="contents" loop={false}>
+						<Toolbar.Root
+							aria-label="Applied filters"
+							className="contents"
+							loop={false}
+						>
 							{sortedFilters.map((filter, index) => (
 								<AppliedFilter
 									key={filter.id}

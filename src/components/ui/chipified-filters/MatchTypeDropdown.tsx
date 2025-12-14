@@ -36,7 +36,7 @@ export const MatchTypeDropdown = ({
 				<button
 					ref={triggerRef}
 					type="button"
-					className="h-full flex items-center justify-center gap-1 px-4 text-sm font-medium text-gray-600 bg-transparent hover:text-gray-900 hover:bg-gray-200 focus:outline-none focus:bg-gray-200 focus:text-gray-900 focus:ring-2 focus:ring-inset focus:ring-blue-500 rounded-r-lg transition-colors"
+					className="h-full flex items-center justify-center gap-1 px-4 text-sm font-medium text-gray-600 bg-transparent hover:text-gray-900 hover:bg-gray-200 focus-visible:outline-none focus-visible:text-gray-900 focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-blue-500/40 rounded-r-lg transition-colors"
 					aria-label="Filter match mode"
 					onKeyDown={handleKeyDown}
 				>
@@ -58,7 +58,7 @@ export const MatchTypeDropdown = ({
 							<DropdownMenu.RadioItem
 								key={value}
 								value={value}
-								className="relative flex items-center justify-between gap-2 px-3 py-2 text-sm text-gray-700 rounded-md outline-none cursor-pointer transition-colors hover:bg-gray-100 focus:bg-gray-100"
+								className="relative flex items-center justify-between gap-2 px-3 py-2 text-sm text-gray-700 rounded-md outline-none cursor-pointer transition-colors hover:bg-gray-100 focus-visible:bg-gray-100"
 							>
 								{labels.full}
 								<DropdownMenu.ItemIndicator data-testid="checkmark-indicator">

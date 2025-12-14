@@ -22,13 +22,13 @@ export const ComponentPreview = () => {
 			{/* GitHub-style Example */}
 			<section>
 				<div
-					className="flex items-stretch bg-gray-100 rounded-lg border border-gray-200 transition-all [&:has([data-focused])]:shadow-[0_0_0_3px_rgba(59,130,246,0.4)]"
+					className="flex items-stretch bg-gray-100 rounded-lg border border-gray-200 transition-all [&:has([data-focused])]:ring-4 [&:has([data-focused])]:ring-blue-500/40"
 					role="toolbar"
 					aria-label="Filter toolbar"
 				>
 					<div className="flex-1">
 						<ChipFilterInput
-							placeholder="Filter issues by status, author, label..."
+							placeholder='Try: "show me high priority bugs"'
 							inputRef={inputRef}
 							onRightArrowAtEnd={() => matchTypeButtonRef.current?.focus()}
 						/>

@@ -499,6 +499,44 @@ describe("ChipFilterInput", () => {
 	});
 
 	describe("Smart space key behavior", () => {
+		test("space should insert a literal space when typing a natural-language sentence that starts with a column name (e.g. 'status is ...')", async () => {
+			/**
+			 * Repro:
+			 * - Focus input (dropdown opens)
+			 * - Type "status"
+			 * - Press Space
+			 *
+			 * Expected:
+			 * - A literal space is inserted so the user can continue typing
+			 *   a natural language sentence like "status is in progress".
+			 *
+			 * Actual (bug):
+			 * - Space selects the highlighted key suggestion (e.g. "status:"),
+			 *   preventing natural language typing.
+			 */
+			const user = userEvent.setup();
+			render(
+				<TestWrapper>
+					<ChipFilterInputWrapper />
+				</TestWrapper>,
+			);
+
+			const input = screen.getByRole("combobox", { name: /filter input/i });
+			await user.click(input);
+
+			// Type a sentence starter that matches a column name, but is intended to be natural language
+			await user.type(input, "status");
+			expect(input).toHaveValue("status");
+
+			// Dropdown should be visible (key suggestions)
+			expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+			// Press space: should add a literal space, not select "status:"
+			await user.keyboard(" ");
+
+			expect(input).toHaveValue("status ");
+		});
+
 		test("space should NOT select a suggestion when dropdown is hidden (after Escape)", async () => {
 			/**
 			 * When the dropdown is hidden (e.g., after pressing Escape), pressing space
@@ -1124,9 +1162,9 @@ describe("ChipFilterInput", () => {
 			const input = screen.getByRole("combobox", { name: /filter input/i });
 			await user.click(input);
 
-			// Type "tags" and press space to select the "tags" column
+			// Type "tags" and press Enter to select the "tags" column
 			await user.type(input, "tags");
-			await user.keyboard(" ");
+			await user.keyboard("{Enter}");
 
 			// Input should now contain "tags:"
 			expect(input).toHaveValue("tags:");

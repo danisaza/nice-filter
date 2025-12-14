@@ -41,6 +41,7 @@ export const AutocompleteDropdown: React.FC<AutocompleteDropdownProps> = ({
 	return (
 		<div
 			ref={dropdownRef}
+			id="autocomplete-dropdown"
 			className="absolute z-50 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150"
 			style={{
 				top: position.top,
