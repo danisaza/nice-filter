@@ -810,7 +810,7 @@ export const ChipFilterInput: React.FC<ChipFilterInputProps> = ({
 						{isNaturalLanguageMode ? (
 							<Sparkles
 								data-testid="magic-wand-icon"
-								className="w-4 h-4 text-blue-400"
+								className="w-4 h-4 text-blue-500/40"
 							/>
 						) : (
 							<Search data-testid="search-icon" className="w-4 h-4" />
